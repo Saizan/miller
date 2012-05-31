@@ -240,23 +240,6 @@ data Subs (Sg : Ctx) : MCtx → Nat → Set where
   nil : ∀ {G} → Subs Sg G (Ctx-len G)
   _◇_ : ∀ {n G D} → Sub Sg G D → (ss : Subs Sg D n) → Subs Sg G (suc n)
 
-{-
-baar : {Sg G D k z D0 : Ctx}{T : _} (v : D0 has (!> ->> _) :> !> ->> T) (r1 : Ren D k D0) (r2 : Ren D z D0) (t : Tm Sg G D (!> ->> T)) 
-       → ren r1 t ≡ var v (ren r2 t :> !>) → ⊥
-baar v r1 r2 (con x x₁) ()
-baar v r1 r2 (fun x x₁) ()
-baar v r1 r2 (var x x₁) eq with thick (xren r1 x) v 
-baar v r1 r2 (var x x₂) eq | inj₁ refl = {!!}
-baar v r1 r2 (var x x₁) eq | inj₂ y = {!!}
-fooo : ∀ {Sg G D d1 d2 Ss B A k z} → (xs : d1 and Ss make D) (ys : d2 and Ss make D) 
-     (v : D has ! B :> !> ->> B) (t : Tm Sg G A (Ss ->> B)) (r1 : Ren A k d1) (r2 : Ren A z d2)
-       ->
-     
-     stitch2 t r1 xs ≡ var v (stitch2 t r2 ys :> !>) → ⊥
-fooo !> !> v t r1 r2 eq = baar v r1 r2 t eq
-fooo (x₁ :> xs) (x₂ :> ys) v (lam t) r1 r2 eq = fooo xs ys v t (r1 <: x₁) (r2 <: x₂) eq
--}
-
 MetaRen : MCtx → MCtx → Set
 MetaRen G D = ∀ S → G ∋ S → ∃ \ Ψ → D ∋ (type S <<- Ψ) × Inj Ψ (ctx S)
 
@@ -269,6 +252,7 @@ singleton : ∀ {G S} → (u : G ∋ S) → ∀ {Ψ} → Inj Ψ (ctx S) -> MetaR
 singleton u j T v with thick u v
 singleton {G} {type <<- ctx} u j T v | inj₁ x = _ , ((suc (proj₁ x)) , (quo (λ _ x₁ → x₁) {λ _ e → e}))
 singleton {G} {type <<- ctx} .v j .(type <<- ctx) v | inj₂ refl = _ , (zero , j) 
+
 mutual
   MRProp : ∀ {Sg : Ctx} {G1 G2 : MCtx} → MetaRen G1 G2 → ∀ {D1 D2 : Ctx} → Inj D1 D2 → ∀ {T} → Tm Sg G1 D2 T → Set
   MRProp r i (con x x₁) = MRProps r i x₁
