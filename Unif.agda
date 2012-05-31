@@ -1,12 +1,24 @@
-module Unif (Base : Set) where
+module Unif where
 
 open import Data.Product renaming (map to mapΣ)
 open import Data.Nat renaming (ℕ to Nat)
 open import Relation.Nullary
 import Relation.Nullary.Decidable as Dec
 open import Relation.Binary.PropositionalEquality
+open import Data.Empty
+open import Data.Unit
 open import Data.Sum
+open import Data.Maybe
+open import Category.Monad
+import Level
+open RawMonad (monad {Level.zero})
+
+open import Injection
 open import Lists
+
+postulate
+  -- it'd more properly be a module parameter
+  Base : Set
 
 data Ty : Set where
   _->>_ : Fwd Ty → Base → Ty
@@ -30,8 +42,6 @@ infixr 40 _<<-_
 
 MCtx : Set
 MCtx = Bwd MTy
-
-open import Injection2
 
 mutual
   data Tm (Sg : Ctx)(G : MCtx)(D : Ctx) : Ty → Set where
@@ -136,7 +146,6 @@ mutual
     _∷_ : {S : Ty}{Ss : Fwd Ty} → ∀ {x xs} →
            RTm Sg G D K i S x → RTms Sg G D K i Ss xs → RTms Sg G D K i (S :> Ss) (x ∷ xs)
 
-open import Data.Maybe
 
 mutual
   unique : ∀ {Sg G D D0}{T : Ty} → {i : Inj D D0} → {t : Tm Sg G D0 T} → (x y : RTm Sg G D D0 i T t) → x ≡ y
@@ -231,11 +240,6 @@ data Subs (Sg : Ctx) : MCtx → Nat → Set where
   nil : ∀ {G} → Subs Sg G (Ctx-len G)
   _◇_ : ∀ {n G D} → Sub Sg G D → (ss : Subs Sg D n) → Subs Sg G (suc n)
 
-open import Data.Maybe
-open import Category.Monad
-import Level
-open RawMonad (monad {Level.zero})
-open import Data.Empty
 {-
 baar : {Sg G D k z D0 : Ctx}{T : _} (v : D0 has (!> ->> _) :> !> ->> T) (r1 : Ren D k D0) (r2 : Ren D z D0) (t : Tm Sg G D (!> ->> T)) 
        → ren r1 t ≡ var v (ren r2 t :> !>) → ⊥
@@ -265,7 +269,6 @@ singleton : ∀ {G S} → (u : G ∋ S) → ∀ {Ψ} → Inj Ψ (ctx S) -> MetaR
 singleton u j T v with thick u v
 singleton {G} {type <<- ctx} u j T v | inj₁ x = _ , ((suc (proj₁ x)) , (quo (λ _ x₁ → x₁) {λ _ e → e}))
 singleton {G} {type <<- ctx} .v j .(type <<- ctx) v | inj₂ refl = _ , (zero , j) 
-open import Data.Unit
 mutual
   MRProp : ∀ {Sg : Ctx} {G1 G2 : MCtx} → MetaRen G1 G2 → ∀ {D1 D2 : Ctx} → Inj D1 D2 → ∀ {T} → Tm Sg G1 D2 T → Set
   MRProp r i (con x x₁) = MRProps r i x₁
