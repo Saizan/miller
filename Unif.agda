@@ -50,16 +50,6 @@ mutual
   uniques [] [] = refl
   uniques (x ∷ xs) (y ∷ ys) = cong₂ _∷_ (unique x y) (uniques xs ys)
 
-mutual
-  ren : ∀ {Sg G D D0}{T : Ty} → Inj D D0 → Tm Sg G D T → Tm Sg G D0 T
-  ren rho (con c ts) = con c (rens rho ts) 
-  ren rho (fun f xs) = fun f (rho ∘i xs)
-  ren rho (var x xs) = var (rho $ x) (rens rho xs)
-  ren rho (lam t) = lam (ren (cons rho) t)
-
-  rens : ∀ {Sg G D D0}{Ts : Fwd Ty} → Inj D D0 → Tms Sg G D Ts → Tms Sg G D0 Ts
-  rens rho [] = []
-  rens rho (x ∷ ts) = ren rho x ∷ rens rho ts
 
 mutual
   forget : ∀ {Sg G D D0}{T : Ty} → {i : Inj D D0} → {t : Tm Sg G D0 T} → (x : RTm Sg G D D0 i T t) → Σ (Tm Sg G D T) \ s → ren i s ≡ t
@@ -73,49 +63,6 @@ mutual
   forgets (x₁ ∷ x₂) = ((proj₁ (forget x₁)) ∷ (proj₁ (forgets x₂))) , (cong₂ _∷_ (proj₂ (forget x₁)) (proj₂ (forgets x₂)))
 
 
-Sub : Ctx → MCtx → MCtx → Set
-Sub Sg G1 G2 = ∀ S → G1 ∋ S → Tm Sg G2 (ctx S) (! type S)
-
-mutual
-  sub : ∀ {Sg G1 G2 D T} → Sub Sg G1 G2 → Tm Sg G1 D T → Tm Sg G2 D T
-  sub s (con x x₁) = con x (subs s x₁)
-  sub s (fun u x₁) = ren x₁ (s _ u)
-  sub s (var x xs) = var x (subs s xs)
-  sub s (lam t) = lam (sub s t)
-
-  subs : ∀ {Sg G1 G2 D Ss} → Sub Sg G1 G2 → Tms Sg G1 D Ss → Tms Sg G2 D Ss
-  subs s [] = []
-  subs s (x ∷ ts) = sub s x ∷ subs s ts
-mutual
-  ren-∘ : ∀ {Sg G1 D1 D2 D3 T} {j : Inj D2 D3} {i : Inj D1 D2} (t : Tm Sg G1 D1 T) -> ren (j ∘i i) t ≡ ren j (ren i t)
-  ren-∘ (con c ts) = cong (con c) (rens-∘ ts)
-  ren-∘ (fun u j₁) = cong (fun u) (sym assoc-∘i)
-  ren-∘ (var x ts) = cong₂ var (apply-∘ _ _) (rens-∘ ts)
-  ren-∘ (lam t) = cong lam (trans (cong (λ k → ren k t) (cons-∘i _ _)) (ren-∘ t))
-  
-  rens-∘ : ∀ {Sg G1 D1 D2 D3 T} {j : Inj D2 D3} {i : Inj D1 D2} (t : Tms Sg G1 D1 T) -> rens (j ∘i i) t ≡ rens j (rens i t)
-  rens-∘ [] = refl
-  rens-∘ (t ∷ ts) = cong₂ _∷_ (ren-∘ t) (rens-∘ ts)
-mutual
-  sub-nat : ∀ {Sg G1 G2 D1 D2 T} {f : Sub Sg G1 G2} {i : Inj D1 D2} (t : Tm Sg G1 D1 T) -> sub f (ren i t) ≡ ren i (sub f t)
-  sub-nat (con c ts) = cong (con c) (sub-nats ts)
-  sub-nat (fun u j) = ren-∘ _
-  sub-nat (var x ts) = cong (var _) (sub-nats ts)
-  sub-nat (lam t) = cong lam (sub-nat t)
-  
-  sub-nats : ∀ {Sg G1 G2 D1 D2 T} {f : Sub Sg G1 G2} {i : Inj D1 D2} (t : Tms Sg G1 D1 T) -> subs f (rens i t) ≡ rens i (subs f t)
-  sub-nats [] = refl
-  sub-nats (t ∷ ts) = cong₂ _∷_ (sub-nat t) (sub-nats ts)
-mutual
-  sub-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tm Sg G1 D T) -> sub f (sub g t) ≡ sub (\ _ t -> sub f (g _ t)) t
-  sub-∘ (con c ts) = cong (con c) (subs-∘ ts)
-  sub-∘ {g = g} (fun u j) = sub-nat (g _ u)
-  sub-∘ (var x ts) = cong (var x) (subs-∘ ts)
-  sub-∘ (lam t) = cong lam (sub-∘ t)
-  
-  subs-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tms Sg G1 D T) -> subs f (subs g t) ≡ subs (\ _ t -> sub f (g _ t)) t
-  subs-∘ [] = refl
-  subs-∘ (t ∷ t₁) = cong₂ _∷_ (sub-∘ t) (subs-∘ t₁)
 
 Bwd-len : ∀ {A : Set} → Bwd A → Nat
 Bwd-len !> = zero
