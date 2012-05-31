@@ -189,8 +189,15 @@ abstract
   _∘i_ : ∀ {A : Set}{xs ys zs : List A} -> zs ⊇ ys -> ys ⊇ xs -> zs ⊇ xs
   f ∘i g = proj₁ (quo' (λ x x₁ → f $ (g $ x₁)) {(λ x x₁ → injective g _ _ (injective f _ _ x₁))})
 
+  id-i : ∀ {A : Set}{xs : List A} -> Inj xs xs
+  id-i = quo (\ _ x -> x) {\ _ e -> e}
+
+  right-id : ∀ {A : Set}{xs ys : List A} -> (i : Inj xs ys) -> i ∘i id-i ≡ i
+  right-id i = trans (quo-ext (λ x v → cong (_$_ i) (iso2 _ _ v))) (iso1 i (λ x eq → injective i _ _ eq))
+
   apply-∘ : ∀ {A : Set}{xs ys zs : List A} -> (j : zs ⊇ ys) -> (i : ys ⊇ xs) -> ∀ {x} {v : x ∈ xs} -> (j ∘i i) $ v ≡ j $ (i $ v)
   apply-∘ j i {x}{v} = iso2 _ _ v
+
   assoc-∘i : ∀ {A : Set}{xs ys ws zs : List A} {f : Inj ws zs}{g : Inj _ ws}{h : Inj xs ys} -> f ∘i (g ∘i h) ≡ (f ∘i g) ∘i h  
   assoc-∘i {f = f}{g = g}{h = h} = quo-ext (λ x v → trans (cong (_$_ f) (iso2 _ _ v)) (sym (iso2 _ _ (h $ v))))
 

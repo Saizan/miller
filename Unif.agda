@@ -31,7 +31,7 @@ mutual
   ... | just (_ , σ , eq) = just (_ , σ , cong (con x) eq)
 
   unify (fun x xs) t with check x t 
-  unify (fun x xs) t | inj₁ x₁  = {!!} -- needs forget-MRTm
+  unify (fun x xs) .(sub (λ S v → mvar (thin x S v)) s) | inj₁ (s , refl) = {!!}
   unify (fun x xs) .(fun x j) | inj₂ (_ , j , [] , refl) = just (_ , (toSub (singleton x k)) , aux) where
     r = intersect xs j
     k = proj₁ (proj₂ r)
@@ -46,7 +46,6 @@ mutual
   unify _ _ = nothing
 
 
-  
   unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → Maybe (∃ \ G1 -> Σ (Sub Sg G G1) \ s -> subs s x ≡ subs s y)
   unifyTms [] [] = just (_ , ((λ S x → fun x (quo (λ _ x₁ → x₁) {λ _ e → e})) , refl))
   unifyTms (s ∷ xs) (t ∷ ys) with unify s t 
@@ -54,7 +53,8 @@ mutual
   ... | just (_ , σ , eq) with unifyTms (subs σ xs) (subs σ ys) 
   ... | nothing = nothing
   ... | just (_ , σ1 , eq1) = just (_ , ((λ S x → sub σ1 (σ S x)) , 
-    cong₂ _∷_ (trans (trans (sym (sub-∘ s)) (cong (sub σ1) eq)) (sub-∘ t)) (trans (trans (sym (subs-∘ xs)) eq1) (subs-∘ ys)))) -- XXX sub assoc
+    cong₂ _∷_ (trans (trans (sym (sub-∘ s)) (cong (sub σ1) eq)) (sub-∘ t)) (trans (trans (sym (subs-∘ xs)) eq1) (subs-∘ ys))))
+
 {-
 
 Bwd-len : ∀ {A : Set} → Bwd A → Nat
