@@ -1,4 +1,4 @@
-module Unif3 (Base : Set) where
+module Unif (Base : Set) where
 
 open import Data.Product renaming (map to mapΣ)
 open import Data.Nat renaming (ℕ to Nat)

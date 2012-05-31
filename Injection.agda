@@ -1,4 +1,4 @@
-module Injection2 where
+module Injection where
 
 open import Data.List hiding ([_])
 open import Relation.Binary.PropositionalEquality hiding ([_])
