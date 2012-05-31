@@ -18,6 +18,7 @@ open import Lists
 
 open import Syntax
 
+
 data DTm (Sg : Ctx)(G : MCtx)(D : Ctx) : Ty ⊎ Fwd Ty → Ctx → Ty ⊎ Fwd Ty → Set where
   lam : ∀ {S Ss B} → DTm Sg G D (inj₁ (S :> Ss ->> B)) (D <: S) (inj₁ (Ss ->> B))
   head : ∀ {S Ss} → (ts : Tms Sg G D Ss) → DTm Sg G D (inj₂ (S :> Ss)) D (inj₁ S)
@@ -31,10 +32,6 @@ data IList {I : Set}(T : I → I → Set) (i : I) : (j : I) → Set where
 
 Context : (Sg : Ctx)(G : MCtx)(DI : Ctx) (TI : Ty ⊎ Fwd Ty) → Ctx → Ty ⊎ Fwd Ty → Set
 Context Sg G DI TI DO TO = IList (\ i j → DTm Sg G (proj₁ i) (proj₂ i) (proj₁ j) (proj₂ j)) (DI , TI) (DO , TO)
-
-Term : (Sg : Ctx)(G : MCtx)(DI : Ctx) (TI : Ty ⊎ Fwd Ty) → Set
-Term Sg G D (inj₁ T) = Tm Sg G D T 
-Term Sg G D (inj₂ Ts) = Tms Sg G D Ts
 
 ∫once : ∀ {Sg G DI TI DO TO} → DTm Sg G DI TI DO TO → Term Sg G DO TO → Term Sg G DI TI
 ∫once lam t = lam t
@@ -61,8 +58,6 @@ mutual
     [] : MRTms Sg G D K i !> []
     _∷_ : {S : Ty}{Ss : Fwd Ty} → ∀ {x xs} →
            MRTm Sg G D K i S x → MRTms Sg G D K i Ss xs → MRTms Sg G D K i (S :> Ss) (x ∷ xs)
-
-
 
 
 _[_]OccursIn_ : ∀ {Sg G D D' T S} (u : G ∋ S) (j : Inj (ctx S) D') (t : Term Sg G D T) → Set

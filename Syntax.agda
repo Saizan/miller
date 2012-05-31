@@ -57,3 +57,8 @@ mutual
     [] : Tms Sg G D !>
     _∷_ : {S : Ty}{Ss : Fwd Ty} →
            (t : Tm Sg G D S) → (ts : Tms Sg G D Ss) → Tms Sg G D (S :> Ss)
+
+
+Term : (Sg : Ctx)(G : MCtx)(DI : Ctx) (TI : Ty ⊎ Fwd Ty) → Set
+Term Sg G D (inj₁ T) = Tm Sg G D T 
+Term Sg G D (inj₂ Ts) = Tms Sg G D Ts
