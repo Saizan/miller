@@ -97,4 +97,4 @@ mutual
 
 invertTm : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → MRProp ρ i t
              → Dec (∃ \ s → ren i s ≡ (sub (toSub ρ) t))
-invertTm i t ρ m = Dec.map′ forget (λ { (s , e)  → subst (RTm _ _ _ _ _ _ ) e (remember i s) }) (invertTm' i t ρ m)
+invertTm i t ρ m = Dec.map′ forget (λ p -> subst (RTm _ _ _ _ _ _ ) (proj₂ p) (remember i (proj₁ p))) (invertTm' i t ρ m)

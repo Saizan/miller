@@ -21,6 +21,46 @@ open import OccursCheck
 open import Purging
 open import Inversion
 
+flexSame : ∀ {Sg G D S} -> (u : G ∋ S) -> (i j : Inj (ctx S) D) -> ∃ \ G1 -> Σ (Sub Sg G G1) \ s -> ren {Sg} i (s _ u) ≡ ren j (s _ u)
+flexSame u i j = _ , σ , aux where
+    r = intersect i j
+    k = proj₁ (proj₂ r)
+    σ = (toSub (singleton u k))
+    aux : ren i (σ _ u) ≡ sub σ (fun u j)
+    aux rewrite thick-refl u = cong (fun zero) (proj₂ (proj₂ r))
+
+flexRigid : ∀ {Sg G D S} →
+               (u : G ∋ S) →
+               (i : Inj (ctx S) D) →
+               (s : Tm Sg (G - u) D (! type S)) → (∃ \ G1 -> Σ (MetaRen (G - u) G1) \ ρ -> MRProp ρ i s) ->
+               Maybe (∃ λ G1 → Σ (Sub Sg G G1) λ s₁ → ren i (s₁ S u) ≡ sub s₁ (sub (λ S₁ v → mvar (thin u S₁ v)) s))
+flexRigid u i s (G1 , ρ , m) with invertTm i s ρ m 
+flexRigid u i s (G1 , ρ , m) | no ¬p = nothing
+flexRigid {Sg} {G} u i s (G1 , ρ , m) | yes (t , eq) = just (G1 , (σ , 
+     trans (trans (cong (ren i) σx≡t') (trans eq (sub-ext σthiny≡toSubρy s))) (sym (sub-∘ s))))
+    where
+      σ : (S : MTy) → G ∋ S → Tm Sg G1 (ctx S) (! (type S))
+      σ S v with thick u v
+      σ S v | inj₁ (w , eq) = toSub ρ _ w
+      σ ._ .u | inj₂ refl = t
+      σx≡t' : σ _ u ≡ t
+      σx≡t' rewrite thick-refl u = refl
+      σthiny≡toSubρy : (S : MTy) (x₁ : G - u ∋ S) → toSub ρ _ x₁ ≡ sub σ (mvar (thin u S x₁))
+      σthiny≡toSubρy S y rewrite thick-thin u y | left-id (proj₂ (proj₂ (ρ S y))) = refl
+
+flexAny : ∀ {Sg G D S} -> (u : G ∋ S) -> (i : Inj (ctx S) D) -> (t : Tm Sg G D (! (type S))) 
+          -> Maybe (∃ \ G1 -> Σ (Sub Sg G G1) \ s -> sub s (fun u i) ≡ sub s t)
+flexAny u i t with check u t 
+flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (purge i s)
+flexAny u i .(fun u j) | inj₂ (G1 , j , [] , refl) = just (flexSame u i j)
+flexAny u i .(∫once x (∫ ps (fun u j))) | inj₂ (G1 , j , x ∷ ps , refl) = nothing
+
+Unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) -> Set
+Unify {Sg} {G} {D} {T} x y = (∃ \ G1 -> Σ (Sub Sg G G1) \ s -> sub s x ≡ sub s y)
+
+unify-comm : ∀ {Sg G D T} → (x y : Tm Sg G D T) -> Unify x y -> Unify y x
+unify-comm _ _ (G , σ , eq) = G , σ , sym eq
+ 
 {-# NO_TERMINATION_CHECK #-}
 mutual
   unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → Maybe (∃ \ G1 -> Σ (Sub Sg G G1) \ s -> sub s x ≡ sub s y)
@@ -29,32 +69,13 @@ mutual
   unify (con x xs) (con .x ys) | yes refl with unifyTms xs ys
   ... | nothing = nothing
   ... | just (_ , σ , eq) = just (_ , σ , cong (con x) eq)
-
-  unify (fun x xs) t with check x t 
-  unify (fun x xs) .(sub (λ S v → mvar (thin x S v)) s) | inj₁ (s , refl) with purge xs s
-  ... | (_ , ρ , m) with invertTm xs s ρ m
-  unify {Sg}{G}(fun x xs) .(sub _ s) | inj₁ (s , refl) | G1 , ρ , m | yes (t' , eq) = just (G1 , (σ , 
-     trans (trans (cong (ren xs) σx≡t') (trans eq (sub-ext {!σthiny≡toSubρy!} s))) (sym (sub-∘ s))))
-    where
-      σ : (S : MTy) → G ∋ S → Tm Sg G1 (ctx S) ([] ->> type S)
-      σ S v with thick x v
-      σ S v | inj₁ (w , eq) = toSub ρ _ w
-      σ ._ .x | inj₂ refl = t'
-      σx≡t' : σ _ x ≡ t'
-      σx≡t' rewrite thick-refl x = refl
-      σthiny≡toSubρy : (S : MTy) (x₁ : G - x ∋ S) →
-                     fun (proj₁ (proj₂ (ρ S x₁))) (proj₂ (proj₂ (ρ S x₁))) ≡
-                                            sub σ (fun (thin x S x₁) id-i)
-      σthiny≡toSubρy S y rewrite thick-thin x y | left-id (proj₂ (proj₂ (ρ S y))) = refl
-  unify (fun {type <<- ctx} x xs) .(sub _ s) | inj₁ (s , refl) | G1 , ρ , m | no ¬p = nothing
-  unify (fun x xs) .(fun x j) | inj₂ (_ , j , [] , refl) = just (_ , (toSub (singleton x k)) , aux) where
-    r = intersect xs j
-    k = proj₁ (proj₂ r)
-    aux : ren xs (toSub (singleton x k) _ x) ≡ sub (toSub (singleton x k)) (fun x j)
-    aux rewrite thick-refl x = cong (fun zero) (proj₂ (proj₂ r))
-  unify (fun x xs) .(∫once x₁ (∫ ps (fun x j))) | inj₂ (proj₁ , j , x₁ ∷ ps , refl) = nothing
-  unify s (fun y ys) = {!!} -- mirror
-  unify (var x xs) (var y ys) = {!!} -- like con
+  unify (fun x xs) t = flexAny x xs t
+  unify s (fun y ys) = unify-comm (fun y ys) s <$> flexAny y ys s
+  unify (var x xs) (var y ys) with eq-∋ (_ , x) (_ , y) 
+  ... | no _ = nothing
+  unify (var x xs) (var .x ys) | yes refl with unifyTms xs ys
+  ... | nothing = nothing
+  ... | just (_ , σ , eq) = just (_ , σ , cong (var x) eq)
   unify (lam x) (lam y) with unify x y
   ... | nothing = nothing
   ... | just (_ , σ , eq) = just (_ , σ , cong lam eq)
