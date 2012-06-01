@@ -87,11 +87,6 @@ cong-∷[] : ∀ {A : Set}{xs : List A}{y} {ys : List A} {i j : y ∈ xs} -> i �
            i ∷ is [ pf1 ] ≡ j ∷ js [ pf2 ]
 cong-∷[] {i = i} refl {is} refl {pf1} {pf2}  = cong (λ pf → i ∷ is [ pf ]) (proof-irr-∉ i is pf1 pf2)
 
-cong-proj₂ : ∀ {A : Set}{B : A -> Set} {x y : A} (eq : x ≡ y) {b1 : B x}{b2 : B y} -> subst B eq b1 ≡ b2 -> (x , b1) ≡ (y , b2)
-cong-proj₂ refl refl = refl
-
-get-proj₂ : ∀ {A : Set}{B : A -> Set} {x : A}{b1 b2 : B x} -> _,_  {A = A} {B = B} x b1 ≡ (x , b2) -> b1 ≡ b2
-get-proj₂ refl = refl
 mkFalse : ∀ {P : Set} -> (P -> ⊥) -> ∀ {d : Dec P} -> False d
 mkFalse ¬p {yes p} = ¬p p
 mkFalse ¬p {no ¬p₁} = tt 
@@ -99,28 +94,22 @@ mkFalse ¬p {no ¬p₁} = tt
 quo' : ∀ {A : Set} {xs ys} -> (f : ∀ (x : A) -> x ∈ xs -> x ∈ ys){inj : ∀ x -> {i j : x ∈ xs} -> f x i ≡ f x j -> i ≡ j} -> 
     Σ (ys ⊇ xs) \ is -> (∀ x (i : x ∈ ys) -> (∀ y j -> False (eq-∋ (_ , i) (_ , f y j))) -> (i ∉ is))
 quo' {_} {[]} f {inj} = [] , (λ x i x₁ → _)
-quo' {_} {x ∷ xs} f {inj} = is , proof 
-  module quo'-lemmas where
-   rec = (quo' {_}{xs} (λ x₁ x₂ → f x₁ (suc x₂)) {(λ x₁ x₂ → suc-inj1 (inj x₁ x₂))})
+quo' {_} {x ∷ xs} f {inj} = is , proof where
+   rec = (quo' {_} {xs} (λ x₁ x₂ → f x₁ (suc x₂)) {(λ x₁ x₂ → suc-inj1 (inj x₁ x₂))})
    abstract
-    pf : f x zero ∉
-      proj₁
-      (quo' (λ x₁ x₂ → f x₁ (suc x₂))
-       {(λ x₁ x₂ → suc-inj1 (inj x₁ x₂))})
-    pf = proj₂ rec x (f x (zero)) (λ y j → mkFalse (lemmma y j))
-  
+    pf : f x zero ∉ proj₁ (quo' (λ x₁ x₂ → f x₁ (suc x₂)) {(λ x₁ x₂ → suc-inj1 (inj x₁ x₂))})
+    pf = proj₂ rec x (f x zero) (λ y j → mkFalse (lemmma y j))  
       where lemmma : ∀ y j -> (x , f x zero) ≡ (y , f y (suc j)) -> ⊥
             lemmma y j eq with cong proj₁ eq
             lemmma .x j eq | refl with f x zero | inj x {zero} {suc j}  
             lemmma ._ j refl | refl | .(f x (suc j)) | q with q refl 
             ... | ()
-   is = ((f x zero) ∷ proj₁ rec [ pf ])
+   is = f x zero ∷ proj₁ rec [ pf ]
   
    proof : (∀ x i -> (∀ y j -> False (eq-∋ (_ , i) (_ , f y j))) -> (i ∉ is))
    proof z i e = e x zero , (proj₂ rec z i (λ y j → e y (suc j)))
 
-quo : ∀ {A : Set} {xs ys} -> (f : ∀ (x : A) -> x ∈ xs -> x ∈ ys){inj : ∀ x -> {i j : x ∈ xs} -> f x i ≡ f x j -> i ≡ j} -> 
-    (ys ⊇ xs)
+quo : ∀ {A : Set} {xs ys} -> (f : ∀ (x : A) -> x ∈ xs -> x ∈ ys){inj : ∀ x -> {i j : x ∈ xs} -> f x i ≡ f x j -> i ≡ j} -> (ys ⊇ xs)
 quo f {inj} = proj₁ (quo' f {inj})
 
 quo-ext : ∀ {A : Set} {xs ys} -> {f : ∀ (x : A) -> x ∈ xs -> x ∈ ys}{injf : ∀ x -> {i j : x ∈ xs} -> f x i ≡ f x j -> i ≡ j} ->
