@@ -120,3 +120,13 @@ mutual
   subs-∘ [] = refl
   subs-∘ (t ∷ t₁) = cong₂ _∷_ (sub-∘ t) (subs-∘ t₁)
 
+mutual
+  sub-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} -> (∀ S x -> f S x ≡ g S x) -> (t : Tm Sg G1 D T) -> sub f t ≡ sub g t
+  sub-ext q (con c ts) = cong (con c) (subs-ext q ts)
+  sub-ext q (fun u j) = cong (ren j) (q _ u)
+  sub-ext q (var x ts) = cong (var x) (subs-ext q ts)
+  sub-ext q (lam t) = cong lam (sub-ext q t)
+
+  subs-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} -> (∀ S x -> f S x ≡ g S x) -> (t : Tms Sg G1 D T) -> subs f t ≡ subs g t
+  subs-ext q [] = refl
+  subs-ext q (t ∷ ts) = cong₂ _∷_ (sub-ext q t) (subs-ext q ts)

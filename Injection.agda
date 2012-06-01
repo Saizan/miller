@@ -40,6 +40,11 @@ thick-refl : ∀ {A}{G : List A}{S} → (x : G ∋ S) → thick x x ≡ inj₂ r
 thick-refl zero = refl
 thick-refl (suc x) rewrite thick-refl x = refl
 
+thick-thin : ∀ {A}{G : List A}{S T} (x : G ∋ S) → (y : (G - x) ∋ T) -> thick x (thin x T y) ≡ inj₁ (y , refl)
+thick-thin zero y = refl
+thick-thin (suc x) zero = refl
+thick-thin (suc x) (suc y) rewrite thick-thin x y = refl
+
 _∈_ : {A : Set} -> A -> List A  -> Set
 _∈_ x xs = xs ∋ x
 
@@ -194,6 +199,9 @@ abstract
 
   right-id : ∀ {A : Set}{xs ys : List A} -> (i : Inj xs ys) -> i ∘i id-i ≡ i
   right-id i = trans (quo-ext (λ x v → cong (_$_ i) (iso2 _ _ v))) (iso1 i (λ x eq → injective i _ _ eq))
+
+  left-id : ∀ {A : Set}{xs ys : List A} -> (i : Inj xs ys) -> id-i ∘i i ≡ i
+  left-id i = trans (quo-ext (λ x v → (iso2 _ _ (i $ v)))) (iso1 i (λ x eq → injective i _ _ eq))
 
   apply-∘ : ∀ {A : Set}{xs ys zs : List A} -> (j : zs ⊇ ys) -> (i : ys ⊇ xs) -> ∀ {x} {v : x ∈ xs} -> (j ∘i i) $ v ≡ j $ (i $ v)
   apply-∘ j i {x}{v} = iso2 _ _ v

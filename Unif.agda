@@ -31,7 +31,22 @@ mutual
   ... | just (_ , σ , eq) = just (_ , σ , cong (con x) eq)
 
   unify (fun x xs) t with check x t 
-  unify (fun x xs) .(sub (λ S v → mvar (thin x S v)) s) | inj₁ (s , refl) = {!!}
+  unify (fun x xs) .(sub (λ S v → mvar (thin x S v)) s) | inj₁ (s , refl) with purge xs s
+  ... | (_ , ρ , m) with invertTm xs s ρ m
+  unify {Sg}{G}(fun x xs) .(sub _ s) | inj₁ (s , refl) | G1 , ρ , m | yes (t' , eq) = just (G1 , (σ , 
+     trans (trans (cong (ren xs) σx≡t') (trans eq (sub-ext {!σthiny≡toSubρy!} s))) (sym (sub-∘ s))))
+    where
+      σ : (S : MTy) → G ∋ S → Tm Sg G1 (ctx S) ([] ->> type S)
+      σ S v with thick x v
+      σ S v | inj₁ (w , eq) = toSub ρ _ w
+      σ ._ .x | inj₂ refl = t'
+      σx≡t' : σ _ x ≡ t'
+      σx≡t' rewrite thick-refl x = refl
+      σthiny≡toSubρy : (S : MTy) (x₁ : G - x ∋ S) →
+                     fun (proj₁ (proj₂ (ρ S x₁))) (proj₂ (proj₂ (ρ S x₁))) ≡
+                                            sub σ (fun (thin x S x₁) id-i)
+      σthiny≡toSubρy S y rewrite thick-thin x y | left-id (proj₂ (proj₂ (ρ S y))) = refl
+  unify (fun {type <<- ctx} x xs) .(sub _ s) | inj₁ (s , refl) | G1 , ρ , m | no ¬p = nothing
   unify (fun x xs) .(fun x j) | inj₂ (_ , j , [] , refl) = just (_ , (toSub (singleton x k)) , aux) where
     r = intersect xs j
     k = proj₁ (proj₂ r)
