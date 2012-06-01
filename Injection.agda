@@ -138,20 +138,24 @@ fromFalse : ∀ {P : Set} {d : Dec P} -> False d -> P -> ⊥
 fromFalse {P} {yes p} ()
 fromFalse {P} {no ¬p} _ = ¬p
 
-quux : ∀ {A : Set} {xs ys : List A} -> (f : ys ⊇ xs) -> ∀ {x} (i : x ∈ ys) -> i ∉ f -> ∀ b -> i ≡ f $ b -> ⊥
-quux (i₁ ∷ f [ pf ]) .i₁ i∉f zero refl = fromFalse (proj₁ i∉f) refl
-quux (i₁ ∷ f [ pf ]) i i∉f (suc b) eq = quux f i (proj₂ i∉f) b eq
-quux [] _ _ () _
+_∉Im_ : ∀ {A : Set} {xs ys : List A} -> ∀ {x} (i : x ∈ ys) -> (f : ys ⊇ xs) -> Set
+i ∉Im f = ∀ b -> ¬ i ≡ f $ b
+  
+∉-∉Im : ∀ {A : Set} {xs ys : List A} -> (f : ys ⊇ xs) -> ∀ {x} (i : x ∈ ys) -> i ∉ f -> i ∉Im f
+∉-∉Im (i₁ ∷ f [ pf ]) .i₁ i∉f zero refl = fromFalse (proj₁ i∉f) refl
+∉-∉Im (i₁ ∷ f [ pf ]) i i∉f (suc b) eq = ∉-∉Im f i (proj₂ i∉f) b eq
+∉-∉Im [] _ _ () _
 
-naaz' : ∀ {A : Set} {xs ys : List A} -> (f : ys ⊇ xs) -> ∀ {x} (i : x ∈ ys) -> (∀ {y} (b : y ∈ xs) -> (x , i) ≡ (y , f $ b) -> ⊥) -> i ∉ f 
-naaz' [] i ¬p = _
-naaz' (i ∷ f [ pf ]) i₁ ¬p = (mkFalse (λ x → ¬p zero x)) , naaz' f i₁ (λ b x → ¬p (suc b) x)
-
+∉Im-∉ : ∀ {A : Set} {xs ys : List A} -> (f : ys ⊇ xs) -> ∀ {x} (i : x ∈ ys) -> i ∉Im f -> i ∉ f
+∉Im-∉ [] _ _ = _
+∉Im-∉ {_}{x ∷ _} {ys} (i ∷ f [ pf ]) {t} i₁ ¬p = mkFalse (aux i pf ¬p) , ∉Im-∉ f i₁ (λ b x → ¬p (suc b) x)
+    where aux : ∀ {x} (i : ys ∋ x) pf -> i₁ ∉Im (i ∷ f [ pf ]) -> (t , i₁) ≡ (x , i) → ⊥
+          aux .i₁ pf₁ ¬Im refl = ¬Im zero refl
 
 injective : ∀ {A : Set} {xs ys : List A} -> (f : ys ⊇ xs) -> ∀ {x} -> (a b : x ∈ xs) -> f $ a ≡ f $ b -> a ≡ b
 injective f zero zero eq = refl
-injective (i ∷ f [ pf ]) zero (suc b) eq = ⊥-elim (quux f i pf b eq)
-injective (i ∷ f [ pf ]) (suc a₁) zero eq = ⊥-elim (quux f i pf a₁ (sym eq))
+injective (i ∷ f [ pf ]) zero (suc b) eq = ⊥-elim (∉-∉Im f i pf b eq)
+injective (i ∷ f [ pf ]) (suc a₁) zero eq = ⊥-elim (∉-∉Im f i pf a₁ (sym eq))
 injective (i ∷ f [ pf ]) (suc a₁) (suc b) eq = cong suc (injective f a₁ b eq)
 
 iso1 : ∀ {A : Set} {xs ys : List A} -> (f : ys ⊇ xs) -> (inj : _) -> proj₁ (quo' (\ x v -> f $ v) {inj}) ≡ f
@@ -162,6 +166,10 @@ iso2 : ∀ {A : Set} {xs ys : List A} -> (f : ∀ (x : A) -> x ∈ xs -> x ∈ y
          -> ∀ {x} (v : x ∈ xs) -> proj₁ (quo' f {inj}) $ v ≡ f x v
 iso2 f inj zero = refl
 iso2 f inj (suc v) = iso2 (λ x₁ x₂ → f x₁ (suc x₂)) (λ x₁ x₂ → suc-inj1 (inj x₁ x₂)) v
+
+∉Im$-∉ : ∀ {A : Set} {xs ys : List A} (f : ∀ x (v : x ∈ xs) -> x ∈ ys){inj} 
+     -> ∀ {x} (i : x ∈ ys) -> (∀ (b : x ∈ xs) -> i ≡ f x b -> ⊥) -> i ∉ (quo f {inj}) 
+∉Im$-∉ f {inj} i eq = ∉Im-∉ (quo f {inj}) i (λ b x → eq b (trans x ((iso2 f inj b))))
 
 invert : ∀ {A : Set} {xs ys : List A} (i : ys ⊇ xs) -> ∀ {t} (y : ys ∋ t) -> Dec (∃ \ x -> (i $ x) ≡ y) 
 invert [] x = no (λ { (() , _)})
@@ -174,22 +182,6 @@ invert (i ∷ f [ pf ]) y₁ | no ¬p₁ | no ¬p = no (lemmi ¬p₁ ¬p) where
     lemmi ¬1 ¬2 (zero , p) = ¬1 (cong (_,_ _) p)
     lemmi ¬1 ¬2 (suc n , p) = ¬2 (n , p)
 
-naaz : ∀ {A : Set} {xs ys : List A} (f : ∀ x (v : x ∈ xs) -> x ∈ ys){inj} 
-     -> ∀ {x} (i : x ∈ ys) -> (∀ {y} (b : y ∈ xs) -> (x , i) ≡ (y , f y b) -> ⊥) -> i ∉ (quo f {inj}) 
-naaz f {inj} i eq = naaz' (quo f {inj}) i (λ b x → eq b (trans x (cong-proj₂ refl (iso2 f inj b))))
-
-naaaz : ∀ {A : Set} {xs ys : List A} (f : ∀ x (v : x ∈ xs) -> x ∈ ys){inj} 
-     -> ∀ {x} (i : x ∈ ys) -> (∀ (b : x ∈ xs) -> i ≡ f x b -> ⊥) -> i ∉ (quo f {inj})
-naaaz f {x = x} i p = naaz f i ¬p where
-  ¬p : {y : _} (b : _ ∋ y) → (x , i) ≡ (y , f y b) → ⊥
-  ¬p b eq with cong proj₁ eq
-  ... | refl = p b (get-proj₂ eq)
-
-naaaaz : ∀ {A : Set} {xs ys : List A} -> (f : ys ⊇ xs) -> ∀ {x} (i : x ∈ ys) -> (∀ (b : x ∈ xs) -> i ≡ f $ b -> ⊥) -> i ∉ f
-naaaaz f {x} i ¬p = naaz' f i aux where
-  aux : {y : _} (b : _ ∋ y) → (x , i) ≡ (y , f $ b) → ⊥
-  aux b eq with cong proj₁ eq
-  ... | refl = ¬p b (get-proj₂ eq)
 abstract
   _∘i_ : ∀ {A : Set}{xs ys zs : List A} -> zs ⊇ ys -> ys ⊇ xs -> zs ⊇ xs
   f ∘i g = proj₁ (quo' (λ x x₁ → f $ (g $ x₁)) {(λ x x₁ → injective g _ _ (injective f _ _ x₁))})
@@ -224,11 +216,13 @@ abstract
   lemma i z = quo-ext (λ x₁ v → cong (_$_ i) (iso2 z _ v))
 
   cons : ∀ {A : Set}{x : A}{xs ys} -> ys ⊇ xs -> x ∷ ys ⊇ x ∷ xs
-  cons z = (zero ∷ weak z [ naaz (λ x x₁ → suc (z $ x₁)) zero (λ { _ ()}) ])
+  cons z = (zero ∷ weak z [ ∉Im$-∉ (λ x x₁ → suc (z $ x₁)) zero (λ {_ ()}) ])
 
   cons-∘i : ∀ {A : Set}{xs ys zs : List A}{x} -> (j : zs ⊇ ys) -> (i : ys ⊇ xs) -> cons {A} {x} (j ∘i i) ≡ cons j ∘i cons i
-  cons-∘i j i = cong-∷[] refl (trans (quo-ext {injg = λ x x₁ → injective i _ _ (injective (weak j) _ _ x₁)}(λ x v → trans (cong suc (iso2 _ _ v)) (sym (iso2 _ _ (i $ v))))) 
+  cons-∘i j i = cong-∷[] refl (trans (quo-ext {injg = λ x x₁ → injective i _ _ (injective (weak j) _ _ x₁)} (λ x v → 
+              trans (cong suc (iso2 _ _ v)) (sym (iso2 _ _ (i $ v))))) 
               (sym (lemma  (cons j) (λ _ x → suc (i $ x))))) 
+
   intersect : ∀ {A : Set} {xs ys : List A} -> (i j : ys ⊇ xs) -> ∃ \ ts -> Σ (xs ⊇ ts) \ r -> (i ∘i r) ≡ (j ∘i r)
   intersect [] [] = [] , ([] , refl)
   intersect (i ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) with intersect f g | eq-∋ (_ , i) (_ , i₁) 
@@ -241,7 +235,7 @@ abstract
   purje i [] = [] , ([] , ([] , refl))
   purje i (v ∷ j [ pf ]) with purje i j | invert i v
   purje i (.(i $ x) ∷ j [ pf ]) | (Dr , h , k , eq) | yes (x , refl) 
-        = (_ ∷ Dr) , (cons h , ((x ∷ k [ naaaaz k x (λ b x≡k$b → quux j (i $ x) pf (h $ b)
+        = (_ ∷ Dr) , (cons h , ((x ∷ k [ ∉Im-∉ k x (λ b x≡k$b → ∉-∉Im j (i $ x) pf (h $ b)
                                                                  (trans (cong (_$_ i) x≡k$b) (cong-$ eq b))) ]) , 
                      (cong-∷[] refl (trans (trans (quo-ext (λ x₁ v → refl)) eq) (sym (lemma ((i $ x) ∷ j [ pf ]) _))))))
 
