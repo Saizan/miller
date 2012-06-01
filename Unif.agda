@@ -21,7 +21,7 @@ open import OccursCheck
 open import Purging
 open import Inversion
 
-flexSame : ∀ {Sg G D S} -> (u : G ∋ S) -> (i j : Inj (ctx S) D) -> ∃ \ G1 -> Σ (Sub Sg G G1) \ s -> ren {Sg} i (s _ u) ≡ ren j (s _ u)
+flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃ \ G1 → Σ (Sub Sg G G1) \ s → ren {Sg} i (s _ u) ≡ ren j (s _ u)
 flexSame u i j = _ , σ , aux where
     r = intersect i j
     k = proj₁ (proj₂ r)
@@ -32,7 +32,7 @@ flexSame u i j = _ , σ , aux where
 flexRigid : ∀ {Sg G D S} →
                (u : G ∋ S) →
                (i : Inj (ctx S) D) →
-               (s : Tm Sg (G - u) D (! type S)) → (∃ \ G1 -> Σ (MetaRen (G - u) G1) \ ρ -> MRProp ρ i s) ->
+               (s : Tm Sg (G - u) D (! type S)) → (∃ \ G1 → Σ (MetaRen (G - u) G1) \ ρ → MRProp ρ i s) ->
                Maybe (∃ λ G1 → Σ (Sub Sg G G1) λ s₁ → ren i (s₁ S u) ≡ sub s₁ (sub (λ S₁ v → mvar (thin u S₁ v)) s))
 flexRigid u i s (G1 , ρ , m) with invertTm i s ρ m 
 flexRigid u i s (G1 , ρ , m) | no ¬p = nothing
@@ -48,22 +48,22 @@ flexRigid {Sg} {G} u i s (G1 , ρ , m) | yes (t , eq) = just (G1 , (σ ,
       σthiny≡toSubρy : (S : MTy) (x₁ : G - u ∋ S) → toSub ρ _ x₁ ≡ sub σ (mvar (thin u S x₁))
       σthiny≡toSubρy S y rewrite thick-thin u y | left-id (proj₂ (proj₂ (ρ S y))) = refl
 
-flexAny : ∀ {Sg G D S} -> (u : G ∋ S) -> (i : Inj (ctx S) D) -> (t : Tm Sg G D (! (type S))) 
-          -> Maybe (∃ \ G1 -> Σ (Sub Sg G G1) \ s -> sub s (fun u i) ≡ sub s t)
+flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) 
+          → Maybe (∃ \ G1 → Σ (Sub Sg G G1) \ s → sub s (fun u i) ≡ sub s t)
 flexAny u i t with check u t 
 flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (purge i s)
 flexAny u i .(fun u j) | inj₂ (G1 , j , [] , refl) = just (flexSame u i j)
 flexAny u i .(∫once x (∫ ps (fun u j))) | inj₂ (G1 , j , x ∷ ps , refl) = nothing
 
-Unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) -> Set
-Unify {Sg} {G} {D} {T} x y = (∃ \ G1 -> Σ (Sub Sg G G1) \ s -> sub s x ≡ sub s y)
+Unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → Set
+Unify {Sg} {G} {D} {T} x y = (∃ \ G1 → Σ (Sub Sg G G1) \ s → sub s x ≡ sub s y)
 
-unify-comm : ∀ {Sg G D T} → (x y : Tm Sg G D T) -> Unify x y -> Unify y x
+unify-comm : ∀ {Sg G D T} → (x y : Tm Sg G D T) → Unify x y → Unify y x
 unify-comm _ _ (G , σ , eq) = G , σ , sym eq
  
 {-# NO_TERMINATION_CHECK #-}
 mutual
-  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → Maybe (∃ \ G1 -> Σ (Sub Sg G G1) \ s -> sub s x ≡ sub s y)
+  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → Maybe (∃ \ G1 → Σ (Sub Sg G G1) \ s → sub s x ≡ sub s y)
   unify (con x xs) (con y ys) with eq-∋ (_ , x) (_ , y) 
   ... | no _ = nothing
   unify (con x xs) (con .x ys) | yes refl with unifyTms xs ys
@@ -82,7 +82,7 @@ mutual
   unify _ _ = nothing
 
 
-  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → Maybe (∃ \ G1 -> Σ (Sub Sg G G1) \ s -> subs s x ≡ subs s y)
+  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → Maybe (∃ \ G1 → Σ (Sub Sg G G1) \ s → subs s x ≡ subs s y)
   unifyTms [] [] = just (_ , ((λ S x → fun x (quo (λ _ x₁ → x₁) {λ _ e → e})) , refl))
   unifyTms (s ∷ xs) (t ∷ ys) with unify s t 
   ... | nothing = nothing

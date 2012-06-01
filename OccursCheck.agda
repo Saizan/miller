@@ -23,7 +23,7 @@ mutual
   data MRTm (Sg : Ctx)(G : MCtx)(D : Ctx)(K : MCtx) (i : ∀ S → G ∋ S → K ∋ S) : (T : Ty) → Tm Sg K D T → Set where
     con : {Ss : Fwd Ty}{B : Base} →
           (c : Sg ∋ (Ss ->> B)) → ∀ {tms} → (MRTms Sg G D K i Ss tms) → MRTm Sg G D K i (! B) (con c tms)
-    fun : {Ss : Bwd Ty}{B : Base} ->
+    fun : {Ss : Bwd Ty}{B : Base} →
               (u : G ∋ (B <<- Ss)) → (j : Inj Ss D) → ∀ {v} → i _ u ≡ v → MRTm Sg G D K i (! B) (fun v j)
     var : forall {Ss B} → (x : D ∋ (Ss ->> B)) → ∀ {tms} → MRTms Sg G D K i Ss tms → MRTm Sg G D K i (! B) (var x tms)
     lam : {S : Ty}{Ss : Fwd Ty}{B : Base} → ∀ {b} →
@@ -34,17 +34,17 @@ mutual
     _∷_ : {S : Ty}{Ss : Fwd Ty} → ∀ {x xs} →
            MRTm Sg G D K i S x → MRTms Sg G D K i Ss xs → MRTms Sg G D K i (S :> Ss) (x ∷ xs)
 
-mvar : ∀ {Sg}{G T} -> T ∈ G -> Tm Sg G (ctx T) (! (type T))
+mvar : ∀ {Sg}{G T} → T ∈ G → Tm Sg G (ctx T) (! (type T))
 mvar u = fun u id-i
 
 mutual
-  forget : ∀ {Sg G D K T}{i}{t} -> MRTm Sg G D K i T t -> ∃ \ s -> sub (\ s v -> mvar (i s v)) s ≡ t
+  forget : ∀ {Sg G D K T}{i}{t} → MRTm Sg G D K i T t → ∃ \ s → sub (\ s v → mvar (i s v)) s ≡ t
   forget (con c ts) = mapΣ (con c) (cong (con c)) (forgets ts)
   forget (fun u j refl) = (fun u j) , cong (fun _) (right-id j)
   forget (var x ts) = mapΣ (var x) (cong (var x)) (forgets ts)
   forget (lam t) = mapΣ lam (cong lam) (forget t)
   
-  forgets : ∀ {Sg G D K T}{i}{t} -> MRTms Sg G D K i T t -> ∃ \ s -> subs (\ s v -> mvar (i s v)) s ≡ t
+  forgets : ∀ {Sg G D K T}{i}{t} → MRTms Sg G D K i T t → ∃ \ s → subs (\ s v → mvar (i s v)) s ≡ t
   forgets [] = [] , refl
   forgets (t ∷ ts) = proj₁ (forget t) ∷ proj₁ (forgets ts) , (cong₂ _∷_ (proj₂ (forget t)) (proj₂ (forgets ts)))
 
@@ -100,5 +100,5 @@ mutual
   ... | _ | inj₂ xs = inj₂ (map-occ (tail t) xs)
 
 
-check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → (∃ \ s -> sub (\ S v -> mvar (thin u S v)) s ≡ t) ⊎ u OccursIn t
-check u t = Data.Sum.map forget (\ x -> x) (check' u t)
+check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → (∃ \ s → sub (\ S v → mvar (thin u S v)) s ≡ t) ⊎ u OccursIn t
+check u t = Data.Sum.map forget (\ x → x) (check' u t)

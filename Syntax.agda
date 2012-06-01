@@ -46,7 +46,7 @@ mutual
   data Tm (Sg : Ctx)(G : MCtx)(D : Ctx) : Ty → Set where
     con : {Ss : Fwd Ty}{B : Base} →
           (c : Sg ∋ (Ss ->> B)) → (ts : Tms Sg G D Ss) → Tm Sg G D (! B)
-    fun : {S : MTy} ->
+    fun : {S : MTy} →
           (u : G ∋ S) → (j : Inj (ctx S) D) → Tm Sg G D (! (type S))
     var : forall {Ss B} → 
           (x : D ∋ (Ss ->> B)) → (ts : Tms Sg G D Ss) → Tm Sg G D (! B)
@@ -88,45 +88,45 @@ mutual
   subs s (x ∷ ts) = sub s x ∷ subs s ts
 
 mutual
-  ren-∘ : ∀ {Sg G1 D1 D2 D3 T} {j : Inj D2 D3} {i : Inj D1 D2} (t : Tm Sg G1 D1 T) -> ren (j ∘i i) t ≡ ren j (ren i t)
+  ren-∘ : ∀ {Sg G1 D1 D2 D3 T} {j : Inj D2 D3} {i : Inj D1 D2} (t : Tm Sg G1 D1 T) → ren (j ∘i i) t ≡ ren j (ren i t)
   ren-∘ (con c ts) = cong (con c) (rens-∘ ts)
   ren-∘ (fun u j₁) = cong (fun u) (sym assoc-∘i)
   ren-∘ (var x ts) = cong₂ var (apply-∘ _ _) (rens-∘ ts)
   ren-∘ (lam t) = cong lam (trans (cong (λ k → ren k t) (cons-∘i _ _)) (ren-∘ t))
   
-  rens-∘ : ∀ {Sg G1 D1 D2 D3 T} {j : Inj D2 D3} {i : Inj D1 D2} (t : Tms Sg G1 D1 T) -> rens (j ∘i i) t ≡ rens j (rens i t)
+  rens-∘ : ∀ {Sg G1 D1 D2 D3 T} {j : Inj D2 D3} {i : Inj D1 D2} (t : Tms Sg G1 D1 T) → rens (j ∘i i) t ≡ rens j (rens i t)
   rens-∘ [] = refl
   rens-∘ (t ∷ ts) = cong₂ _∷_ (ren-∘ t) (rens-∘ ts)
 
 mutual
-  sub-nat : ∀ {Sg G1 G2 D1 D2 T} {f : Sub Sg G1 G2} {i : Inj D1 D2} (t : Tm Sg G1 D1 T) -> sub f (ren i t) ≡ ren i (sub f t)
+  sub-nat : ∀ {Sg G1 G2 D1 D2 T} {f : Sub Sg G1 G2} {i : Inj D1 D2} (t : Tm Sg G1 D1 T) → sub f (ren i t) ≡ ren i (sub f t)
   sub-nat (con c ts) = cong (con c) (sub-nats ts)
   sub-nat (fun u j) = ren-∘ _
   sub-nat (var x ts) = cong (var _) (sub-nats ts)
   sub-nat (lam t) = cong lam (sub-nat t)
   
-  sub-nats : ∀ {Sg G1 G2 D1 D2 T} {f : Sub Sg G1 G2} {i : Inj D1 D2} (t : Tms Sg G1 D1 T) -> subs f (rens i t) ≡ rens i (subs f t)
+  sub-nats : ∀ {Sg G1 G2 D1 D2 T} {f : Sub Sg G1 G2} {i : Inj D1 D2} (t : Tms Sg G1 D1 T) → subs f (rens i t) ≡ rens i (subs f t)
   sub-nats [] = refl
   sub-nats (t ∷ ts) = cong₂ _∷_ (sub-nat t) (sub-nats ts)
 
 mutual
-  sub-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tm Sg G1 D T) -> sub f (sub g t) ≡ sub (\ _ t -> sub f (g _ t)) t
+  sub-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tm Sg G1 D T) → sub f (sub g t) ≡ sub (\ _ t → sub f (g _ t)) t
   sub-∘ (con c ts) = cong (con c) (subs-∘ ts)
   sub-∘ {g = g} (fun u j) = sub-nat (g _ u)
   sub-∘ (var x ts) = cong (var x) (subs-∘ ts)
   sub-∘ (lam t) = cong lam (sub-∘ t)
   
-  subs-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tms Sg G1 D T) -> subs f (subs g t) ≡ subs (\ _ t -> sub f (g _ t)) t
+  subs-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tms Sg G1 D T) → subs f (subs g t) ≡ subs (\ _ t → sub f (g _ t)) t
   subs-∘ [] = refl
   subs-∘ (t ∷ t₁) = cong₂ _∷_ (sub-∘ t) (subs-∘ t₁)
 
 mutual
-  sub-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} -> (∀ S x -> f S x ≡ g S x) -> (t : Tm Sg G1 D T) -> sub f t ≡ sub g t
+  sub-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → (∀ S x → f S x ≡ g S x) → (t : Tm Sg G1 D T) → sub f t ≡ sub g t
   sub-ext q (con c ts) = cong (con c) (subs-ext q ts)
   sub-ext q (fun u j) = cong (ren j) (q _ u)
   sub-ext q (var x ts) = cong (var x) (subs-ext q ts)
   sub-ext q (lam t) = cong lam (sub-ext q t)
 
-  subs-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} -> (∀ S x -> f S x ≡ g S x) -> (t : Tms Sg G1 D T) -> subs f t ≡ subs g t
+  subs-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → (∀ S x → f S x ≡ g S x) → (t : Tms Sg G1 D T) → subs f t ≡ subs g t
   subs-ext q [] = refl
   subs-ext q (t ∷ ts) = cong₂ _∷_ (sub-ext q t) (subs-ext q ts)

@@ -5,9 +5,9 @@ open import Data.List public using (List; []; _∷_)
 {-
 data Fwd (X : Set) : Set where
   !> : Fwd X
-  _:>_ : X -> Fwd X -> Fwd X
+  _:>_ : X → Fwd X → Fwd X
 -}
-Fwd : Set -> Set
+Fwd : Set → Set
 Fwd = List
 
 pattern !> = []
@@ -18,9 +18,9 @@ infixr 50 _:>_
 {-
 data Bwd (X : Set) : Set where
   <! : Bwd X
-  _<:_ : Bwd X -> X -> Bwd X
+  _<:_ : Bwd X → X → Bwd X
 -}
-Bwd : Set -> Set
+Bwd : Set →  Set
 Bwd = List
 pattern <! = []
 pattern _<:_ xs x = x ∷ xs

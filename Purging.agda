@@ -29,7 +29,7 @@ f ∘mr g = λ S x → let gr = g S x; Ψ = proj₁ gr; v = proj₁ (proj₂ gr)
                       fr = f _ v; fΨ = proj₁ fr; fv = proj₁ (proj₂ fr); fj = proj₂ (proj₂ fr)  in
                   fΨ , (fv , j ∘i fj)
 
-singleton : ∀ {G S} → (u : G ∋ S) → ∀ {Ψ} → Inj Ψ (ctx S) -> MetaRen G ((G - u) <: (type S <<- Ψ))
+singleton : ∀ {G S} → (u : G ∋ S) → ∀ {Ψ} → Inj Ψ (ctx S) → MetaRen G ((G - u) <: (type S <<- Ψ))
 singleton u j T v with thick u v
 singleton {G} {type <<- ctx} u j T v | inj₁ x = _ , ((suc (proj₁ x)) , (quo (λ _ x₁ → x₁) {λ _ e → e}))
 singleton {G} {type <<- ctx} .v j .(type <<- ctx) v | inj₂ refl = _ , (zero , j) 
@@ -76,7 +76,7 @@ mutual
 {-# NO_TERMINATION_CHECK #-}
 mutual
   
-  purge : ∀ {Sg G D1 D2 T} -> (i : Inj D1 D2) -> (t : Tm Sg G D2 T) -> (∃ \ G1 -> Σ (MetaRen G G1) \ ρ -> MRProp ρ i t)
+  purge : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → (∃ \ G1 → Σ (MetaRen G G1) \ ρ → MRProp ρ i t)
   purge i (con c ts) = purges i ts
   purge i (fun u j) = _ , (singleton u (proj₁ (proj₂ r)) , aux) where
     r = purje i j
@@ -91,8 +91,8 @@ mutual
   purge i (var x ts) = purges i ts
   purge i (lam t) = purge (cons i) t
 
-  purges : ∀ {Sg G D1 D2 T} -> (i : Inj D1 D2) -> (t : Tms Sg G D2 T) -> (∃ \ G1 -> Σ (MetaRen G G1) \ ρ -> MRProps ρ i t)
-  purges {Sg}{G} i [] = G , (λ S x → _ , (x , (quo (λ x₁ x₂ → x₂) {\ _ eq -> eq}))) , tt
+  purges : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → (∃ \ G1 → Σ (MetaRen G G1) \ ρ → MRProps ρ i t)
+  purges {Sg}{G} i [] = G , (λ S x → _ , (x , (quo (λ x₁ x₂ → x₂) {\ _ eq → eq}))) , tt
   purges i (t ∷ t₁) with purge i t
   ... | (G1 , ρ , p) with purges i (subs (toSub ρ) t₁)
   ... | (G2 , ρ2 , p2) = G2 , ((ρ2 ∘mr ρ) , ((DClosedMRP ρ2 ρ i t p) , step-MRPs ρ2 ρ i t₁ p2))
