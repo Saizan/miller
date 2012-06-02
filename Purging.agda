@@ -37,7 +37,7 @@ singleton {G} {type <<- ctx} .v j .(type <<- ctx) v | inj₂ refl = _ , (zero , 
 mutual
   MRProp : ∀ {Sg : Ctx} {G1 G2 : MCtx} → MetaRen G1 G2 → ∀ {D1 D2 : Ctx} → Inj D1 D2 → ∀ {T} → Tm Sg G1 D2 T → Set
   MRProp r i (con x x₁) = MRProps r i x₁
-  MRProp r i (fun u j) = Σ (_ ⊇ proj₁ (r _ u)) (λ k → i ∘i k ≡ j ∘i proj₂ (proj₂ (r _ u)))
+  MRProp r i (fun u j) = Σ (Inj (proj₁ (r _ u)) _) (λ k → i ∘i k ≡ j ∘i proj₂ (proj₂ (r _ u)))
   MRProp r i (var x x₁) = MRProps r i x₁
   MRProp r i (lam t) = MRProp r (cons i) t
 
@@ -80,7 +80,7 @@ mutual
   purge i (con c ts) = purges i ts
   purge i (fun u j) = _ , (singleton u (proj₁ (proj₂ r)) , aux) where
     r = purje i j
-    aux : Σ (_ ⊇ proj₁ (singleton u (proj₁ (proj₂ r)) _  u))
+    aux : Σ (Inj (proj₁ (singleton u (proj₁ (proj₂ r)) _  u)) _)
            (λ k →
                 i ∘i k ≡
                      j ∘i
