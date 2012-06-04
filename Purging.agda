@@ -40,7 +40,7 @@ f ∘mr g = λ S x → let gr = g S x; fr = f _ (body gr) in
 
 singleton : ∀ {G S} → (u : G ∋ S) → ∀ {Ψ} → Inj Ψ (ctx S) → MetaRen G ((G - u) <: (type S <<- Ψ))
 singleton u  j T  v with thick u v
-singleton u  j T  v | inj₁ x = quo (λ _ x₁ → x₁) {λ _ e → e} / suc (proj₁ x)
+singleton u  j T  v | inj₁ x = id-i / suc (proj₁ x)
 singleton .v j ._ v | inj₂ refl = j / zero 
 
 mutual

@@ -43,8 +43,7 @@ flexRigid {Sg} {G} u i s (G1 , ρ , m) | yes (t , eq) = just (G1 , (σ ,
      ren i t                                    ≡⟨ eq ⟩ 
      sub (toSub ρ) s                            ≡⟨ sub-ext σthiny≡toSubρy s ⟩ 
      sub (λ S v → sub σ (mvar (thin u S v))) s  ≡⟨ sym (sub-∘ s) ⟩ 
-     sub σ (sub (λ S v → mvar (thin u S v)) s) 
-    ∎)))
+     sub σ (sub (λ S v → mvar (thin u S v)) s)  ∎)))
     where
       σ : (S : MTy) → G ∋ S → Tm Sg G1 (ctx S) (! (type S))
       σ S v with thick u v
@@ -90,7 +89,7 @@ mutual
 
 
   unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → Maybe (∃ \ G1 → Σ (Sub Sg G G1) \ s → subs s x ≡ subs s y)
-  unifyTms [] [] = just (_ , ((λ S x → fun x (quo (λ _ x₁ → x₁) {λ _ e → e})) , refl))
+  unifyTms [] [] = just (_ , ((λ S x → fun x id-i) , refl))
   unifyTms (s ∷ xs) (t ∷ ys) with unify s t 
   ... | nothing = nothing
   ... | just (_ , σ , eq) with unifyTms (subs σ xs) (subs σ ys) 
