@@ -59,7 +59,7 @@ mutual
   remembers : ∀ {Sg G D D0}{T} → (i : Inj D D0) → (s : Tms Sg G D T) →
              RTms Sg G D D0 i T (rens i s)
   remembers i [] = []
-  remembers i (t ∷ s) = (remember i t) ∷ (remembers i s)
+  remembers i (t ∷ s) = remember i t ∷ remembers i s
 
 mutual
   forget : ∀ {Sg G D D0}{T : Ty} → {i : Inj D D0} → {t : Tm Sg G D0 T} → (x : RTm Sg G D D0 i T t) → Σ (Tm Sg G D T) \ s → ren i s ≡ t
@@ -73,21 +73,21 @@ mutual
   forgets (x₁ ∷ x₂) = ((proj₁ (forget x₁)) ∷ (proj₁ (forgets x₂))) , (cong₂ _∷_ (proj₂ (forget x₁)) (proj₂ (forgets x₂)))
 
 mutual
-  invertTm' : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → MRProp ρ i t
+  invertTm' : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → ρ / t ∈ i
     → Dec (RTm Sg G1 Ss D i T (sub (toSub ρ) t))
-  invertTm' i (con x x₁) r m with invertTm's i x₁ r m
-  invertTm' i (con x x₁) r m | yes p = yes (con x p)
-  invertTm' i (con x x₁) r m | no ¬p = no (λ {(con .x ys) → ¬p ys})
-  invertTm' i (fun u j) r m = yes (fun (proj₁ (proj₂ (r _ u))) (proj₁ m) (proj₂ m))
-  invertTm' i (var x x₁) r m with invert (i) x | invertTm's i x₁ r m 
-  invertTm' i (var x x₁) r m | yes (y , eq) | yes p₁ = yes (var y eq p₁)
-  invertTm' i (var x x₁) r m | yes p | no ¬p = no λ {(var y eq xs) → ¬p xs}
-  invertTm' i (var x x₁) r m | no ¬p | q = no λ {(var y eq xs) → ¬p (y , eq)}
+  invertTm' i (con c ts) r m with invertTm's i ts r m
+  invertTm' i (con c ts) r m | yes p = yes (con c p)
+  invertTm' i (con c ts) r m | no ¬p = no (λ {(con .c ys) → ¬p ys})
+  invertTm' i (fun u j) r m = yes (fun (body (r _ u)) (proj₁ m) (proj₂ m))
+  invertTm' i (var x ts) r m with invert (i) x | invertTm's i ts r m 
+  invertTm' i (var x ts) r m | yes (y , eq) | yes p₁ = yes (var y eq p₁)
+  invertTm' i (var x ts) r m | yes p | no ¬p = no λ {(var y eq ys) → ¬p ys}
+  invertTm' i (var x ts) r m | no ¬p | q = no λ {(var y eq _) → ¬p (y , eq)}
   invertTm' i (lam t) r m with invertTm' (cons i) t r m
   invertTm' i (lam t) r m | yes p = yes (lam p)
   invertTm' i (lam t) r m | no ¬p = no (λ {(lam q) → ¬p q})
 
-  invertTm's : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → (ρ : MetaRen G G1) → MRProps ρ i t 
+  invertTm's : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → (ρ : MetaRen G G1) → ρ /s t ∈ i 
             → Dec (RTms Sg G1 Ss D i T (subs (toSub ρ) t))
   invertTm's i [] r m = yes []
   invertTm's i (x ∷ t) r m with invertTm' i x r (proj₁ m) | invertTm's i t r (proj₂ m)
@@ -95,6 +95,5 @@ mutual
   invertTm's i (x ∷ t) r m | yes p | no ¬p = no λ {(y ∷ ys) → ¬p ys}
   invertTm's i (x ∷ t) r m | no ¬p | z = no λ {(y ∷ ys) → ¬p y}
 
-invertTm : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → MRProp ρ i t
-             → Dec (∃ \ s → ren i s ≡ (sub (toSub ρ) t))
+invertTm : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → ρ / t ∈ i → Dec (∃ \ s → ren i s ≡ sub (toSub ρ) t)
 invertTm i t ρ m = Dec.map′ forget (λ p → subst (RTm _ _ _ _ _ _ ) (proj₂ p) (remember i (proj₁ p))) (invertTm' i t ρ m)

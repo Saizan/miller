@@ -5,6 +5,7 @@ open import Data.Nat renaming (ℕ to Nat)
 open import Relation.Nullary
 import Relation.Nullary.Decidable as Dec
 open import Relation.Binary.PropositionalEquality
+open ≡-Reasoning
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum
@@ -32,12 +33,18 @@ flexSame u i j = _ , σ , aux where
 flexRigid : ∀ {Sg G D S} →
                (u : G ∋ S) →
                (i : Inj (ctx S) D) →
-               (s : Tm Sg (G - u) D (! type S)) → (∃ \ G1 → Σ (MetaRen (G - u) G1) \ ρ → MRProp ρ i s) ->
-               Maybe (∃ λ G1 → Σ (Sub Sg G G1) λ s₁ → ren i (s₁ S u) ≡ sub s₁ (sub (λ S₁ v → mvar (thin u S₁ v)) s))
+               (s : Tm Sg (G - u) D (! type S)) → (∃ \ G1 → Σ (MetaRen (G - u) G1) \ ρ → ρ / s ∈ i) ->
+               Maybe (∃ λ G1 → Σ (Sub Sg G G1) λ σ → ren i (σ S u) ≡ sub σ (sub (λ S v → mvar (thin u S v)) s))
 flexRigid u i s (G1 , ρ , m) with invertTm i s ρ m 
 flexRigid u i s (G1 , ρ , m) | no ¬p = nothing
 flexRigid {Sg} {G} u i s (G1 , ρ , m) | yes (t , eq) = just (G1 , (σ , 
-     trans (trans (cong (ren i) σx≡t') (trans eq (sub-ext σthiny≡toSubρy s))) (sym (sub-∘ s))))
+   (begin
+     ren i (σ _ u)                              ≡⟨ cong (ren i) σx≡t' ⟩ 
+     ren i t                                    ≡⟨ eq ⟩ 
+     sub (toSub ρ) s                            ≡⟨ sub-ext σthiny≡toSubρy s ⟩ 
+     sub (λ S v → sub σ (mvar (thin u S v))) s  ≡⟨ sym (sub-∘ s) ⟩ 
+     sub σ (sub (λ S v → mvar (thin u S v)) s) 
+    ∎)))
     where
       σ : (S : MTy) → G ∋ S → Tm Sg G1 (ctx S) (! (type S))
       σ S v with thick u v
@@ -46,7 +53,7 @@ flexRigid {Sg} {G} u i s (G1 , ρ , m) | yes (t , eq) = just (G1 , (σ ,
       σx≡t' : σ _ u ≡ t
       σx≡t' rewrite thick-refl u = refl
       σthiny≡toSubρy : (S : MTy) (x₁ : G - u ∋ S) → toSub ρ _ x₁ ≡ sub σ (mvar (thin u S x₁))
-      σthiny≡toSubρy S y rewrite thick-thin u y | left-id (proj₂ (proj₂ (ρ S y))) = refl
+      σthiny≡toSubρy S y rewrite thick-thin u y | left-id (ρ-env (ρ S y)) = refl
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) 
           → Maybe (∃ \ G1 → Σ (Sub Sg G G1) \ s → sub s (fun u i) ≡ sub s t)
@@ -88,10 +95,19 @@ mutual
   ... | nothing = nothing
   ... | just (_ , σ , eq) with unifyTms (subs σ xs) (subs σ ys) 
   ... | nothing = nothing
-  ... | just (_ , σ1 , eq1) = just (_ , ((λ S x → sub σ1 (σ S x)) , 
-    cong₂ _∷_ (trans (trans (sym (sub-∘ s)) (cong (sub σ1) eq)) (sub-∘ t)) (trans (trans (sym (subs-∘ xs)) eq1) (subs-∘ ys))))
+  ... | just (_ , σ1 , eq1) = just (_ , (λ S x → sub σ1 (σ S x)) , 
+    cong₂ _∷_ (begin sub (λ z t₁ → sub σ1 (σ z t₁)) s ≡⟨ sym (sub-∘ s) ⟩ 
+                     sub σ1 (sub σ s)                 ≡⟨ cong (sub σ1) eq ⟩ 
+                     sub σ1 (sub σ t)                 ≡⟨ sub-∘ t ⟩ 
+                     sub (λ z t₁ → sub σ1 (σ z t₁)) t ∎) 
+              (begin subs (λ z t₁ → sub σ1 (σ z t₁)) xs ≡⟨ sym (subs-∘ xs) ⟩ 
+                     subs σ1 (subs σ xs)                ≡⟨ eq1 ⟩ 
+                     subs σ1 (subs σ ys)                ≡⟨ subs-∘ ys ⟩ 
+                     subs (λ z t₁ → sub σ1 (σ z t₁)) ys ∎))
 
 {-
+
+-- sketch of how to ensure termination
 
 Bwd-len : ∀ {A : Set} → Bwd A → Nat
 Bwd-len !> = zero

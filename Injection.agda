@@ -2,6 +2,7 @@ module Injection where
 
 open import Data.List hiding ([_])
 open import Relation.Binary.PropositionalEquality hiding ([_])
+open ≡-Reasoning
 open import Data.Product
 open import Data.Unit
 open import Data.Maybe
@@ -147,13 +148,13 @@ iso1 [] _ = refl
 iso1 (i ∷ f [ pf ]) inj = cong-∷[] refl (iso1 f (λ x₁ x₂ → suc-inj1 (inj x₁ x₂)))
 
 iso2 : ∀ {A : Set} {xs ys : List A} → (f : ∀ (x : A) → x ∈ xs → x ∈ ys)(inj : ∀ x → {i j : x ∈ xs} → f x i ≡ f x j → i ≡ j)
-         → ∀ {x} (v : x ∈ xs) → proj₁ (quo' f {inj}) $ v ≡ f x v
+         → ∀ {x} (v : x ∈ xs) → quo f {inj} $ v ≡ f x v
 iso2 f inj zero = refl
 iso2 f inj (suc v) = iso2 (λ x₁ x₂ → f x₁ (suc x₂)) (λ x₁ x₂ → suc-inj1 (inj x₁ x₂)) v
 
 ∉Im$-∉ : ∀ {A : Set} {xs ys : List A} (f : ∀ x (v : x ∈ xs) → x ∈ ys){inj} 
      → ∀ {x} (i : x ∈ ys) → (∀ (b : x ∈ xs) → i ≡ f x b → ⊥) → i ∉ (quo f {inj}) 
-∉Im$-∉ f {inj} i eq = ∉Im-∉ (quo f {inj}) i (λ b x → eq b (trans x ((iso2 f inj b))))
+∉Im$-∉ f {inj} i eq = ∉Im-∉ (quo f {inj}) i (λ b x → eq b (begin i ≡⟨ x ⟩ quo f $ b ≡⟨ iso2 f inj b ⟩ f _ b ∎))
 
 invert : ∀ {A : Set} {xs ys : List A} (i : Inj xs ys) → ∀ {t} (y : ys ∋ t) → Dec (∃ \ x → (i $ x) ≡ y) 
 invert [] x = no (λ { (() , _)})
@@ -174,26 +175,38 @@ abstract
   id-i = quo (\ _ x → x) {\ _ e → e}
 
   right-id : ∀ {A : Set}{xs ys : List A} → (i : Inj xs ys) → i ∘i id-i ≡ i
-  right-id i = trans (quo-ext (λ x v → cong (_$_ i) (iso2 _ _ v))) (iso1 i (λ x eq → injective i _ _ eq))
+  right-id i = begin quo (λ x z → i $ (id-i $ z)) ≡⟨ quo-ext (λ x v → cong (_$_ i) (iso2 _ _ v)) ⟩ 
+                     quo (λ x → _$_ i)            ≡⟨ iso1 i (λ x eq → injective i _ _ eq) ⟩ 
+                     i                            ∎
 
   left-id : ∀ {A : Set}{xs ys : List A} → (i : Inj xs ys) → id-i ∘i i ≡ i
-  left-id i = trans (quo-ext (λ x v → (iso2 _ _ (i $ v)))) (iso1 i (λ x eq → injective i _ _ eq))
+  left-id i = begin quo (λ x z → id-i $ (i $ z)) ≡⟨ quo-ext (λ x v → (iso2 _ _ (i $ v))) ⟩ 
+                    quo (λ x → _$_ i)            ≡⟨ iso1 i (λ x eq → injective i _ _ eq) ⟩ 
+                    i                            ∎
 
   apply-∘ : ∀ {A : Set}{xs ys zs : List A} → (j : Inj ys zs) → (i : Inj xs ys) → ∀ {x} {v : x ∈ xs} → (j ∘i i) $ v ≡ j $ (i $ v)
   apply-∘ j i {x}{v} = iso2 _ _ v
 
   assoc-∘i : ∀ {A : Set}{xs ys ws zs : List A} {f : Inj ws zs}{g : Inj _ ws}{h : Inj xs ys} → f ∘i (g ∘i h) ≡ (f ∘i g) ∘i h  
-  assoc-∘i {f = f}{g = g}{h = h} = quo-ext (λ x v → trans (cong (_$_ f) (iso2 _ _ v)) (sym (iso2 _ _ (h $ v))))
+  assoc-∘i {f = f}{g = g}{h = h} = quo-ext λ x v → 
+      begin f $ (quo (λ x₁ x₂ → g $ (h $ x₂)) $ v) ≡⟨ cong (_$_ f) (iso2 _ _ v) ⟩ 
+            f $ (g $ (h $ v))                      ≡⟨ sym (iso2 _ _ (h $ v)) ⟩ 
+            quo (λ x₁ x₂ → f $ (g $ x₂)) $ (h $ v) ∎
 
   cong-$ : ∀ {A : Set}{xs ys : List A} {f g : _} {inj1 inj2} → quo {_} {xs} {ys} f {inj1} ≡ quo g {inj2} → ∀ {s} (x : xs ∋ s) → f s x ≡ g s x
-  cong-$ {A} {xs} {ys} {f} {g} eq x = trans (sym (iso2 f _ x)) (trans (cong (λ f₁ → f₁ $ x) eq) (iso2 g _ x))
+  cong-$ {A} {xs} {ys} {f} {g} eq x = begin f _ x     ≡⟨ sym (iso2 f _ x) ⟩ 
+                                            quo f $ x ≡⟨ cong (λ f₁ → f₁ $ x) eq ⟩ 
+                                            quo g $ x ≡⟨ iso2 g _ x ⟩ 
+                                            g _ x     ∎
 
   ∘i-inj : ∀ {A : Set}{xs ys zs : List A} → (i : Inj ys zs) (j1 j2 : Inj xs ys) → (i ∘i j1) ≡ (i ∘i j2) → j1 ≡ j2
-  ∘i-inj i j1 j2 eq = trans (trans (sym (iso1 j1 (λ x x₁ → injective j1 _ _ x₁))) 
-           (quo-ext (λ x v → injective i _ _ (cong-$ eq v)))) (iso1 j2 (λ x x₁ → injective j2 _ _ x₁))
+  ∘i-inj i j1 j2 eq = begin j1                 ≡⟨ sym (iso1 j1 (λ x x₁ → injective j1 _ _ x₁)) ⟩ 
+                            quo (λ x → _$_ j1) ≡⟨ quo-ext (λ x v → injective i _ _ (cong-$ eq v)) ⟩ 
+                            quo (λ x → _$_ j2) ≡⟨ iso1 j2 (λ x x₁ → injective j2 _ _ x₁) ⟩ 
+                            j2                 ∎
 
   weak : ∀ {A : Set}{x : A}{xs ys} → Inj xs ys → Inj xs (x ∷ ys)
-  weak f = proj₁ (quo' (λ x x₁ → suc (f $ x₁)) {λ x x₁ → injective f _ _ (suc-inj1 x₁)})
+  weak f = quo (λ x x₁ → suc (f $ x₁)) {λ x x₁ → injective f _ _ (suc-inj1 x₁)}
 
   lemma : ∀ {A : Set}{xs ys ts : List A} (i : Inj xs ts)(z : _){inj1 inj2 inj3} → 
             quo (\ x v → i $ (quo {_} {ys} z {inj1} $ v)) {inj3} ≡ quo (\ x v → i $ (z _ v)) {inj2} 
@@ -203,24 +216,43 @@ abstract
   cons z = (zero ∷ weak z [ ∉Im$-∉ (λ x x₁ → suc (z $ x₁)) zero (λ {_ ()}) ])
 
   cons-∘i : ∀ {A : Set}{xs ys zs : List A}{x} → (j : Inj ys zs) → (i : Inj xs ys) → cons {A} {x} (j ∘i i) ≡ cons j ∘i cons i
-  cons-∘i j i = cong-∷[] refl (trans (quo-ext {injg = λ x x₁ → injective i _ _ (injective (weak j) _ _ x₁)} (λ x v → 
-              trans (cong suc (iso2 _ _ v)) (sym (iso2 _ _ (i $ v))))) 
-              (sym (lemma  (cons j) (λ _ x → suc (i $ x))))) 
+  cons-∘i j i = cong-∷[] refl (begin 
+    quo (λ x z → suc (proj₁ (quo' (λ v v₁ → j $ (i $ v₁))) $ z)) 
+      ≡⟨ quo-ext {injg = λ x x₁ → injective i _ _ (injective (weak j) _ _ x₁)} (λ x v → 
+          begin suc (proj₁ (quo' (λ v₁ v₂ → j $ (i $ v₂))) $ v) ≡⟨ cong suc (iso2 _ _ v) ⟩ 
+                suc (j $ (i $ v))                               ≡⟨ sym (iso2 _ _ (i $ v)) ⟩ 
+                quo (λ x₁ x₂ → suc (j $ x₂)) $ (i $ v)          ∎) ⟩ 
+    quo (λ x v → cons j $ suc (i $ v))                       ≡⟨ sym (lemma (cons j) (λ _ x → suc (i $ x))) ⟩ 
+    quo (λ x v → cons j $ (quo (λ z x₁ → suc (i $ x₁)) $ v)) ∎)
 
   intersect : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → ∃ \ ts → Σ (Inj ts xs) \ r → (i ∘i r) ≡ (j ∘i r)
   intersect [] [] = [] , ([] , refl)
   intersect (i ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) with intersect f g | eq-∋ (_ , i) (_ , i₁) 
-  intersect (.i₁ ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) | (ts , z , eq) | yes refl = _ ∷ ts , cons z , 
-                 cong-∷[] refl (trans (lemma (i₁ ∷ f [ pf ]) _) (trans eq (sym (lemma (i₁ ∷ g [ pf₁ ]) _))))
+  intersect (.i₁ ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) | (ts , z , eq) | yes refl = _ ∷ ts , cons z ,
+     cong-∷[] refl (begin 
+                     quo (λ x v → (i₁ ∷ f [ pf ]) $ (quo (λ x₁ x₂ → suc (z $ x₂)) $ v))  ≡⟨ lemma (i₁ ∷ f [ pf ]) _ ⟩ 
+                     quo (λ x x₁ → f $ (z $ x₁))                                         ≡⟨ eq ⟩ 
+                     quo (λ x v → (i₁ ∷ g [ pf₁ ]) $ suc (z $ v))                        ≡⟨ (sym (lemma (i₁ ∷ g [ pf₁ ]) _)) ⟩ 
+                     quo (λ x v → (i₁ ∷ g [ pf₁ ]) $ (quo (λ x₁ x₂ → suc (z $ x₂)) $ v)) ∎)
+
   intersect (i ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) | (ts , z , eq) | no ¬p = ts , weak z , 
-                 trans (lemma (i ∷ f [ pf ]) _) (trans eq (sym (lemma (i₁ ∷ g [ pf₁ ]) _)))
+            (begin quo (λ x v → (i ∷ f [ pf ]) $ (quo (λ x₁ x₂ → suc (z $ x₂)) $ v)) ≡⟨ (lemma (i ∷ f [ pf ]) _) ⟩ 
+                   quo (λ x x₁ → f $ (z $ x₁))                                       ≡⟨ eq ⟩ 
+                   quo (λ x v → (i₁ ∷ g [ pf₁ ]) $ suc (z $ v))                      ≡⟨ sym (lemma (i₁ ∷ g [ pf₁ ]) _) ⟩ 
+                   quo (λ x v → (i₁ ∷ g [ pf₁ ]) $ (quo (λ x₁ x₂ → suc (z $ x₂)) $ v)) ∎)
 
   purje : ∀ {A : Set} {D1 D2 Du : List A} → (i : Inj D1 D2)(j : Inj Du D2) → ∃ \ Dr → Σ[ h ∶ Inj Dr Du ] Σ[ k ∶ Inj Dr D1 ] (i ∘i k) ≡ j ∘i h
   purje i [] = [] , [] , [] , refl
   purje i (v ∷ j [ pf ]) with purje i j | invert i v
   purje i (.(i $ x) ∷ j [ pf ]) | (Dr , h , k , eq) | yes (x , refl) 
         = _ ∷ Dr , cons h , (x ∷ k
-            [ ∉Im-∉ k x (λ b x≡k$b → ∉-∉Im j (i $ x) pf (h $ b) (trans (cong (_$_ i) x≡k$b) (cong-$ eq b))) ])
-          , cong-∷[] refl (trans (trans (quo-ext (λ x₁ v → refl)) eq) (sym (lemma ((i $ x) ∷ j [ pf ]) _)))
-  purje i (v ∷ j [ pf ]) | (Dr , h , k , eq) | no ¬p = Dr , weak h , k , trans eq (sym (lemma (v ∷ j [ pf ]) _))
+            [ ∉Im-∉ k x (λ b x≡k$b → ∉-∉Im j (i $ x) pf (h $ b) (begin i $ x ≡⟨ cong (_$_ i) x≡k$b ⟩ i $ (k $ b) ≡⟨ cong-$ eq b ⟩ j $ (h $ b) ∎)) ])
+          , cong-∷[] refl (begin quo (λ _ v → i $ (k $ v))                        ≡⟨ quo-ext (λ x₁ v → refl) ⟩ 
+                                 quo (λ _ v → i $ (k $ v))                        ≡⟨ eq ⟩ 
+                                 quo (λ _ v → ((i $ x) ∷ j [ pf ]) $ suc (h $ v)) ≡⟨ sym (lemma ((i $ x) ∷ j [ pf ]) _) ⟩ 
+                                 quo (λ x₁ v → ((i $ x) ∷ j [ pf ]) $ (quo (λ x₂ x₃ → suc (h $ x₃)) $ v)) ∎)
+  purje i (v ∷ j [ pf ]) | (Dr , h , k , eq) | no ¬p = Dr , weak h , k , 
+                 (begin quo (λ _ x → i $ (k $ x))                  ≡⟨ eq ⟩ 
+                        quo (λ _ x → (v ∷ j [ pf ]) $ suc (h $ x)) ≡⟨ sym (lemma (v ∷ j [ pf ]) _) ⟩ 
+                        quo (λ _ x → (v ∷ j [ pf ]) $ (quo (λ _ x₁ → suc (h $ x₁)) $ x)) ∎)
 
