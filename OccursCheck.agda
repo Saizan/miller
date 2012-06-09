@@ -17,7 +17,7 @@ open import Injection
 open import Lists
 
 open import Syntax
-
+open import OneHoleContext
 
 mutual
   data MRTm (Sg : Ctx)(G : MCtx)(D : Ctx)(K : MCtx) (i : ∀ S → G ∋ S → K ∋ S) : (T : Ty) → Tm Sg K D T → Set where
@@ -48,39 +48,36 @@ mutual
   forgets [] = [] , refl
   forgets (t ∷ ts) = proj₁ (forget t) ∷ proj₁ (forgets ts) , (cong₂ _∷_ (proj₂ (forget t)) (proj₂ (forgets ts)))
 
-data DTm (Sg : Ctx)(G : MCtx)(D : Ctx) : Ty ⊎ Fwd Ty → Ctx → Ty ⊎ Fwd Ty → Set where
-  lam : ∀ {S Ss B} → DTm Sg G D (inj₁ (S :> Ss ->> B)) (D <: S) (inj₁ (Ss ->> B))
-  head : ∀ {S Ss} → (ts : Tms Sg G D Ss) → DTm Sg G D (inj₂ (S :> Ss)) D (inj₁ S)
-  tail : ∀ {S Ss} → (t : Tm Sg G D S) → DTm Sg G D (inj₂ (S :> Ss)) D (inj₂ Ss)
-  con : ∀ {Ss B} → (c : Sg ∋ (Ss ->> B)) → DTm Sg G D (inj₁ (! B)) D (inj₂ Ss)
-  var : ∀ {Ss B} → (x : D ∋ (Ss ->> B)) → DTm Sg G D (inj₁ (! B)) D (inj₂ Ss)
+no-confusion : ∀ {R : Set}{I}{T : I -> I -> Set}{i k j} -> (ps : IList T k j) {x : T j i} -> _≡_ {A = Σ I (\ i -> IList T k i)} (i , (ps ⊹ (x ∷ []))) (k , []) -> R
+no-confusion [] ()
+no-confusion (x ∷ ps) ()
 
-data IList {I : Set}(T : I → I → Set) (i : I) : (j : I) → Set where
-  [] : IList T i i
-  _∷_ : ∀ {k j} → T i k → (xs : IList T k j) → IList T i j
+not-nil : ∀ {R : Set}{I}{T : I -> I -> Set}{i k j} -> (ps : IList T k j) {x : T i k} -> 
+        _≡_ {A = Σ I (\ j -> IList T i j)} (j , (x ∷ ps)) (i , []) -> R
+not-nil ps ()
 
-Context : (Sg : Ctx)(G : MCtx)(DI : Ctx) (TI : Ty ⊎ Fwd Ty) → Ctx → Ty ⊎ Fwd Ty → Set
-Context Sg G DI TI DO TO = IList (\ i j → DTm Sg G (proj₁ i) (proj₂ i) (proj₁ j) (proj₂ j)) (DI , TI) (DO , TO)
-
-∫once : ∀ {Sg G DI TI DO TO} → DTm Sg G DI TI DO TO → Term Sg G DO TO → Term Sg G DI TI
-∫once lam t = lam t
-∫once (head ts) t = t ∷ ts
-∫once (tail t) ts = t ∷ ts
-∫once (con c) ts = con c ts
-∫once (var x) ts = var x ts
-
-∫ : ∀ {Sg G DI TI DO TO} → Context Sg G DI TI DO TO → Term Sg G DO TO → Term Sg G DI TI
-∫ [] t = t
-∫ (x ∷ c) t = ∫once x (∫ c t)
+No-Cycle : ∀ {TI Sg G D1 DI DO} -> let TO = TI in (ps : Context Sg G (DI , TI) (DO , TO)) (t : Term Sg G D1 TO) (i : Inj D1 DI)(j : Inj D1 DO) -> 
+                        renT i t ≡ ∫ ps (renT j t) -> _≡_ {A = Σ Index \ D -> Context Sg G (DI , TI) D} ((DO , TO) , ps) ((DI , TI) , [])
+No-Cycle ps t i j eq with view ps t i (renT j t) eq
+No-Cycle .[] t i j eq | [] x = refl
+No-Cycle .(lam ∷ ps) .(lam t) i j eq | lam∷ {DO} {S} {Ss} {B} {ps} {t} x = 
+  no-confusion ps (No-Cycle (ps ⊹ (lam ∷ [])) t (cons i) (cons j) (trans x (⊹-snoc ps lam (ren (cons j) t))))
+No-Cycle .(head (rens i ts) ∷ ps) .(t ∷ ts) i j eq | head∷ {DO} {S} {Ss} {ps} {t} {ts} x = 
+  no-confusion ps (No-Cycle (ps ⊹ (head _ ∷ [])) t i j (trans x (⊹-snoc ps (head _) (ren j t))))
+No-Cycle .(tail (ren i t) ∷ ps) .(t ∷ ts) i j eq | tail∷ {DO} {S} {Ss} {ps} {t} {ts} x = 
+  no-confusion ps (No-Cycle (ps ⊹ (tail _ ∷ [])) ts i j (trans x (⊹-snoc ps (tail _) (rens j ts))))
+No-Cycle .(con c ∷ ps) .(con c ts) i j eq | con∷ {DO} {Ss} {B} {ps} {c} {ts} x = 
+  no-confusion ps (No-Cycle (ps ⊹ (con c ∷ [])) ts i j (trans x (⊹-snoc ps (con c) (rens j ts))))
+No-Cycle .(var (i $ x) ∷ ps) .(var x ts) i j eq | var∷ {DO} {Ss} {B} {ps} {x} {ts} x₁ = 
+  no-confusion ps (No-Cycle (ps ⊹ (var _ ∷ [])) ts i j (trans x₁ (⊹-snoc ps (var _) (rens j ts))))
 
 _[_]OccursIn_ : ∀ {Sg G D D' T S} (u : G ∋ S) (j : Inj (ctx S) D') (t : Term Sg G D T) → Set
-u [ j ]OccursIn t = Σ (Context _ _ _ _ _ (inj₁ _) ) \ C → ∫ C (fun u j) ≡ t
+u [ j ]OccursIn t = Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (fun u j) ≡ t
 
 _OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
 _OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → u [ j ]OccursIn t
 
-
-map-occ : ∀ {Sg G S D T D' T' }{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg G D' T' D T) → u OccursIn t → u OccursIn ∫once d t
+map-occ : ∀ {Sg G S D T D' T' }{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg G (D' , T') (D , T)) → u OccursIn t → u OccursIn ∫once d t
 map-occ d (Dj , j , C , eq) = (Dj , j , (d ∷ C) , cong (∫once d) eq)
   
 mutual
@@ -98,7 +95,6 @@ mutual
   ... | inj₂ x | _ = inj₂ (map-occ (head ts) x)
   ... | inj₁ x | inj₁ xs = inj₁ (x ∷ xs)
   ... | _ | inj₂ xs = inj₂ (map-occ (tail t) xs)
-
 
 check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → (∃ \ s → sub (\ S v → mvar (thin u S v)) s ≡ t) ⊎ u OccursIn t
 check u t = Data.Sum.map forget (\ x → x) (check' u t)

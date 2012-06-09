@@ -8,6 +8,7 @@ open import Relation.Binary.PropositionalEquality
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum
+open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 open import Data.Maybe
 open import Category.Monad
 import Level
@@ -56,8 +57,7 @@ mutual
   remember i (var x ts) = var x refl (remembers i ts)
   remember i (lam s) = lam (remember (cons i) s)
 
-  remembers : ∀ {Sg G D D0}{T} → (i : Inj D D0) → (s : Tms Sg G D T) →
-             RTms Sg G D D0 i T (rens i s)
+  remembers : ∀ {Sg G D D0}{T} → (i : Inj D D0) → (s : Tms Sg G D T) → RTms Sg G D D0 i T (rens i s)
   remembers i [] = []
   remembers i (t ∷ s) = remember i t ∷ remembers i s
 
@@ -72,28 +72,38 @@ mutual
   forgets [] = [] , refl
   forgets (x₁ ∷ x₂) = ((proj₁ (forget x₁)) ∷ (proj₁ (forgets x₂))) , (cong₂ _∷_ (proj₂ (forget x₁)) (proj₂ (forgets x₂)))
 
+open import OneHoleContext
+
+notInv : ∀ {Sg G D D' T} (i : Inj D D') (t : Term Sg G D' T) → Set
+notInv i t = ∃ \ D1 -> ∃ \ Ss -> ∃ \ B -> Σ (D1 ∋ Ss ->> B) \ x -> ∃ \ ts -> Σ (Context _ _ _ (D1 , inj₁ _) ) \ C → 
+       ∫ C (var x ts) ≡ t × x ∉ (∫Inj C i)
+
+map-occ : ∀ {Sg G DI D T D' T' }{i : Inj D' DI}{t : Term Sg G D T} (d : DTm Sg G (DI , T') (D , T) ) → notInv (∫oInj d i) t → notInv i (∫once d t)
+map-occ d (D1 , Ss , B , x , ys , C , eq , x∉i) = D1 , Ss , B , x , ys , d ∷ C , cong (∫once d) eq , x∉i
+
 mutual
   invertTm' : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → ρ / t ∈ i
-    → Dec (RTm Sg G1 Ss D i T (sub (toSub ρ) t))
+    → (RTm Sg G1 Ss D i T (sub (toSub ρ) t)) ⊎ (notInv i t)
   invertTm' i (con c ts) r m with invertTm's i ts r m
   invertTm' i (con c ts) r m | yes p = yes (con c p)
-  invertTm' i (con c ts) r m | no ¬p = no (λ {(con .c ys) → ¬p ys})
+  invertTm' i (con c ts) r m | no e = no (map-occ (con c) e)
   invertTm' i (fun u j) r m = yes (fun (body (r _ u)) (proj₁ m) (proj₂ m))
   invertTm' i (var x ts) r m with invert (i) x | invertTm's i ts r m 
   invertTm' i (var x ts) r m | yes (y , eq) | yes p₁ = yes (var y eq p₁)
-  invertTm' i (var x ts) r m | yes p | no ¬p = no λ {(var y eq ys) → ¬p ys}
-  invertTm' i (var x ts) r m | no ¬p | q = no λ {(var y eq _) → ¬p (y , eq)}
+  invertTm' i (var x ts) r m | yes p | no ¬p = no (map-occ (var x) ¬p)
+  invertTm' i (var x ts) r m | no ¬p | q = no (_ , _ , _ , x , ts , [] , refl , ∉Im-∉ i x (λ b x₁ → ¬p (b , sym x₁)))
   invertTm' i (lam t) r m with invertTm' (cons i) t r m
   invertTm' i (lam t) r m | yes p = yes (lam p)
-  invertTm' i (lam t) r m | no ¬p = no (λ {(lam q) → ¬p q})
+  invertTm' i (lam t) r m | no q = no (map-occ lam q)
 
   invertTm's : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → (ρ : MetaRen G G1) → ρ /s t ∈ i 
-            → Dec (RTms Sg G1 Ss D i T (subs (toSub ρ) t))
+            → (RTms Sg G1 Ss D i T (subs (toSub ρ) t)) ⊎ (notInv i t)
   invertTm's i [] r m = yes []
   invertTm's i (x ∷ t) r m with invertTm' i x r (proj₁ m) | invertTm's i t r (proj₂ m)
   invertTm's i (x ∷ t) r m | yes p | yes p₁ = yes (p ∷ p₁)
-  invertTm's i (x ∷ t) r m | yes p | no ¬p = no λ {(y ∷ ys) → ¬p ys}
-  invertTm's i (x ∷ t) r m | no ¬p | z = no λ {(y ∷ ys) → ¬p y}
+  invertTm's i (x ∷ t) r m | yes p | no ¬p = no (map-occ (tail x) ¬p)
+  invertTm's i (x ∷ t) r m | no ¬p | z = no (map-occ (head t) ¬p)
 
-invertTm : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → ρ / t ∈ i → Dec (∃ \ s → ren i s ≡ sub (toSub ρ) t)
-invertTm i t ρ m = Dec.map′ forget (λ p → subst (RTm _ _ _ _ _ _ ) (proj₂ p) (remember i (proj₁ p))) (invertTm' i t ρ m)
+invertTm : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → ρ / t ∈ i → (∃ \ s → ren i s ≡ sub (toSub ρ) t) ⊎ (notInv i t)
+invertTm i t ρ m = Data.Sum.map forget (\ x -> x) (invertTm' i t ρ m)
+

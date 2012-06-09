@@ -73,6 +73,11 @@ mutual
   rens rho [] = []
   rens rho (x ∷ ts) = ren rho x ∷ rens rho ts
 
+renT : ∀ {T Sg G D1 D2} -> (Inj D1 D2) -> Term Sg G D1 T -> Term Sg G D2 T
+renT {inj₁ _} i t = ren i t
+renT {inj₂ _} i ts = rens i ts
+
+
 Sub : Ctx → MCtx → MCtx → Set
 Sub Sg G1 G2 = ∀ S → G1 ∋ S → Tm Sg G2 (ctx S) (! type S)
 
@@ -86,6 +91,10 @@ mutual
   subs : ∀ {Sg G1 G2 D Ss} → Sub Sg G1 G2 → Tms Sg G1 D Ss → Tms Sg G2 D Ss
   subs s [] = []
   subs s (x ∷ ts) = sub s x ∷ subs s ts
+
+subT : ∀ {T Sg G1 G2 D} -> (Sub Sg G1 G2) -> Term Sg G1 D T -> Term Sg G2 D T
+subT {inj₁ _} i t = sub i t
+subT {inj₂ _} i ts = subs i ts
 
 mutual
   ren-∘ : ∀ {Sg G1 D1 D2 D3 T} {j : Inj D2 D3} {i : Inj D1 D2} (t : Tm Sg G1 D1 T) → ren (j ∘i i) t ≡ ren j (ren i t)
@@ -109,14 +118,17 @@ mutual
   sub-nats [] = refl
   sub-nats (t ∷ ts) = cong₂ _∷_ (sub-nat t) (sub-nats ts)
 
+_∘s_ : ∀ {Sg G1 G2 G3} -> Sub Sg G2 G3 -> Sub Sg G1 G2 -> Sub Sg G1 G3
+r ∘s s = λ S x → sub r (s S x)
+
 mutual
-  sub-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tm Sg G1 D T) → sub f (sub g t) ≡ sub (\ _ t → sub f (g _ t)) t
+  sub-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tm Sg G1 D T) → sub f (sub g t) ≡ sub (f ∘s g) t
   sub-∘ (con c ts) = cong (con c) (subs-∘ ts)
   sub-∘ {g = g} (fun u j) = sub-nat (g _ u)
   sub-∘ (var x ts) = cong (var x) (subs-∘ ts)
   sub-∘ (lam t) = cong lam (sub-∘ t)
   
-  subs-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tms Sg G1 D T) → subs f (subs g t) ≡ subs (\ _ t → sub f (g _ t)) t
+  subs-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tms Sg G1 D T) → subs f (subs g t) ≡ subs (f ∘s g) t
   subs-∘ [] = refl
   subs-∘ (t ∷ t₁) = cong₂ _∷_ (sub-∘ t) (subs-∘ t₁)
 
