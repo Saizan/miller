@@ -18,6 +18,10 @@ data _∋_ {A : Set} : List A → A → Set where
   zero : ∀ {G T} → T ∷ G ∋ T
   suc : ∀ {G T S} → G ∋ T → S ∷ G ∋ T
 
+∋-case : ∀ {A : Set}{xs : List A}{x} {P : ∀ a -> x ∷ xs ∋ a -> Set} -> P x zero -> (∀ a y -> P a (suc y)) -> ∀ a y -> P a y
+∋-case z s a zero = z
+∋-case z s a (suc v) = s a v
+ 
 _-_ : ∀{A} {T} → (G : List A) → G ∋ T → List A
 _-_ {_} {T} .(T ∷ G) (zero {G}) = G
 ._ - suc {G} {_} {S} x = S ∷ (G - x) 
@@ -62,6 +66,9 @@ eq-∋ (x , suc i) (y , zero) = no (λ ())
 eq-∋ (x , suc i) (y , suc j) with eq-∋ (x , i) (y , j)
 eq-∋ (.y , suc .j) (y , suc j) | yes refl = yes refl
 eq-∋ (x , suc i) (y , suc j) | no ¬p = no (¬p ∘ suc-inj)
+
+cong-proj₁ : ∀ {A : Set}{xs : List A}{x : A} {i j : xs ∋ x} -> i ≡ j -> _≡_ {A = ∃ (_∋_ xs)} (x , i) (x , j)
+cong-proj₁ refl = refl
 
 mutual
   data Inj {A : Set}: (List A) → List A → Set where
@@ -225,22 +232,25 @@ abstract
     quo (λ x v → cons j $ suc (i $ v))                       ≡⟨ sym (lemma (cons j) (λ _ x → suc (i $ x))) ⟩ 
     quo (λ x v → cons j $ (quo (λ z x₁ → suc (i $ x₁)) $ v)) ∎)
 
-  intersect : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → ∃ \ ts → Σ (Inj ts xs) \ r → (i ∘i r) ≡ (j ∘i r)
-  intersect [] [] = [] , ([] , refl)
+  intersect : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → ∃ \ ts → Σ (Inj ts xs) \ r → (i ∘i r) ≡ (j ∘i r) 
+              × (∀ a (y : xs ∋ a) -> i $ y ≡ j $ y -> ∃ \ z -> y ≡ r $ z)
+  intersect [] [] = [] , ([] , refl , (λ _ ()))
   intersect (i ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) with intersect f g | eq-∋ (_ , i) (_ , i₁) 
-  intersect (.i₁ ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) | (ts , z , eq) | yes refl = _ ∷ ts , cons z ,
+  intersect (.i₁ ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) | (ts , z , eq , c) | yes refl = _ ∷ ts , cons z ,
      cong-∷[] refl (begin 
                      quo (λ x v → (i₁ ∷ f [ pf ]) $ (quo (λ x₁ x₂ → suc (z $ x₂)) $ v))  ≡⟨ lemma (i₁ ∷ f [ pf ]) _ ⟩ 
                      quo (λ x x₁ → f $ (z $ x₁))                                         ≡⟨ eq ⟩ 
                      quo (λ x v → (i₁ ∷ g [ pf₁ ]) $ suc (z $ v))                        ≡⟨ (sym (lemma (i₁ ∷ g [ pf₁ ]) _)) ⟩ 
                      quo (λ x v → (i₁ ∷ g [ pf₁ ]) $ (quo (λ x₁ x₂ → suc (z $ x₂)) $ v)) ∎)
-
-  intersect (i ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) | (ts , z , eq) | no ¬p = ts , weak z , 
+     , (∋-case (λ x → zero , refl) (λ a y x → (suc (proj₁ (c a y x))) , (trans (cong suc (proj₂ (c a y x))) (sym (iso2 _ _ (proj₁ (c a y x)))))))
+  intersect (i ∷ f [ pf ]) (i₁ ∷ g [ pf₁ ]) | (ts , z , eq , c) | no ¬p = ts , weak z , 
             (begin quo (λ x v → (i ∷ f [ pf ]) $ (quo (λ x₁ x₂ → suc (z $ x₂)) $ v)) ≡⟨ (lemma (i ∷ f [ pf ]) _) ⟩ 
                    quo (λ x x₁ → f $ (z $ x₁))                                       ≡⟨ eq ⟩ 
                    quo (λ x v → (i₁ ∷ g [ pf₁ ]) $ suc (z $ v))                      ≡⟨ sym (lemma (i₁ ∷ g [ pf₁ ]) _) ⟩ 
                    quo (λ x v → (i₁ ∷ g [ pf₁ ]) $ (quo (λ x₁ x₂ → suc (z $ x₂)) $ v)) ∎)
-
+     , ∋-case (λ x → ⊥-elim (¬p (cong-proj₁ x))) (λ a y x → proj₁ (c a y x) ,
+                                                    trans (cong suc (proj₂ (c a y x)))
+                                                    (sym (iso2 _ _ (proj₁ (c a y x)))))
   purje : ∀ {A : Set} {D1 D2 Du : List A} → (i : Inj D1 D2)(j : Inj Du D2) → ∃ \ Dr → Σ[ h ∶ Inj Dr Du ] Σ[ k ∶ Inj Dr D1 ] (i ∘i k) ≡ j ∘i h
   purje i [] = [] , [] , [] , refl
   purje i (v ∷ j [ pf ]) with purje i j | invert i v
