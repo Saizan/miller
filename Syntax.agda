@@ -108,6 +108,17 @@ mutual
   rens-∘ (t ∷ ts) = cong₂ _∷_ (ren-∘ t) (rens-∘ ts)
 
 mutual
+  ren-id : ∀ {Sg G D T} (t : Tm Sg G D T) → ren id-i t ≡ t
+  ren-id (con c ts) = cong (con c) (rens-id ts)
+  ren-id (fun u j) = cong (fun u) (left-id j)
+  ren-id (var x ts) = cong₂ var (id-i$ x) (rens-id ts)
+  ren-id (lam t) = cong lam (trans (cong (λ k → ren k t) cons-id) (ren-id t))
+  
+  rens-id : ∀ {Sg G D T} (t : Tms Sg G D T) → rens id-i t ≡ t
+  rens-id [] = refl
+  rens-id (t ∷ ts) = cong₂ _∷_ (ren-id t) (rens-id ts)
+
+mutual
   sub-nat : ∀ {Sg G1 G2 D1 D2 T} {f : Sub Sg G1 G2} {i : Inj D1 D2} (t : Tm Sg G1 D1 T) → sub f (ren i t) ≡ ren i (sub f t)
   sub-nat (con c ts) = cong (con c) (sub-nats ts)
   sub-nat (fun u j) = ren-∘ _

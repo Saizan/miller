@@ -180,6 +180,9 @@ abstract
 
   id-i : ∀ {A : Set}{xs : List A} → Inj xs xs
   id-i = quo (\ _ x → x) {\ _ e → e}
+  
+  id-i$ : ∀ {A : Set}{xs : List A} -> ∀ {x}(v : xs ∋ x) -> id-i $ v ≡ v
+  id-i$ v = iso2 _ _ v
 
   right-id : ∀ {A : Set}{xs ys : List A} → (i : Inj xs ys) → i ∘i id-i ≡ i
   right-id i = begin quo (λ x z → i $ (id-i $ z)) ≡⟨ quo-ext (λ x v → cong (_$_ i) (iso2 _ _ v)) ⟩ 
@@ -221,6 +224,9 @@ abstract
 
   cons : ∀ {A : Set}{x : A}{xs ys} → Inj xs ys → Inj (x ∷ xs) (x ∷ ys)
   cons z = (zero ∷ weak z [ ∉Im$-∉ (λ x x₁ → suc (z $ x₁)) zero (λ {_ ()}) ])
+
+  cons-id : ∀ {A : Set}{x : A}{xs} -> cons id-i ≡ id-i {_} {x ∷ xs}
+  cons-id = cong-∷[] refl (quo-ext (λ x v → cong suc (iso2 _ _ v)))
 
   cons-∘i : ∀ {A : Set}{xs ys zs : List A}{x} → (j : Inj ys zs) → (i : Inj xs ys) → cons {A} {x} (j ∘i i) ≡ cons j ∘i cons i
   cons-∘i j i = cong-∷[] refl (begin 
