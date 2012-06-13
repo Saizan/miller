@@ -18,6 +18,9 @@ data _∋_ {A : Set} : List A → A → Set where
   zero : ∀ {G T} → T ∷ G ∋ T
   suc : ∀ {G T S} → G ∋ T → S ∷ G ∋ T
 
+zero≢suc : ∀ {A : Set}{x : A}{xs : List A}{i : xs ∋ x} -> _∋_.zero ≡ suc i -> ⊥
+zero≢suc ()
+
 ∋-case : ∀ {A : Set}{xs : List A}{x} {P : ∀ a -> x ∷ xs ∋ a -> Set} -> P x zero -> (∀ a y -> P a (suc y)) -> ∀ a y -> P a y
 ∋-case z s a zero = z
 ∋-case z s a (suc v) = s a v
@@ -257,18 +260,68 @@ abstract
      , ∋-case (λ x → ⊥-elim (¬p (cong-proj₁ x))) (λ a y x → proj₁ (c a y x) ,
                                                     trans (cong suc (proj₂ (c a y x)))
                                                     (sym (iso2 _ _ (proj₁ (c a y x)))))
-  purje : ∀ {A : Set} {D1 D2 Du : List A} → (i : Inj D1 D2)(j : Inj Du D2) → ∃ \ Dr → Σ[ h ∶ Inj Dr Du ] Σ[ k ∶ Inj Dr D1 ] (i ∘i k) ≡ j ∘i h
-  purje i [] = [] , [] , [] , refl
+
+  cons-inter : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → ∀ {ts} → (r : Inj ts xs) -> 
+               (∀ a (y : xs ∋ a) -> i $ y ≡ j $ y -> ∃ \ z -> y ≡ r $ z) ->               
+               ∀ {S} -> (a : A) (y : S ∷ xs ∋ a) → cons i $ y ≡ cons j $ y → Σ (S ∷ ts ∋ a) (λ z → y ≡ cons r $ z)
+  cons-inter i j r c a zero eq = zero , refl
+  cons-inter i j r c a (suc y) eq = let rec = (c a y (suc-inj1 (trans (sym (iso2 _ _ y)) (trans eq (iso2 _ _ y)))))
+             in (suc (proj₁ rec)) , trans (cong suc (proj₂ rec)) (sym (iso2 _ _ (proj₁ rec)))
+
+  inter-Inj : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → ∀ {ts} → (r : Inj ts xs) -> 
+               (∀ a (y : xs ∋ a) -> i $ y ≡ j $ y -> ∃ \ z -> y ≡ r $ z) ->               
+                {as : List A} (h : Inj as xs) → i ∘i h ≡ j ∘i h → Σ (Inj as ts) (λ z → h ≡ r ∘i z)
+  inter-Inj i j r c h eq = quo (λ x x₁ → proj₁ (c _ (h $ x₁) (trans (sym (apply-∘ i h)) (trans (cong (λ f → f $ x₁) eq) (apply-∘ j h))))) 
+                           {λ x x₁ → injective h _ _ (trans (proj₂ (c _ (h $ _) _)) (trans (cong (_$_ r) x₁) (sym (proj₂ (c _ (h $ _) _)))))} 
+                           , trans (sym (iso1 h (λ x x₁ → injective h _ _ x₁))) (quo-ext (λ x v → trans (proj₂ (c x (h $ v) _)) (cong (_$_ r) (sym (iso2 _ _ v)))))
+  
+  purje : ∀ {A : Set} {D1 D2 Du : List A} → (i : Inj D1 D2)(j : Inj Du D2) → ∃ \ Dr → Σ[ h ∶ Inj Dr Du ] Σ[ k ∶ Inj Dr D1 ] (i ∘i k) ≡ j ∘i h 
+                                  × (∀ (a : A) (y : Du ∋ a)(x : D1 ∋ a) -> i $ x ≡ j $ y -> (∃ \ z -> k $ z ≡ x × h $ z ≡ y))
+  purje i [] = [] , [] , [] , refl , (λ _ → λ ())
   purje i (v ∷ j [ pf ]) with purje i j | invert i v
-  purje i (.(i $ x) ∷ j [ pf ]) | (Dr , h , k , eq) | yes (x , refl) 
+  purje i (.(i $ x) ∷ j [ pf ]) | (Dr , h , k , eq , uni) | yes (x , refl)
         = _ ∷ Dr , cons h , (x ∷ k
             [ ∉Im-∉ k x (λ b x≡k$b → ∉-∉Im j (i $ x) pf (h $ b) (begin i $ x ≡⟨ cong (_$_ i) x≡k$b ⟩ i $ (k $ b) ≡⟨ cong-$ eq b ⟩ j $ (h $ b) ∎)) ])
           , cong-∷[] refl (begin quo (λ _ v → i $ (k $ v))                        ≡⟨ quo-ext (λ x₁ v → refl) ⟩ 
                                  quo (λ _ v → i $ (k $ v))                        ≡⟨ eq ⟩ 
                                  quo (λ _ v → ((i $ x) ∷ j [ pf ]) $ suc (h $ v)) ≡⟨ sym (lemma ((i $ x) ∷ j [ pf ]) _) ⟩ 
                                  quo (λ x₁ v → ((i $ x) ∷ j [ pf ]) $ (quo (λ x₂ x₃ → suc (h $ x₃)) $ v)) ∎)
-  purje i (v ∷ j [ pf ]) | (Dr , h , k , eq) | no ¬p = Dr , weak h , k , 
+          , ∋-case (λ x₁ x₂ → (zero , (injective i _ _ (sym x₂)) , refl)) (λ a y x₁ x₂ → 
+                   let rec = uni a y x₁ x₂; z = proj₁ rec; eq1 = proj₁ (proj₂ rec) ; eq2 = proj₂ (proj₂ rec)
+                   in (suc z , eq1 , (trans (iso2 _ _ z) (cong suc eq2))))
+  purje i (v ∷ j [ pf ]) | (Dr , h , k , eq , uni) | no ¬p = Dr , weak h , k , 
                  (begin quo (λ _ x → i $ (k $ x))                  ≡⟨ eq ⟩ 
                         quo (λ _ x → (v ∷ j [ pf ]) $ suc (h $ x)) ≡⟨ sym (lemma (v ∷ j [ pf ]) _) ⟩ 
                         quo (λ _ x → (v ∷ j [ pf ]) $ (quo (λ _ x₁ → suc (h $ x₁)) $ x)) ∎)
+          , ∋-case (λ x x₁ → ⊥-elim (¬p (x , x₁))) (λ a y x x₁ → 
+                   let rec = uni a y x x₁; z = proj₁ rec; eq1 = proj₁ (proj₂ rec); eq2 = proj₂ (proj₂ rec) in
+                      z , eq1 , trans (iso2 _ _ z) (cong suc eq2))
 
+  uni-pullback : ∀ {A : Set} {D1 D2 Du : List A} → (i : Inj D1 D2)(j : Inj Du D2) -> ∀ {Dr} -> (h : Inj Dr Du) (k : Inj Dr D1)
+                 -> (∀ (a : A) (y : Du ∋ a)(x : D1 ∋ a) -> i $ x ≡ j $ y -> (∃ \ z -> k $ z ≡ x × h $ z ≡ y))
+                 -> ∀ {Q} -> (h' : Inj Q Du) (k' : Inj Q D1) -> i ∘i k' ≡ j ∘i h' -> ∃ \ q -> k' ≡ k ∘i q × h' ≡ h ∘i q  
+  uni-pullback i j h k uni h' k' eq = quo (λ x x₁ → proj₁ (uni x (h' $ x₁) (k' $ x₁) (cong-$ eq x₁))) 
+     {λ x x₁ → injective k' _ _
+              (trans
+               (trans (sym (proj₁ (proj₂ (uni x (h' $ _) (k' $ _) _))))
+                (cong (_$_ k) x₁))
+               (proj₁ (proj₂ (uni x (h' $ _) (k' $ _) _))))} , 
+     (trans (sym (iso1 k' (λ x x₁ → injective k' _ _ x₁))) 
+       (quo-ext (λ x v → trans ((sym (proj₁ (proj₂ (uni x (h' $ v) (k' $ v) _))))) (cong (_$_ k) (sym (iso2 _ _ v)))))) 
+   , trans (sym (iso1 h' (λ x x₁ → injective h' _ _ x₁)))
+       (quo-ext
+        (λ x v →
+           trans (sym (proj₂ (proj₂ (uni x (h' $ v) (k' $ v) _))))
+           (cong (_$_ h) (sym (iso2 _ _ v)))))
+  flip2 : ∀ {A : Set}{xs ys} {P : ∀ (a : A) -> xs ∋ a -> ys ∋ a -> Set} -> (∀ a -> (x : xs ∋ a) -> (y : ys ∋ a) -> P a x y) -> 
+         ∀ a -> (y : ys ∋ a) -> (x : xs ∋ a) -> P a x y
+  flip2 f a y x = f a x y
+
+  cons-pullback : ∀ {A : Set} {D1 D2 Du : List A} → (i : Inj D1 D2)(j : Inj Du D2) -> ∀ {Dr} -> (h : Inj Dr Du) (k : Inj Dr D1)
+                 -> (∀ (a : A) (y : Du ∋ a)(x : D1 ∋ a) -> i $ x ≡ j $ y -> (∃ \ z -> k $ z ≡ x × h $ z ≡ y))
+                 -> ∀ {S} -> (∀ (a : A) (y : S ∷ Du ∋ a)(x : S ∷ D1 ∋ a) -> cons i $ x ≡ cons j $ y -> (∃ \ z -> cons k $ z ≡ x × cons h $ z ≡ y))
+  cons-pullback i j h k uni = ∋-case (λ x x₁ → zero , ((injective (cons i) _ _ (sym x₁)) , refl)) (flip2 
+    (∋-case (λ y x → ⊥-elim (zero≢suc (trans x (iso2 (λ _ v → suc (j $ v)) _ y)))) 
+            (λ a y y₁ x → let rec = uni a y₁ y (suc-inj1 (trans (sym (iso2 _ _ y)) (trans x (iso2 _ _ y₁)))) in  
+                 (suc (proj₁ rec)) , ((trans (iso2 _ _ (proj₁ rec)) (cong suc (proj₁ (proj₂ rec)))) 
+                 , (trans (iso2 _ _ (proj₁ rec)) (cong suc (proj₂ (proj₂ rec))))))))

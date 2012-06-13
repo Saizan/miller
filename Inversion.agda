@@ -50,18 +50,6 @@ mutual
   uniques (x ∷ xs) (y ∷ ys) = cong₂ _∷_ (unique x y) (uniques xs ys)
 
 mutual
-  remember : ∀ {Sg G D D0}{T : Ty} → (i : Inj D D0) → (s : Tm Sg G D T) →
-             RTm Sg G D D0 i T (ren i s)
-  remember i (con c ts) = con c (remembers i ts)
-  remember i (fun u j) = fun u j refl
-  remember i (var x ts) = var x refl (remembers i ts)
-  remember i (lam s) = lam (remember (cons i) s)
-
-  remembers : ∀ {Sg G D D0}{T} → (i : Inj D D0) → (s : Tms Sg G D T) → RTms Sg G D D0 i T (rens i s)
-  remembers i [] = []
-  remembers i (t ∷ s) = remember i t ∷ remembers i s
-
-mutual
   forget : ∀ {Sg G D D0}{T : Ty} → {i : Inj D D0} → {t : Tm Sg G D0 T} → (x : RTm Sg G D D0 i T t) → Σ (Tm Sg G D T) \ s → ren i s ≡ t
   forget (con c x) = mapΣ (con c) (cong (con c)) (forgets x)
   forget (fun u j eq) = fun u j , cong (fun u) eq
@@ -72,6 +60,24 @@ mutual
   forgets [] = [] , refl
   forgets (x₁ ∷ x₂) = ((proj₁ (forget x₁)) ∷ (proj₁ (forgets x₂))) , (cong₂ _∷_ (proj₂ (forget x₁)) (proj₂ (forgets x₂)))
 
+mutual
+  remember : ∀ {Sg G D D0}{T : Ty} → (i : Inj D D0) → (s : Tm Sg G D T) →
+             Σ (RTm Sg G D D0 i T (ren i s)) \ rt -> proj₁ (forget rt) ≡ s
+  remember i (con c ts) = mapΣ (con c) (cong (con c)) (remembers i ts)
+  remember i (fun u j) = fun u j refl , refl
+  remember i (var x ts) = mapΣ (var x refl) (cong (var x)) (remembers i ts)
+  remember i (lam s) = mapΣ lam (cong lam) (remember (cons i) s)
+
+  remembers : ∀ {Sg G D D0}{T} → (i : Inj D D0) → (s : Tms Sg G D T) → Σ (RTms Sg G D D0 i T (rens i s)) \ rt -> proj₁ (forgets rt) ≡ s
+  remembers i [] = [] , refl
+  remembers i (t ∷ ts) = proj₁ rect ∷ proj₁ rects , cong₂ _∷_ (proj₂ rect) (proj₂ rects) where
+    rect = remember i t
+    rects = remembers i ts
+
+
+ren-inj : ∀ {Sg G D D0}{T : Ty} → (i : Inj D D0) → (s t : Tm Sg G D T) -> ren i s ≡ ren i t -> s ≡ t
+ren-inj i s t eq with remember i s | remember i t
+... | (rs , fogrs≡s) | (rt , fogrt≡t) rewrite eq = trans (sym fogrs≡s) (trans (cong (λ r → proj₁ (forget r)) (unique rs rt)) fogrt≡t)
 open import OneHoleContext
 
 notInv : ∀ {Sg G D D' T} (i : Inj D D') (t : Term Sg G D' T) → Set

@@ -59,7 +59,7 @@ not-nil ps ()
 No-Cycle : ∀ {TI Sg G D1 DI DO} -> let TO = TI in (ps : Context Sg G (DI , TI) (DO , TO)) (t : Term Sg G D1 TO) (i : Inj D1 DI)(j : Inj D1 DO) -> 
                         renT i t ≡ ∫ ps (renT j t) -> _≡_ {A = Σ Index \ D -> Context Sg G (DI , TI) D} ((DO , TO) , ps) ((DI , TI) , [])
 No-Cycle ps t i j eq with view ps t i (renT j t) eq
-No-Cycle .[] t i j eq | [] x = refl
+No-Cycle .[] t i j eq | [] = refl
 No-Cycle .(lam ∷ ps) .(lam t) i j eq | lam∷ {DO} {S} {Ss} {B} {ps} {t} x = 
   no-confusion ps (No-Cycle (ps ⊹ (lam ∷ [])) t (cons i) (cons j) (trans x (⊹-snoc ps lam (ren (cons j) t))))
 No-Cycle .(head (rens i ts) ∷ ps) .(t ∷ ts) i j eq | head∷ {DO} {S} {Ss} {ps} {t} {ts} x = 

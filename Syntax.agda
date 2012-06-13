@@ -1,11 +1,11 @@
 module Syntax where
 open import Data.Product renaming (map to mapΣ)
-open import Data.Nat renaming (ℕ to Nat)
+open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
 open import Relation.Nullary
 import Relation.Nullary.Decidable as Dec
 open import Relation.Binary.PropositionalEquality
 open import Data.Empty
-open import Data.Unit
+open import Data.Unit hiding (_≤_)
 open import Data.Sum
 open import Data.Maybe
 open import Category.Monad
@@ -81,6 +81,7 @@ renT {inj₂ _} i ts = rens i ts
 Sub : Ctx → MCtx → MCtx → Set
 Sub Sg G1 G2 = ∀ S → G1 ∋ S → Tm Sg G2 (ctx S) (! type S)
 
+
 mutual
   sub : ∀ {Sg G1 G2 D T} → Sub Sg G1 G2 → Tm Sg G1 D T → Tm Sg G2 D T
   sub s (con x x₁) = con x (subs s x₁)
@@ -91,6 +92,12 @@ mutual
   subs : ∀ {Sg G1 G2 D Ss} → Sub Sg G1 G2 → Tms Sg G1 D Ss → Tms Sg G2 D Ss
   subs s [] = []
   subs s (x ∷ ts) = sub s x ∷ subs s ts
+
+_∘s_ : ∀ {Sg G1 G2 G3} -> Sub Sg G2 G3 -> Sub Sg G1 G2 -> Sub Sg G1 G3
+r ∘s s = λ S x → sub r (s S x)
+
+_≤_ : ∀ {Sg D C1 C2} -> Sub Sg D C1 -> Sub Sg D C2 -> Set
+f ≤ g = ∃ \ r -> ∀ S u -> f S u ≡ (r ∘s g) S u
 
 subT : ∀ {T Sg G1 G2 D} -> (Sub Sg G1 G2) -> Term Sg G1 D T -> Term Sg G2 D T
 subT {inj₁ _} i t = sub i t
@@ -128,9 +135,6 @@ mutual
   sub-nats : ∀ {Sg G1 G2 D1 D2 T} {f : Sub Sg G1 G2} {i : Inj D1 D2} (t : Tms Sg G1 D1 T) → subs f (rens i t) ≡ rens i (subs f t)
   sub-nats [] = refl
   sub-nats (t ∷ ts) = cong₂ _∷_ (sub-nat t) (sub-nats ts)
-
-_∘s_ : ∀ {Sg G1 G2 G3} -> Sub Sg G2 G3 -> Sub Sg G1 G2 -> Sub Sg G1 G3
-r ∘s s = λ S x → sub r (s S x)
 
 mutual
   sub-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Tm Sg G1 D T) → sub f (sub g t) ≡ sub (f ∘s g) t
