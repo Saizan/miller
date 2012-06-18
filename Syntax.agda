@@ -46,8 +46,8 @@ mutual
   data Tm (Sg : Ctx)(G : MCtx)(D : Ctx) : Ty → Set where
     con : {Ss : Fwd Ty}{B : Base} →
           (c : Sg ∋ (Ss ->> B)) → (ts : Tms Sg G D Ss) → Tm Sg G D (! B)
-    fun : {S : MTy} →
-          (u : G ∋ S) → (j : Inj (ctx S) D) → Tm Sg G D (! (type S))
+    fun : ∀ {Ss B} →
+          (u : G ∋ (B <<- Ss)) → (j : Inj Ss D) → Tm Sg G D (! B)
     var : forall {Ss B} → 
           (x : D ∋ (Ss ->> B)) → (ts : Tms Sg G D Ss) → Tm Sg G D (! B)
     lam : {S : Ty}{Ss : Fwd Ty}{B : Base} →
@@ -61,6 +61,9 @@ mutual
 Term : (Sg : Ctx)(G : MCtx)(DI : Ctx) (TI : Ty ⊎ Fwd Ty) → Set
 Term Sg G D (inj₁ T) = Tm Sg G D T 
 Term Sg G D (inj₂ Ts) = Tms Sg G D Ts
+
+mvar : ∀ {Sg}{G T} → T ∈ G → Tm Sg G (ctx T) (! (type T))
+mvar {T = _ <<- _} u = fun u id-i
 
 mutual
   ren : ∀ {Sg G D D0}{T : Ty} → Inj D D0 → Tm Sg G D T → Tm Sg G D0 T

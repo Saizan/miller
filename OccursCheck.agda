@@ -34,9 +34,6 @@ mutual
     _∷_ : {S : Ty}{Ss : Fwd Ty} → ∀ {x xs} →
            MRTm Sg G D K i S x → MRTms Sg G D K i Ss xs → MRTms Sg G D K i (S :> Ss) (x ∷ xs)
 
-mvar : ∀ {Sg}{G T} → T ∈ G → Tm Sg G (ctx T) (! (type T))
-mvar u = fun u id-i
-
 mutual
   forget : ∀ {Sg G D K T}{i}{t} → MRTm Sg G D K i T t → ∃ \ s → sub (\ s v → mvar (i s v)) s ≡ t
   forget (con c ts) = mapΣ (con c) (cong (con c)) (forgets ts)
@@ -77,7 +74,7 @@ u [ j ]OccursIn t = Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (fun u j) �
 _OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
 _OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → u [ j ]OccursIn t
 
-map-occ : ∀ {Sg G S D T D' T' }{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg G (D' , T') (D , T)) → u OccursIn t → u OccursIn ∫once d t
+map-occ : ∀ {Sg G S D T D' T'}{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg G (D' , T') (D , T)) → u OccursIn t → u OccursIn ∫once d t
 map-occ d (Dj , j , C , eq) = (Dj , j , (d ∷ C) , cong (∫once d) eq)
   
 mutual

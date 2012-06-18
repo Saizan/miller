@@ -286,7 +286,7 @@ abstract
                                  quo (λ _ v → i $ (k $ v))                        ≡⟨ eq ⟩ 
                                  quo (λ _ v → ((i $ x) ∷ j [ pf ]) $ suc (h $ v)) ≡⟨ sym (lemma ((i $ x) ∷ j [ pf ]) _) ⟩ 
                                  quo (λ x₁ v → ((i $ x) ∷ j [ pf ]) $ (quo (λ x₂ x₃ → suc (h $ x₃)) $ v)) ∎)
-          , ∋-case (λ x₁ x₂ → (zero , (injective i _ _ (sym x₂)) , refl)) (λ a y x₁ x₂ → 
+          , ∋-case (λ x₁ x₂ → zero , injective i _ _ (sym x₂) , refl) (λ a y x₁ x₂ → 
                    let rec = uni a y x₁ x₂; z = proj₁ rec; eq1 = proj₁ (proj₂ rec) ; eq2 = proj₂ (proj₂ rec)
                    in (suc z , eq1 , (trans (iso2 _ _ z) (cong suc eq2))))
   purje i (v ∷ j [ pf ]) | (Dr , h , k , eq , uni) | no ¬p = Dr , weak h , k , 

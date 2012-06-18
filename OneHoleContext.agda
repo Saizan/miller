@@ -133,17 +133,19 @@ open import Equality
 view' : ∀ {Sg G DI TI D T D1} (ps : Context Sg G (DI , TI) (D , T))(t : Term Sg G D1 _) (i : Inj D1 DI) (s : Term Sg G D T) 
      -> eqT (renT i t) (∫ ps s) -> View ps t i s
 view' [] t i ts eq = []
-view' (_∷_ {.(_ ∷ _) , .(inj₁ (_ ->> _))} {_ , _} lam ps) (lam t) i ts eq = lam∷ (proj₂ (eqTm _ _) eq)
-view' (_∷_ {_ , ._} {_ , _} (head ts) ps) (t ∷ t₁) i ts₁ (eqt , eqts) with proj₂ (eqTms (rens i t₁) ts) eqts
-view' (_∷_ {_ , .(inj₁ _)} {_ , _} (head .(rens i t₁)) ps) (t ∷ t₁) i ts₁ (eqt , eqts) | refl = head∷ (proj₂ (eqTm _ _) eqt)
-view' (_∷_ {_ , ._} {_ , _} (tail t) ps) (t₁ ∷ t₂) i ts (eqt , eqts) with proj₂ (eqTm (ren i t₁) t) eqt
-view' (_∷_ {_ , .(inj₂ _)} {_ , _} (tail .(ren i t₁)) ps) (t₁ ∷ t₂) i ts (eqt , eqts) | refl = tail∷ (proj₂ (eqTms _ _) eqts)
-view' (_∷_ {_ , ._} {_ , _} (con c) ps) (con .c ts) i ts₁ (refl , refl , eqts) = con∷ (proj₂ (eqTms _ _) eqts)
-view' (_∷_ {_ , ._} (con c) ps) (fun u j) i ts ()
+view' (_∷_ {.(_ ∷ _) , .(inj₁ (_ ->> _))} {_ , _} lam ps) (lam t) i ts (lam eq) = lam∷ (T-≡ eq)
+view' (_∷_ {_ , ._} {_ , _} (head ts) ps) (t ∷ t₁) i ts₁ (eqt ∷ eqts) with T-≡ eqts
+view' (_∷_ {_ , .(inj₁ _)} {_ , _} (head .(rens i t₁)) ps) (t ∷ t₁) i ts₁ (eqt ∷ eqts) | refl = head∷ (T-≡ eqt)
+view' (_∷_ {_ , ._} {_ , _} (tail t) ps) (t₁ ∷ t₂) i ts (eqt ∷ eqts) with T-≡ eqt
+view' (_∷_ {_ , .(inj₂ _)} {_ , _} (tail .(ren i t₁)) ps) (t₁ ∷ t₂) i ts (eqt ∷ eqts) | refl = tail∷ (T-≡ eqts)
+view' (_∷_ {_ , ._} {_ , _} (con c) ps) (con .c ts) i ts₁ (con refl eqts) = con∷ (T-≡ eqts)
+view' (_∷_ {_ , ._} {_ , _} (con c) ps) (fun u j) i ts e with T-≡ e
+... | ()
 view' (_∷_ {_ , ._} (con c) ps) (var x ts) i ts₁ ()
 view' (_∷_ {_ , ._} (var x) ps) (con c ts) i ts₁ ()
-view' (_∷_ {_ , ._} (var x) ps) (fun u j) i ts ()
-view' (_∷_ {_ , ._} {_ , _} (var .(i $ x₁)) ps) (var x₁ ts) i ts₁ (refl , refl , eqts) = var∷ (proj₂ (eqTms _ _) eqts)
+view' (_∷_ {_ , ._} {_ , _} (var x) ps) (fun u j) i ts e with T-≡ e
+... | ()
+view' (_∷_ {_ , ._} {_ , _} (var .(i $ x₁)) ps) (var x₁ ts) i ts₁ (var refl eqts) = var∷ (T-≡ eqts)
 
 view : ∀ {Sg G DI TI D T D1} (ps : Context Sg G (DI , TI) (D , T))(t : Term Sg G D1 _) (i : Inj D1 DI) (s : Term Sg G D T) 
      -> renT i t ≡ ∫ ps s -> View ps t i s
