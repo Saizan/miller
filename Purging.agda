@@ -18,6 +18,7 @@ open import Injection
 open import Lists
 
 open import Syntax
+open import Equality
 
 record VarClosure (D : MCtx) (S : MTy) : Set where
   constructor _/_
@@ -111,7 +112,6 @@ mutual
   ... | (G1 , ρ , p) with purges i (subs (toSub ρ) t₁)
   ... | (G2 , ρ2 , p2) = G2 , ρ2 ∘mr ρ , DClosedMRP ρ2 ρ i t p , step-MRPs ρ2 ρ i t₁ p2
 
-open import Equality
 mutual
   uni-pullbackT : ∀ {D1 D2 Du : Ctx} → (i : Inj D1 D2)(j : Inj Du D2) -> ∀ {Dr} -> (h : Inj Dr Du) (k : Inj Dr D1)
                  -> (∀ a (y : Du ∋ a)(x : D1 ∋ a) -> i $ x ≡ j $ y -> (∃ \ z -> k $ z ≡ x × h $ z ≡ y)) ->

@@ -17,6 +17,7 @@ open import Injection
 open import Lists
 
 open import Syntax
+open import Equality
 
 Index = Ctx × (Ty ⊎ List Ty)
 
@@ -127,8 +128,6 @@ data View {Sg G D T D1} : ∀ {DI TI} (ps : Context Sg G (DI , TI) (D , T))(t : 
   tail∷ : ∀ {DI S Ss ps}{t : Tm _ _ D1 S}{ts : Tms _ _ D1 Ss}{i : Inj _ DI}{s} -> rens i ts ≡ ∫ ps s -> View (tail (ren i t) ∷ ps) (t ∷ ts) i s
   con∷ : ∀ {DI Ss B ps}{c : Sg ∋ (Ss ->> B)}{ts : Tms _ _ D1 Ss}{i : Inj _ DI}{s} -> rens i ts ≡ ∫ ps s -> View (con c ∷ ps) (con c ts) i s
   var∷ : ∀ {DI Ss B ps}{x : D1 ∋ (Ss ->> B)}{ts : Tms _ _ D1 Ss}{i : Inj _ DI}{s} -> rens i ts ≡ ∫ ps s -> View (var (i $ x) ∷ ps) (var x ts) i s
-
-open import Equality
 
 view' : ∀ {Sg G DI TI D T D1} (ps : Context Sg G (DI , TI) (D , T))(t : Term Sg G D1 _) (i : Inj D1 DI) (s : Term Sg G D T) 
      -> eqT (renT i t) (∫ ps s) -> View ps t i s

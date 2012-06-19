@@ -18,6 +18,7 @@ open import Injection
 open import Lists
 
 open import Syntax
+open import OneHoleContext
 open import Purging
 
 mutual
@@ -74,11 +75,9 @@ mutual
     rect = remember i t
     rects = remembers i ts
 
-
 ren-inj : ∀ {Sg G D D0}{T : Ty} → (i : Inj D D0) → (s t : Tm Sg G D T) -> ren i s ≡ ren i t -> s ≡ t
 ren-inj i s t eq with remember i s | remember i t
 ... | (rs , fogrs≡s) | (rt , fogrt≡t) rewrite eq = trans (sym fogrs≡s) (trans (cong (λ r → proj₁ (forget r)) (unique rs rt)) fogrt≡t)
-open import OneHoleContext
 
 notInv : ∀ {Sg G D D' T} (i : Inj D D') (t : Term Sg G D' T) → Set
 notInv i t = ∃ \ D1 -> ∃ \ Ss -> ∃ \ B -> Σ (D1 ∋ Ss ->> B) \ x -> ∃ \ ts -> Σ (Context _ _ _ (D1 , inj₁ _) ) \ C → 
