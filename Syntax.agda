@@ -151,6 +151,17 @@ mutual
   subs-∘ (t ∷ t₁) = cong₂ _∷_ (sub-∘ t) (subs-∘ t₁)
 
 mutual
+  sub-id : ∀ {Sg G D T} (t : Tm Sg G D T) → sub (\ S u -> fun u id-i) t ≡ t
+  sub-id (con c ts) = cong (con c) (subs-id ts)
+  sub-id (fun u j) = cong (fun u) (right-id j)
+  sub-id (var x ts) = cong (var x) (subs-id ts)
+  sub-id (lam t) = cong lam (sub-id t)
+  
+  subs-id : ∀ {Sg G D T} (t : Tms Sg G D T) → subs (\ S u -> fun u id-i) t ≡ t
+  subs-id [] = refl
+  subs-id (t ∷ ts) = cong₂ _∷_ (sub-id t) (subs-id ts)
+
+mutual
   sub-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → (∀ S x → f S x ≡ g S x) → (t : Tm Sg G1 D T) → sub f t ≡ sub g t
   sub-ext q (con c ts) = cong (con c) (subs-ext q ts)
   sub-ext q (fun u j) = cong (ren j) (q _ u)
