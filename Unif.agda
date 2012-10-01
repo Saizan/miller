@@ -17,10 +17,12 @@ import Level
 open RawMonad (monad {Level.zero})
 
 open import Injection
+open import Injection.Objects
 open import Lists
 
 open import Syntax
 open import Equality
+open import RenOrn
 open import OneHoleContext
 open import OccursCheck
 open import Purging
@@ -42,41 +44,42 @@ Max : ∀ {Sg G1} -> Property Sg G1 -> Property Sg G1
 Max P σ = P σ × IsMax P σ
 
 mutual
-  inters : ∀ {Sg G D1 D2 P S} {i j : Inj D1 D2}{r : Inj P D1} -> (∀ a (y : D1 ∋ a) -> i $ y ≡ j $ y -> ∃ \ z -> y ≡ r $ z)
-        -> (t : Tm Sg G D1 S) -> (ren i t) ≡T (ren j t) -> RTm Sg G P D1 r _ t
-  inters c (con c₁ ts) (con refl eqts) = con c₁ (interss c ts eqts)
-  inters c (fun u j₁) (fun refl eqts) = fun u (proj₁ rec) (sym (proj₂ rec)) where
-    rec = inter-Inj _ _ _ c j₁ eqts 
-  inters c (var x ts) (var eqv eqts)  = var (proj₁ (c _ x eqv)) (sym (proj₂ (c _ x eqv))) (interss c ts eqts)
-  inters c (lam t) (lam eq) = lam (inters (cons-inter _ _ _ c) t eq)
+  lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tm Sg G X S) 
+                 -> (ren i t) ≡T (ren j t) -> let open Equalizer equ in RTm Sg G E X e _ t
+  lift-equalizer equ (con c ts) (con refl eq) = con c (lifts-equalizer equ ts eq)
+  lift-equalizer equ (fun u j₁) (fun refl eq) = fun u (universal j₁ eq) e∘universal≡m
+    where open Equalizer equ
+  lift-equalizer equ (var x ts) (var eqv eqts) = var (proj₁ r) (sym (proj₂ r)) (lifts-equalizer equ ts eqts)
+    where r = e$u≡m equ _ x eqv
+  lift-equalizer equ (lam t) (lam eq) = lam (lift-equalizer (cons-equalizer _ _ equ) t eq)
 
-  interss : ∀ {Sg G D1 D2 P S} {i j : Inj D1 D2}{r : Inj P D1} -> (∀ a (y : D1 ∋ a) -> i $ y ≡ j $ y -> ∃ \ z -> y ≡ r $ z)
-        -> (t : Tms Sg G D1 S) -> (rens i t) ≡T (rens j t) -> RTms Sg G P D1 r _ t
-  interss c [] eq = []
-  interss c (t ∷ ts) (eqt ∷ eqts) = inters c t eqt ∷ interss c ts eqts
-
+  lifts-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tms Sg G X S) 
+                 -> (rens i t) ≡T (rens j t) -> let open Equalizer equ in RTms Sg G E X e _ t
+  lifts-equalizer equ [] eq = []
+  lifts-equalizer equ (t ∷ ts) (eqt ∷ eqts) = (lift-equalizer equ t eqt) ∷ (lifts-equalizer equ ts eqts)
 
 flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃σ Max (Unifies {Sg} (Tm.fun u i) (fun u j))
-flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , σ , aux , maxprop where
-    r = intersect i j
-    k = proj₁ (proj₂ r)
+flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , σ , aux , maxprop
+  where
+    i,j⇒e = equalizer i j
+    open Equalizer i,j⇒e
+    k = e
     σ = (toSub (singleton u k))
     aux : eqT (ren i (σ _ u)) (ren j (σ _ u))
-    aux rewrite thick-refl u = ≡-T (cong (fun zero) (proj₁ (proj₂ (proj₂ r))))
+    aux rewrite thick-refl u = ≡-T (cong (fun zero) commutes)
     maxprop : {G' : List MTy}
       (ρ : (S : MTy) → G ∋ S → Tm Sg G' (ctx S) (! type S)) →
       eqT (ren i (ρ _ u)) (ren j (ρ _ u)) → ρ ≤ σ
     maxprop {G'} ρ eq = dif , proof where
       dif : (S₁ : MTy) →
-        B <<- proj₁ (intersect i j) ∷ G - u ∋ S₁ →
+        B <<- E ∷ G - u ∋ S₁ →
         Tm Sg G' (ctx S₁) ([] ->> type S₁)
-      dif ._ zero = proj₁ (Inversion.forget (inters {r = k} (proj₂ (proj₂ (proj₂ r))) (ρ _ u) eq ))
+      dif ._ zero = proj₁ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) eq))
       dif S₁ (suc v) = ρ _ (thin u _ v)
       proof : (S₁ : MTy) (u₁ : G ∋ S₁) → ρ S₁ u₁ ≡ (dif ∘s σ) S₁ u₁
       proof S₁ u₁ with thick u u₁ 
       proof S₁ u₁ | inj₁ (v , eq') rewrite eq' = sym (ren-id (ρ _ u₁))
-      proof .(B <<- Ss) .u | inj₂ refl = sym (proj₂ (Inversion.forget (inters {r = k} (proj₂ (proj₂ (proj₂ r))) (ρ _ u) (eq))))
-
+      proof .(B <<- Ss) .u | inj₂ refl = sym (proj₂ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) eq)))
 
 Spec : ∀ {Sg G1 D S} (x y : Term Sg G1 D S) -> Set
 Spec x y = ∃σ Max (Unifies x y) ⊎ ¬ ∃σ Unifies x y
@@ -130,6 +133,7 @@ flexRigid {Sg} {G} u i s (G1 , ρ , m) maxρ | inj₁ (t , eq) = yes (G1 , σ ,
                  sub r (sub (toSub ρ) s) ≡⟨ cong (sub r) (sym eq) ⟩ 
                  sub r (ren i t) ≡⟨ sub-nat t ⟩ 
                  ren i (sub r t) ∎)
+
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (fun u i) t
 flexAny u i t with check u t 
