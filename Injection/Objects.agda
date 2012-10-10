@@ -79,7 +79,7 @@ _→zero∷e⇒i∷f,i∷g {a = a} {v = u} {f} {g} {pf} {pg} {E} {e} equ =
     aux x (suc v) rewrite Inj-thin-$ {x = a} zero e v = trans (sym (apply-∘ f e)) (trans (cong (λ f₁ → f₁ $ v) commutes) (apply-∘ g e))
     uni : {Q : _} (m : Inj Q _) → (u ∷ f [ pf ]) ∘i m ≡ (u ∷ g [ pg ]) ∘i m → Σ (Inj Q (a ∷ E)) (λ z → (zero ∷[] e) ∘i z ≡ m )
     uni = 
-      inter-Inj (u ∷ f [ pf ]) (u ∷ g [ pg ]) (zero ∷[] e)
+      Equ-universal-quote (u ∷ f [ pf ]) (u ∷ g [ pg ]) (zero ∷[] e)
         (∋-case (λ x → zero , refl)
          (λ a₁ y x →
             let rec = e$u≡m (Equ _ , _ , equ) a₁ y x
@@ -116,7 +116,7 @@ _,_→weake⇒i∷f,j∷g {a = a} {u = u}{v} u≢v {f} {g} {pf} {pg} {E} {e} equ
    aux x v₁ rewrite Inj-thin-$ {x = a} zero e v₁ = trans (sym (apply-∘ f e)) (trans (cong (λ f₁ → f₁ $ v₁) commutes) (apply-∘ g e))
 
    uni : {Q : _} (m : Inj Q _) → (u ∷ f [ pf ]) ∘i m ≡ (v ∷ g [ pg ]) ∘i m → Σ (Inj Q E) (λ z → (weak e) ∘i z ≡ m )
-   uni = inter-Inj (u ∷ f [ pf ]) (v ∷ g [ pg ]) (weak e) (∋-case (λ u≡v → ⊥-elim (u≢v u≡v)) 
+   uni = Equ-universal-quote (u ∷ f [ pf ]) (v ∷ g [ pg ]) (weak e) (∋-case (λ u≡v → ⊥-elim (u≢v u≡v)) 
                    (λ a₁ y x →
                         let rec : _
                             rec = e$u≡m (Equ _ , _ , equ) a₁ y x
@@ -160,7 +160,7 @@ empty-pullback {A} {X} {Z} {f} = record {
     abstract
       uni : ∀ {Q} -> (q₁ : Inj Q X) (q₂ : Inj Q (a ∷ Y)) -> f ∘i q₁ ≡ ((f $ x) ∷ g [ pf ]) ∘i q₂ -> 
           ∃ \ u -> q₁ ≡ (x ∷ p₁ [ x∉p₁ ]) ∘i u × q₂ ≡ (zero ∷[] p₂) ∘i u  
-      uni {Q} q₁ q₂ eq = uni-pullback f ((f $ x) ∷ g [ pf ]) (zero ∷[] p₂) (x ∷ p₁ [ x∉p₁ ]) 
+      uni {Q} q₁ q₂ eq = Pull-universal-quote f ((f $ x) ∷ g [ pf ]) (zero ∷[] p₂) (x ∷ p₁ [ x∉p₁ ]) 
             (∋-case (λ x₁ x₂ → zero , ((injective f x x₁ (sym x₂)) , refl)) (λ a₁ y x₁ x₂ → 
             let p : Σ _ _; p = p$u≡q f g (Pull P , p₁ , p₂ , pull) a₁ y x₁ x₂ 
             in (suc (proj₁ p)) , (proj₁ (proj₂ p)) , (trans (iso2 _ _ (proj₁ p)) (cong suc (proj₂ (proj₂ p)))))) 
@@ -199,7 +199,7 @@ comm-pullback pull = record {
      open IsPullback pull 
      abstract
        uni : ∀ {Q} -> (q₁ : Inj Q X) (q₂ : Inj Q (a ∷ Y)) -> f ∘i q₁ ≡ (i ∷ g [ pf ]) ∘i q₂ -> ∃ \ u -> q₁ ≡ p₁ ∘i u × q₂ ≡ (weak p₂) ∘i u  
-       uni {Q} q₁ q₂ eq = uni-pullback f (i ∷ g [ pf ]) (weak p₂) p₁ (∋-case (λ x x₁ → ⊥-elim (i∉f x (sym x₁))) 
+       uni {Q} q₁ q₂ eq = Pull-universal-quote f (i ∷ g [ pf ]) (weak p₂) p₁ (∋-case (λ x x₁ → ⊥-elim (i∉f x (sym x₁))) 
          (λ a₁ y x x₁ → let p : Σ _ _
                             p = p$u≡q f g (Pull _ , p₁ , p₂ , pull) a₁ y x x₁
                         in (proj₁ p) , ((proj₁ (proj₂ p)) , trans (iso2 _ _ (proj₁ p)) (cong suc (proj₂ (proj₂ p)))))) 

@@ -20,98 +20,125 @@ open import Lists
 
 open import Syntax
 open import Equality
-
-record VarClosure (D : MCtx) (S : MTy) : Set where
-  constructor _/_
-  field
-    {Ψ} : Ctx
-    ρ-env : Inj Ψ (ctx S)
-    body : D ∋ (type S <<- Ψ)
-
-open VarClosure public using (body; ρ-env)
-
-MetaRen : MCtx → MCtx → Set
-MetaRen G D = ∀ S → G ∋ S → VarClosure D S
-
-toSub : ∀ {Sg G D} → MetaRen G D → Sub Sg G D
-toSub r = λ S x → fun (body (r S x)) (ρ-env (r S x))
-
-idmr : ∀ {G} -> MetaRen G G
-idmr = \ S x -> id-i / x
-
-_∘mr_ : ∀ {G1 G2 G3} → MetaRen G2 G3 → MetaRen G1 G2 → MetaRen G1 G3
-f ∘mr g = λ S x → let gr = g S x; fr = f _ (body gr) in
-                  (ρ-env gr ∘i ρ-env fr) / body fr 
-
-singleton : ∀ {G S} → (u : G ∋ S) → ∀ {Ψ} → Inj Ψ (ctx S) → MetaRen G ((G - u) <: (type S <<- Ψ))
-singleton u  j T  v with thick u v
-singleton u  j T  v | inj₁ x = id-i / suc (proj₁ x)
-singleton .v j ._ v | inj₂ refl = j / zero 
+open import MetaRens
 
 mutual
-  _/_∈_ : ∀ {Sg : Ctx} {G1 G2 : MCtx} → MetaRen G1 G2 → ∀ {D1 D2 : Ctx} → ∀ {T} → Tm Sg G1 D2 T →  Inj D1 D2 → Set
+  _/_∈_ : ∀ {Sg : Ctx} {G1 G2 : MCtx} → Sub Sg G1 G2 → ∀ {D1 D2 : Ctx} → ∀ {T} → Tm Sg G1 D2 T → Inj D1 D2 → Set
   r / con c ts ∈ i = r /s ts ∈ i
-  r / fun u j ∈ i = ∃ (λ k → i ∘i k ≡ j ∘i ρ-env (r _ u))
+  r / fun u j ∈ i = ∃ \ H -> ∃ \ v -> ∃ \ (h : Inj H _) -> r _ u ≡ fun v h × ∃ (λ k → i ∘i k ≡ j ∘i h)
   r / var x ts ∈ i = r /s ts ∈ i
   r / lam t ∈ i = r / t ∈ cons i
 
-  _/s_∈_ : ∀ {Sg : Ctx} {G1 G2 : MCtx} → MetaRen G1 G2 → ∀ {D1 D2 : Ctx} → ∀ {Ts} → Tms Sg G1 D2 Ts → Inj D1 D2 → Set
+  _/s_∈_ : ∀ {Sg : Ctx} {G1 G2 : MCtx} → Sub Sg G1 G2 → ∀ {D1 D2 : Ctx} → ∀ {Ts} → Tms Sg G1 D2 Ts → Inj D1 D2 → Set
   r /s [] ∈ i = ⊤
   r /s (x ∷ ts) ∈ i = r / x ∈ i × r /s ts ∈ i
 
 -- downward closed
 mutual
-  DClosedMRP : ∀ {Sg G1 G2 G3} (f : MetaRen G2 G3)(g : MetaRen G1 G2) {D1 D2 : Ctx} (i : Inj D1 D2) ->
-               ∀ {T} → (t : Tm Sg G1 D2 T) → g / t ∈ i → (f ∘mr g) / t ∈ i
+  DClosedMRP : ∀ {Sg G1 G2 G3} (f : MetaRen G2 G3)(g : Sub Sg G1 G2) {D1 D2 : Ctx} (i : Inj D1 D2) ->
+               ∀ {T} → (t : Tm Sg G1 D2 T) → g / t ∈ i → (toSub f ∘s g) / t ∈ i
   DClosedMRP f g i (con c ts) m = DClosedMRPs f g i ts m
-  DClosedMRP f g i (fun u j) (h , i∘h≡j∘gu) = h ∘i fj , 
+  DClosedMRP f g i (fun u j) (H , v , k , eq , h , i∘h≡j∘gu) rewrite eq = _ , body (f _ v) , k ∘i fj  , refl , h ∘i fj , 
        (begin i ∘i (h ∘i fj)             ≡⟨ assoc-∘i ⟩ 
               (i ∘i h) ∘i fj             ≡⟨ cong (λ k → k ∘i fj) i∘h≡j∘gu ⟩ 
-              (j ∘i ρ-env (g _ u)) ∘i fj ≡⟨ sym assoc-∘i ⟩ 
-              j ∘i (ρ-env (g _ u) ∘i fj) ∎)
+              (j ∘i k) ∘i fj ≡⟨ sym assoc-∘i ⟩ 
+              j ∘i (k ∘i fj) ∎)
     where
-      fr = f _ (body (g _ u))
+      fr = f _ v
       fj = ρ-env fr
+
   DClosedMRP f g i (var x ts) m = DClosedMRPs f g i ts m
   DClosedMRP f g i (lam t) m = DClosedMRP f g (cons i) t m
   
-  DClosedMRPs : ∀ {Sg G1 G2 G3} → (f : MetaRen G2 G3)(g : MetaRen G1 G2) → ∀ {D1 D2 : Ctx} → (i : Inj D1 D2) ->
-               ∀ {T} → (t : Tms Sg G1 D2 T) → g /s t ∈ i → (f ∘mr g) /s t ∈ i
+  DClosedMRPs : ∀ {Sg G1 G2 G3} → (f : MetaRen G2 G3)(g : Sub Sg G1 G2) → ∀ {D1 D2 : Ctx} → (i : Inj D1 D2) ->
+               ∀ {T} → (t : Tms Sg G1 D2 T) → g /s t ∈ i → (toSub f ∘s g) /s t ∈ i
   DClosedMRPs f g i [] m = _
   DClosedMRPs f g i (t ∷ ts) m = (DClosedMRP f g i t (proj₁ m)) , (DClosedMRPs f g i ts (proj₂ m))
 
-  step-MRP : ∀ {Sg G1 G2 G3} (f : MetaRen G2 G3)(g : MetaRen G1 G2) {D1 D2 : Ctx} (i : Inj D1 D2) ->
-               ∀ {T} → (t : Tm Sg G1 D2 T) → f / sub (toSub g) t ∈ i → (f ∘mr g) / t ∈ i
+  step-MRP : ∀ {Sg G1 G2 G3} (f : Sub Sg G2 G3)(g : MetaRen G1 G2) {D1 D2 : Ctx} (i : Inj D1 D2) ->
+               ∀ {T} → (t : Tm Sg G1 D2 T) → f / sub (toSub g) t ∈ i → (f ∘s toSub g) / t ∈ i
   step-MRP f g i (con c ts) m = step-MRPs f g i ts m
-  step-MRP f g i (fun u j) (k , p) = k , 
-    (begin i ∘i k                                             ≡⟨ p ⟩ 
-           (j ∘i ρ-env (g _ u)) ∘i ρ-env (f _ (body (g _ u))) ≡⟨ sym assoc-∘i ⟩ 
-           j ∘i (ρ-env (g _ u) ∘i ρ-env (f _ (body (g _ u)))) ∎)
+  step-MRP f g i (fun u j) (H , v , h , eq , k , p) rewrite eq = _ ,
+                                                                   v ,
+                                                                   ρ-env (g _ u) ∘i h ,
+                                                                   refl ,
+                                                                   k ,
+                                                                   (begin
+                                                                    i ∘i k ≡⟨ p ⟩
+                                                                    (j ∘i ρ-env (g _ u)) ∘i h ≡⟨ sym assoc-∘i ⟩
+                                                                    (j ∘i (ρ-env (g _ u) ∘i h) ∎))
   step-MRP f g i (var x ts) m = step-MRPs f g i ts m
   step-MRP f g i (lam t) m = step-MRP f g (cons i) t m
   
-  step-MRPs : ∀ {Sg G1 G2 G3} (f : MetaRen G2 G3)(g : MetaRen G1 G2) {D1 D2 : Ctx} (i : Inj D1 D2) ->
-               ∀ {T} → (t : Tms Sg G1 D2 T) → f /s subs (toSub g) t ∈ i  → (f ∘mr g) /s t ∈ i
+  step-MRPs : ∀ {Sg G1 G2 G3} (f : Sub Sg G2 G3)(g : MetaRen G1 G2) {D1 D2 : Ctx} (i : Inj D1 D2) ->
+               ∀ {T} → (t : Tms Sg G1 D2 T) → f /s subs (toSub g) t ∈ i  → (f ∘s toSub g) /s t ∈ i
   step-MRPs f g i [] ms = _
   step-MRPs f g i (t ∷ ts) ms = step-MRP f g i t (proj₁ ms) , step-MRPs f g i ts (proj₂ ms)
 
-{-# NO_TERMINATION_CHECK #-}
+mutual
+  MRP-ext : ∀ {Sg : Ctx} {G1 G2 : MCtx} → (f g : Sub Sg G1 G2) → (∀ S u -> f S u ≡ g S u) -> 
+            ∀ {D1 D2 : Ctx} → (i : Inj D1 D2) →  ∀ {T} → (t : Tm Sg G1 D2 T) → f / t ∈ i -> g / t ∈ i
+  MRP-ext f g eq i (con c ts) m = MRPs-ext f g eq i ts m
+  MRP-ext f g eq i (fun u j) m rewrite eq _ u = m
+  MRP-ext f g eq i (var x ts) m = MRPs-ext f g eq i ts m
+  MRP-ext f g eq i (lam t) m = MRP-ext f g eq (cons i) t m
+
+  MRPs-ext : ∀ {Sg : Ctx} {G1 G2 : MCtx} → (f g : Sub Sg G1 G2) → (∀ S u -> f S u ≡ g S u) -> 
+            ∀ {D1 D2 : Ctx} → (i : Inj D1 D2) →  ∀ {T} → (t : Tms Sg G1 D2 T) → f /s t ∈ i -> g /s t ∈ i
+  MRPs-ext f g eq i [] m = _
+  MRPs-ext f g eq i (t ∷ ts) m = (MRP-ext f g eq i t (proj₁ m)) , (MRPs-ext f g eq i ts (proj₂ m))
+
+open import DSub
+
 mutual
   
-  purge : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∃ \ G1 → Σ (MetaRen G G1) \ ρ → ρ / t ∈ i
-  purge i (con c ts) = purges i ts
-  purge i (fun u j) = _ , (singleton u p₂ , aux) where
+  purge : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
+            -> ∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ / t ∈ i
+  purge i (con c ts) l = purges i ts l
+  purge i (fun u j) l = _ , (singleton u p₂ , decr , _ , _ , _ , refl , aux) where
     open Pullback (pullback i j)
     aux : ∃ (λ k → i ∘i k ≡ j ∘i ρ-env (singleton u p₂ _ u))
     aux rewrite thick-refl u = p₁ , commutes
-  purge i (var x ts) = purges i ts
-  purge i (lam t) = purge (cons i) t
+    decr = singleton-Decreasing p₂ u (pullback-Decr i j)
+  purge i (var x ts) l = purges i ts l
+  purge i (lam t) l = purge (cons i) t l
 
-  purges : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∃ \ G1 → Σ (MetaRen G G1) \ ρ → ρ /s t ∈ i
-  purges {Sg}{G} i [] = G , idmr , tt
-  purges i (t ∷ t₁) with purge i t
-  ... | (G1 , ρ , p) with purges i (subs (toSub ρ) t₁)
-  ... | (G2 , ρ2 , p2) = G2 , ρ2 ∘mr ρ , DClosedMRP ρ2 ρ i t p , step-MRPs ρ2 ρ i t₁ p2
+  purges : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
+           -> ∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing (toSub ρ) × toSub ρ /s t ∈ i
+  purges {Sg}{G} i [] _ = G , idmr , inj₁
+                                       (refl ,
+                                        ((λ S x → mvar x) , (λ S u → sym (ren-id _))) ,
+                                        (λ S u → sym (ren-id _))) , tt
+  purges i (t ∷ t₁) l with purge i t l 
+  ... | (G1 , ρ , ρ-decr , p) = helper-pur i t t₁ l (G1 , ρ , ρ-decr , p)
+
+  helper-pur : ∀ {Sg G D1 D2 T Ts } → (i : Inj D1 D2) → (t : Tm Sg G D2 T)(ts : Tms Sg G D2 Ts) → ∃ (\ n -> n ≥ Ctx-length G) 
+               -> (∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ / t ∈ i)
+               -> ∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ /s (t ∷ ts) ∈ i
+
+  helper-pur i t ts l (_ , σ , (inj₁ (eq , (δ , iso1) , iso2)) , p1) with purges i ts l 
+  ... | (G1 , ρ , ρ-decr , p) = G1 , (ρ , (ρ-decr , ((MRP-ext (toSub (ρ ∘mr δ') ∘s toSub σ) (toSub ρ) 
+        (λ S u → trans (cong (λ i₁ → fun (body (((ρ ∘mr δ') ∘mr σ) _ u)) i₁) assoc-∘i)
+                   (sym
+                    (trans (sym (ren-id (toSub ρ _ u)))
+                     (cong (sub (toSub ρ))
+                      (trans (iso1 S u) (sym (sub-ext δ≡δ' (toSub σ _ u)))))))) 
+      i t (DClosedMRP (ρ ∘mr δ') (toSub σ) i t p1)) , p)))
+      where δ' = proj₁ (toMRen δ ((toSub σ) , iso2))
+            δ≡δ' = proj₂ (toMRen δ ((toSub σ) , iso2))
+  helper-pur i t ts (n , n≥length) (_ , σ , (inj₂ G>G2) , p1) with 
+             let open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _≤-∎) in  
+               helper-pur2 i ts σ (n , n≥length) (≤-begin _ ≤⟨ G>G2 ⟩ _ ≤⟨ n≥length ⟩ (_ ≤-∎))
+  ... | (G2 , ρ2 , ρ2-decr , p2) = G2 ,
+                                     ρ2 ∘mr σ ,
+                                     decreasing ((DS toSub ρ2 , ρ2-decr) ∘ds (DS toSub σ , inj₂ G>G2)) 
+                                   , DClosedMRP ρ2 (toSub σ) i t p1 , step-MRPs (toSub ρ2) σ i ts p2
+
+  helper-pur2 : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → 
+             ∀ {G2} (σ : MetaRen G G2) -> ∀ (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G2 -> 
+             ∃ \ G1 → Σ (MetaRen G2 G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ /s (subs (toSub σ) t) ∈ i
+  helper-pur2 i t σ (.(suc n) , _) (s≤s {._} {n} u>smt) = purges i (subs (toSub σ) t) (n , u>smt)
+
 
 open import RenOrn
 
@@ -137,12 +164,12 @@ mutual
   lifts-pullback pull (t ∷ ts) (t₁ ∷ ts₁) (eqt ∷ eqts) = (lift-pullback pull t t₁ eqt) ∷ (lifts-pullback pull ts ts₁ eqts)
  
 mutual
-  purge-gen : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → 
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> eqT (ren i z) (sub s t) -> s ≤ toSub (proj₁ (proj₂ (purge i t)))
-  purge-gen i (con c ts) s (con c₁ ts₁) (con _ eq) = purge-gens i ts s ts₁ eq
-  purge-gen i (con c ts) s (fun u j) ()
-  purge-gen i (con c ts) s (var x ts₁) ()
-  purge-gen {Sg} {G} i (fun {Ss = Ss} {B} u j) {G2} s z eq = dif , proof
+  purge-gen : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∀ l -> 
+              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> eqT (ren i z) (sub s t) -> s ≤ toSub (proj₁ (proj₂ (purge i t l)))
+  purge-gen i (con c ts) l s (con c₁ ts₁) (con _ eq) = purge-gens i ts l s ts₁ eq
+  purge-gen i (con c ts) l s (fun u j) ()
+  purge-gen i (con c ts) l s (var x ts₁) ()
+  purge-gen {Sg} {G} i (fun {Ss = Ss} {B} u j) l {G2} s z eq = dif , proof
     where 
       pull = pullback i j
       open Pullback pull
@@ -156,19 +183,27 @@ mutual
       proof S₁ .(thin u S₁ v) | inj₁ (v , refl) = sym (ren-id _)
       proof ._ ._ | inj₂ refl = sym ((proj₂ uniT))
    
-  purge-gen i (var x ts) s (con c ts₁) ()
-  purge-gen i (var x ts) s (fun u j) ()
-  purge-gen i (var x ts) s (var x₁ ts₁) (var eqv eq) = purge-gens i ts s ts₁ eq
-  purge-gen i (lam t) s (lam z) (lam eq) = purge-gen (cons i) t s z eq
+  purge-gen i (var x ts) l s (con c ts₁) ()
+  purge-gen i (var x ts) l s (fun u j) ()
+  purge-gen i (var x ts) l s (var x₁ ts₁) (var eqv eq) = purge-gens i ts l s ts₁ eq
+  purge-gen i (lam t) l s (lam z) (lam eq) = purge-gen (cons i) t l s z eq
 
-  purge-gens : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → 
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tms Sg G2 D1 T) -> eqT (rens i z) (subs s t) -> s ≤ toSub (proj₁ (proj₂ (purges i t)))
-  purge-gens i [] s [] eq = s , (λ S u → sym (ren-id _))
-  purge-gens i (t ∷ ts) s (z ∷ zs) (eqt ∷ eqts) with purge-gen i t s z eqt 
-  ... | (r , s≡r∘ρ) with purge-gens i (subs (toSub (proj₁ (proj₂ (purge i t)))) ts) r zs (≡-T (trans (T-≡ eqts) 
+  purge-gens : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∀ l ->
+              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tms Sg G2 D1 T) -> eqT (rens i z) (subs s t) -> s ≤ toSub (proj₁ (proj₂ (purges i t l)))
+  purge-gens i [] l s [] eq = s , (λ S u → sym (ren-id _))
+  purge-gens i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) with purge-gen i t l s z eqt 
+  ... | (r , s≡r∘ρ) with purge i t l 
+  purge-gens i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | proj₁ , σ , inj₁ x , p1 = purge-gens i ts l s zs eqts
+  purge-gens i (t ∷ ts) (n , n≥length) s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | proj₁ , σ , inj₂ y , p1 with
+    let open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _≤-∎) in  
+               (≤-begin _ ≤⟨ y ⟩ _ ≤⟨ n≥length ⟩ (_ ≤-∎)) 
+  purge-gens i (t ∷ ts) (.(suc n) , n≥length) s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | _ , σ , inj₂ y , p1 | s≤s {._} {n} ww 
+   with purge-gens i (subs (toSub σ) ts) (n , ww) r zs (≡-T (trans (T-≡ eqts) 
                          (trans (subs-ext s≡r∘ρ ts) (sym (subs-∘ ts)))))
   ... | (r1 , r≡r1∘ρ1) = r1 , (λ S u → trans (s≡r∘ρ S u) (trans (sub-ext r≡r1∘ρ1 (toSub ρ S u)) (sym (sub-∘ {f = r1} {g = toSub ρ1} (toSub ρ S u)))))
     where
-      ρ = (proj₁ (proj₂ (purge i t)))
-      ρ1 = proj₁ (proj₂ (purges i (subs (toSub ρ) ts)))
+      ρ = σ
+      ρ1 = proj₁ (proj₂ (purges i (subs (toSub ρ) ts) (n , ww)))
+
+
 

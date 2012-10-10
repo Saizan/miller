@@ -13,7 +13,7 @@ import Level
 open RawMonad (monad {Level.zero})
 
 open import Injection
-open import Lists
+open import Lists public
 
 postulate
   -- it'd more properly be a module parameter
@@ -96,6 +96,8 @@ mutual
   subs s [] = []
   subs s (x ∷ ts) = sub s x ∷ subs s ts
 
+id-s : ∀ {Sg G} -> Sub Sg G G
+id-s = \ S x -> mvar x
 _∘s_ : ∀ {Sg G1 G2 G3} -> Sub Sg G2 G3 -> Sub Sg G1 G2 -> Sub Sg G1 G3
 r ∘s s = λ S x → sub r (s S x)
 
@@ -171,3 +173,15 @@ mutual
   subs-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → (∀ S x → f S x ≡ g S x) → (t : Tms Sg G1 D T) → subs f t ≡ subs g t
   subs-ext q [] = refl
   subs-ext q (t ∷ ts) = cong₂ _∷_ (sub-ext q t) (subs-ext q ts)
+
+subT-id : ∀ {Sg G D T} (t : Term Sg G D T) → subT (\ S u -> fun u id-i) t ≡ t
+subT-id {Sg} {G} {D} {inj₁ x} t = sub-id t
+subT-id {Sg} {G} {D} {inj₂ y} t = subs-id t
+
+subT-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → (∀ S x → f S x ≡ g S x) → (t : Term Sg G1 D T) → subT f t ≡ subT g t
+subT-ext {Sg} {G1} {G2} {D} {inj₁ x} eq t = sub-ext eq t
+subT-ext {Sg} {G1} {G2} {D} {inj₂ y} eq t = subs-ext eq t
+
+subT-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g} (t : Term Sg G1 D T) → subT f (subT g t) ≡ subT (f ∘s g) t
+subT-∘ {Sg} {G1} {G2} {G3} {D} {inj₁ x} t = sub-∘ t
+subT-∘ {Sg} {G1} {G2} {G3} {D} {inj₂ y} t = subs-∘ t

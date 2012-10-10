@@ -19,6 +19,7 @@ open RawMonad (monad {Level.zero})
 open import Injection
 open import Injection.Objects
 open import Lists
+open import Data.List
 
 open import Syntax
 open import Equality
@@ -28,20 +29,9 @@ open import OccursCheck
 open import Purging
 open import Inversion
 
-Property : ∀ Sg G -> Set₁
-Property Sg G = (∀ {G2} -> Sub Sg G G2 -> Set)
-
-Unifies : ∀ {Sg G1 D S} (x y : Term Sg G1 D S) -> Property Sg G1
-Unifies x y σ = eqT (subT σ x) (subT σ y)
-
-∃σ_ : ∀ {Sg G1} -> Property Sg G1 -> Set
-∃σ P = ∃ \ G2 -> ∃ \ σ -> P {G2} σ
-
-IsMax : ∀ {Sg G1} -> Property Sg G1 -> Property Sg G1
-IsMax P σ = (∀ {G'} ρ -> P {G'} ρ -> ρ ≤ σ)
-
-Max : ∀ {Sg G1} -> Property Sg G1 -> Property Sg G1
-Max P σ = P σ × IsMax P σ
+open import DSub
+open import Specification
+open import MetaRens
 
 mutual
   lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tm Sg G X S) 
@@ -58,13 +48,12 @@ mutual
   lifts-equalizer equ [] eq = []
   lifts-equalizer equ (t ∷ ts) (eqt ∷ eqts) = (lift-equalizer equ t eqt) ∷ (lifts-equalizer equ ts eqts)
 
-flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃σ Max (Unifies {Sg} (Tm.fun u i) (fun u j))
-flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , σ , aux , maxprop
+flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃⟦σ⟧ Max (Unifies {Sg} (Tm.fun u i) (fun u j))
+flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (equalizer-Decr i j)) , aux , maxprop
   where
     i,j⇒e = equalizer i j
     open Equalizer i,j⇒e
-    k = e
-    σ = (toSub (singleton u k))
+    σ = (toSub (singleton u e))
     aux : eqT (ren i (σ _ u)) (ren j (σ _ u))
     aux rewrite thick-refl u = ≡-T (cong (fun zero) commutes)
     maxprop : {G' : List MTy}
@@ -81,25 +70,21 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , σ , aux , maxprop
       proof S₁ u₁ | inj₁ (v , eq') rewrite eq' = sym (ren-id (ρ _ u₁))
       proof .(B <<- Ss) .u | inj₂ refl = sym (proj₂ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) eq)))
 
-Spec : ∀ {Sg G1 D S} (x y : Term Sg G1 D S) -> Set
-Spec x y = ∃σ Max (Unifies x y) ⊎ ¬ ∃σ Unifies x y
-
-
 flexRigid : ∀ {Sg G D S} →
                (u : G ∋ S) →
                (i : Inj (ctx S) D) →
-               (s : Tm Sg (G - u) D (! type S)) → (p : ∃ \ G1 → Σ (MetaRen (G - u) G1) \ ρ → ρ / s ∈ i) ->
+               (s : Tm Sg (G - u) D (! type S)) → (p : ∃ \ G1 → Σ (MetaRen (G - u) G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ / s ∈ i) ->
                (∀ {G1} (σo : Sub Sg G G1) -> sub σo (fun u i) ≡ sub (\ S v -> σo _ ((thin u S v))) s 
                   -> (\ S v -> σo _ ((thin u S v))) ≤ toSub (proj₁ (proj₂ p))) ->
                Spec (fun u i) (sub (\ S v -> mvar (thin u S v)) s)
-flexRigid {S = S} u i s (G1 , ρ , m) maxρ with invertTm i s ρ m 
-flexRigid {S = S} u i .(∫ C (var x ys)) (G1 , ρ , m) _ | inj₂ (D1 , _ , _ , x , ys , C , refl , x∉i) = no (aux x∉i) where
+flexRigid {S = S} u i s (G1 , ρ , decr , m) maxρ with invertTm i s (toSub ρ) m 
+flexRigid {S = S} u i .(∫ C (var x ys)) (G1 , ρ , decr , m) _ | inj₂ (D1 , _ , _ , x , ys , C , refl , x∉i) = no (aux x∉i) where
   aux : x ∉ ∫Inj C i -> ∃σ (Unifies (fun u i) (sub (λ S v → mvar (thin u S v)) (∫ C (var x ys)))) → ⊥
   aux x∉i (_ , σ , eq) with ren-∫ x (subC _ C) (σ _ u) i (subs _ ys) (trans (T-≡ eq) (trans (sub-∘ (∫ C (var x ys))) (∫-sub _ C (var x ys))))
                        | ∫Ctx C (ctx S) | ∫Inj C i | ∫Inj-subC {s = (λ z t → ren id-i (σ z (thin u z t)))} C i
   ... | (b , x≡i$b) | ._ | ._ | refl = ∉-∉Im (∫Inj (subC (λ z t → ren id-i (σ z (thin u z t))) C) i) x x∉i b x≡i$b
 
-flexRigid {Sg} {G} u i s (G1 , ρ , m) maxρ | inj₁ (t , eq) = yes (G1 , σ , 
+flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , eq) = yes (G1 , (DS σ , inj₂ (rigid-decr u (Data.Sum.map proj₁ (\ x -> x) decr))) , 
    ≡-T (begin
      ren i (σ _ u)                              ≡⟨ cong (ren i) σx≡t' ⟩ 
      ren i t                                    ≡⟨ eq ⟩ 
@@ -137,8 +122,10 @@ flexRigid {Sg} {G} u i s (G1 , ρ , m) maxρ | inj₁ (t , eq) = yes (G1 , σ ,
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (fun u i) t
 flexAny u i t with check u t 
-flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (purge i s) (λ σo x → 
-        purge-gen i s (λ S x₁ → σo _ ((thin u S x₁))) (σo _ u) (≡-T x))
+flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (purge i s (_ , (≤-begin _ ∎-≤))) (λ σo x → 
+        purge-gen i s (_ , (≤-begin _ ∎-≤)) (λ S x₁ → σo _ ((thin u S x₁))) (σo _ u) (≡-T x)) 
+    where 
+      open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _∎-≤) 
 flexAny u i .(fun u j) | inj₂ (G1 , j , [] , refl) = yes (flexSame u i j)
 flexAny u i .(∫once x (∫ ps (fun u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no λ {(D1 , s , eq) → 
         not-nil (subC s ps) (No-Cycle (subC s (x ∷ ps)) (s _ u) i j (trans (T-≡ eq) (∫-sub s (x ∷ ps) (fun u j))))}
@@ -148,84 +135,45 @@ unify-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → ∃σ Unifies x y → 
 unify-comm _ _ (G , σ , eq) = (G , σ , T.sym eq)
 
 spec-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → Spec x y → Spec y x
-spec-comm _ _ = Data.Sum.map (λ { (G , σ , eq , max) → G , σ , T.sym eq , (λ {_} ρ x → max ρ (T.sym x))}) (λ x x₁ → x (unify-comm _ _ x₁))
+spec-comm _ _ = Data.Sum.map (λ {(G , σ , eq , max) → G , σ , T.sym eq , (λ {_} ρ x → max ρ (T.sym x))}) (λ x x₁ → x (unify-comm _ _ x₁))
 
-{-# NO_TERMINATION_CHECK #-}
 mutual
-  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → Spec x y
-  unify (con x xs) (con y ys) with eq-∋ (_ , x) (_ , y) 
+  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
+  unify (con x xs) (con y ys) l with eq-∋ (_ , x) (_ , y) 
   ... | no ¬p = no (λ {(_ , _ , eq) → ¬p (con-inj₁ eq)})
-  unify (con x xs) (con .x ys) | yes refl with unifyTms xs ys
+  unify (con x xs) (con .x ys) l | yes refl with unifyTms xs ys l
   ... | no p = no (λ { (_ , σ , con _ eq) → p (_ , (σ , eq))})
   ... | yes (_ , σ , eq , max) = yes (_ , σ , T.cong (con x) eq , λ { ρ (con _ eq) → max ρ eq})
-  unify (fun x xs) t = flexAny x xs t
-  unify s (fun y ys) = spec-comm (fun y ys) s (flexAny y ys s)
-  unify (var x xs) (var y ys) with eq-∋ (_ , x) (_ , y) 
+  unify (fun x xs) t l = flexAny x xs t
+  unify s (fun y ys) l = spec-comm (fun y ys) s (flexAny y ys s)
+  unify (var x xs) (var y ys) l with eq-∋ (_ , x) (_ , y) 
   ... | no ¬p = no (λ {(_ , _ , eq) → ¬p (var-inj₁ eq)})
-  unify (var x xs) (var .x ys) | yes refl with unifyTms xs ys
+  unify (var x xs) (var .x ys) l | yes refl with unifyTms xs ys l
   ... | no p = no λ {(_ , σ , var _ eq) → p (_ , σ , eq)}
   ... | yes (_ , σ , eq , max) = yes (_ , σ , T.cong (var x) eq , λ { ρ (var _ eq) → max ρ eq})
-  unify (lam x) (lam y) with unify x y
+  unify (lam x) (lam y) l with unify x y l
   ... | no p = no λ {(_ , σ , lam eq) → p (_ , σ , eq)}
   ... | yes (_ , σ , eq , max) = yes (_ , σ , T.cong lam eq , λ {ρ (lam eq) → max ρ eq})
-  unify (con _ _) (var _ _) = no λ {(_ , _ , ())}
-  unify (var _ _) (con _ _) = no λ {(_ , _ , ())}
+  unify (con _ _) (var _ _) l = no λ {(_ , _ , ())}
+  unify (var _ _) (con _ _) l = no λ {(_ , _ , ())}
  
 
-  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → Spec x y
-  unifyTms [] [] = yes (_ , ((λ S x → mvar x) , [] , (λ ρ x → ρ , (λ S u → sym (ren-id _)))))
-  unifyTms (s ∷ xs) (t ∷ ys) with unify s t 
+  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
+  unifyTms [] [] _ = yes (refl-Unifies [])
+  unifyTms (s ∷ xs) (t ∷ ys) l with unify s t l
   ... | no p = no λ {(_ , ρ , eq ∷ _) → p (_ , ρ , eq)}
-  ... | yes (_ , σ , eq , max) with unifyTms (subs σ xs) (subs σ ys) 
-  ... | no p = no λ {(_ , σ1 , eqt ∷ eqts) → p (_ , (proj₁ (max σ1 eqt) , ≡-T (trans (subs-∘ xs) (trans (trans (sym (subs-ext (proj₂ (max σ1 eqt)) xs)) (trans (T-≡ eqts) (trans (subs-ext (proj₂ (max σ1 eqt)) ys) refl))) (sym (subs-∘ ys))))))} 
-  ... | yes (_ , σ1 , eq1 , max1) = yes (_ , (σ1 ∘s σ) , 
-              (≡-T (begin sub (λ z t₁ → sub σ1 (σ z t₁)) s ≡⟨ sym (sub-∘ s) ⟩ 
-                     sub σ1 (sub σ s)                 ≡⟨ cong (sub σ1) (T-≡ eq) ⟩ 
-                     sub σ1 (sub σ t)                 ≡⟨ sub-∘ t ⟩ 
-                     sub (λ z t₁ → sub σ1 (σ z t₁)) t ∎) ∷
-               ≡-T (begin subs (λ z t₁ → sub σ1 (σ z t₁)) xs ≡⟨ sym (subs-∘ xs) ⟩ 
-                     subs σ1 (subs σ xs)                ≡⟨ T-≡ eq1 ⟩ 
-                     subs σ1 (subs σ ys)                ≡⟨ subs-∘ ys ⟩ 
-                     subs (λ z t₁ → sub σ1 (σ z t₁)) ys ∎))
-               , maxall) where
-    maxall : IsMax (Unifies (Tms._∷_ s xs) (t ∷ ys)) (σ1 ∘s σ)
-    maxall ρ (eqt ∷ eqts) with max ρ eqt 
-    ... | (r , ρ≡r∘σ) with max1 r (≡-T (trans (subs-∘ xs) (trans (trans 
-                                        (sym (subs-ext ρ≡r∘σ _)) (trans (T-≡ eqts) (subs-ext ρ≡r∘σ _))) (sym (subs-∘ _))))) 
-    ... | (r1 , r≡r1∘σ1 ) = r1 , (λ S u → trans (ρ≡r∘σ S u) (trans (sub-ext r≡r1∘σ1 (σ S u)) (sym (sub-∘ (σ S u)))))
-      
+  ... | yes (_ , σ , eq , max) with helper l σ xs ys
+  ... | no p = no λ {(_ , σ1 , eqt ∷ eqts) → p (shift2 xs ys σ1 ⟦ σ ⟧ (max σ1 eqt) eqts) }
+  ... | yes (_ , σ1 , eq1 , max1) = yes (_ , (σ1 ∘ds σ) , optimist-Unifies s t xs ys ⟦ σ ⟧ ⟦ σ1 ⟧ (eq , max) (eq1 , max1))
 
-{-
--- sketch of how to ensure termination
 
-Bwd-len : ∀ {A : Set} → Bwd A → Nat
-Bwd-len !> = zero
-Bwd-len (x :> xs) = suc (Bwd-len xs)
 
-Ctx-len : MCtx → Nat
-Ctx-len <! = zero
-Ctx-len (x <: (_ <<- f)) = suc (Bwd-len f + (Ctx-len x))
+  helper : ∀ {Sg G D Ts} -> ∃ (\ n -> n ≥ Ctx-length G) ->
+             ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
+  helper l (DS σ , inj₁ (eq , σ-is-iso)) xs ys = Spec[xs,ys]⇒Spec[σxs,σys] xs ys σ eq (proj₁ σ-is-iso) (proj₂ σ-is-iso) (unifyTms xs ys l)
+  helper (n , n≥length) (DS σ , inj₂ G>G1) xs ys = helper2 (n , n≥length) σ xs ys (≤-begin _ ≤⟨ G>G1 ⟩ _ ≤⟨ n≥length ⟩ (_ ≤-∎)) 
+         where open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _≤-∎)
 
-data Subs (Sg : Ctx) : MCtx → Nat → Set where
-  nil : ∀ {G} → Subs Sg G (Ctx-len G)
-  _◇_ : ∀ {n G D} → Sub Sg G D → (ss : Subs Sg D n) → Subs Sg G (suc n)
-
-mutual
-  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∀ {n} → Subs Sg G n → Maybe (Subs Sg G n)
-  unify (con x xs) (con y ys) a with eq-∋ (_ , x) (_ , y)
-  unify (con x xs) (con .x ys) a | yes refl = unifyTms xs ys a
-  unify (con x xs) (con y ys) a | no y₁ = nothing
-  unify (fun x xs) (fun y ys) nil = {!!}
-  unify (fun x xs) t nil = {!!}
-  unify s (fun y ys) nil = {!!}
-  unify (var x xs) (var y ys) a with eq-∋ (_ , x) (_ , y) 
-  unify (var x xs) (var .x ys) a | yes refl = unifyTms xs ys a
-  unify (var x xs) (var y ys) a | no y₁ = nothing
-  unify (lam x) (lam y) a = unify x y a
-  unify s t (s₁ ◇ a) = _◇_ s₁ <$> unify (sub s₁ s) (sub s₁ t) a
-  unify _ _ _ = nothing
-
-  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∀ {n} → Subs Sg G n → Maybe (Subs Sg G n)
-  unifyTms [] [] a = yes a
-  unifyTms (x ∷ xs) (y ∷ ys) a = unify x y a >>= unifyTms xs ys
--}
+  helper2 : ∀ {Sg G D Ts} -> (u : ∃ (\ n -> n ≥ Ctx-length G)) ->
+             ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> proj₁ u > Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
+  helper2 (.(suc n) , n≥length) σ xs ys (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) (n , z)

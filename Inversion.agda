@@ -21,6 +21,7 @@ open import Syntax
 open import OneHoleContext
 open import Purging
 open import RenOrn
+open import MetaRens
 
 notInv : ∀ {Sg G D D' T} (i : Inj D D') (t : Term Sg G D' T) → Set
 notInv i t = ∃ \ D1 -> ∃ \ Ss -> ∃ \ B -> Σ (D1 ∋ Ss ->> B) \ x -> ∃ \ ts -> Σ (Context _ _ _ (D1 , inj₁ _) ) \ C → 
@@ -33,10 +34,10 @@ map-occ : ∀ {Sg G DI D T D' T' }{i : Inj D' DI}{t : Term Sg G D T} (d : DTm Sg
 map-occ d (D1 , Ss , B , x , ys , C , eq , x∉i) = D1 , Ss , B , x , ys , d ∷ C , cong (∫once d) eq , x∉i
 
 mutual
-  invertTm' : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → ρ / t ∈ i
-    → RTm Sg G1 Ss D i T (sub (toSub ρ) t) ⊎ notInv i t
+  invertTm' : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : Sub Sg G G1) → ρ / t ∈ i
+    → RTm Sg G1 Ss D i T (sub ρ t) ⊎ notInv i t
   invertTm' i (con c ts) r m = map⊎ (con c) (map-occ (con c)) (invertTm's i ts r m)
-  invertTm' i (fun u j) r m = yes (fun (body (r _ u)) (proj₁ m) (proj₂ m))
+  invertTm' i (fun u j) r (H , v , h , eq , k , comm) rewrite eq = yes (fun v k comm)
   invertTm' i (var x ts) r m 
    with invert i x   | invertTm's i ts r m 
   ... | yes (y , eq) | yes p₁ = yes (var y eq p₁)
@@ -44,8 +45,8 @@ mutual
   ... | no ¬p        | q      = no (_ , _ , _ , x , ts , [] , refl , ∉Im-∉ i x (λ b x₁ → ¬p (b , sym x₁)))
   invertTm' i (lam t) r m = map⊎ lam (map-occ lam) (invertTm' (cons i) t r m)
 
-  invertTm's : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → (ρ : MetaRen G G1) → ρ /s t ∈ i 
-                → RTms Sg G1 Ss D i T (subs (toSub ρ) t) ⊎ notInv i t
+  invertTm's : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → (ρ : Sub Sg G G1) → ρ /s t ∈ i 
+                → RTms Sg G1 Ss D i T (subs ρ t) ⊎ notInv i t
   invertTm's i [] r m = yes []
   invertTm's i (t ∷ ts) r (mt , mts) 
    with invertTm' i t r mt | invertTm's i ts r mts
@@ -53,6 +54,6 @@ mutual
   ... | yes p              | no ¬ps = no (map-occ (tail t) ¬ps) 
   ... | no ¬p              | _      = no (map-occ (head ts) ¬p)
 
-invertTm : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : MetaRen G G1) → ρ / t ∈ i → (∃ \ s → ren i s ≡ sub (toSub ρ) t) ⊎ (notInv i t)
+invertTm : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : Sub Sg G G1) → ρ / t ∈ i → (∃ \ s → ren i s ≡ sub ρ t) ⊎ (notInv i t)
 invertTm i t ρ m = Data.Sum.map forget (\ x -> x) (invertTm' i t ρ m)
 

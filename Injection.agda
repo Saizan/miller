@@ -95,11 +95,6 @@ cons z = zero ∷[] z
 
 abstract
 
-  lemma : ∀ {A : Set}{xs ys ts : List A} (i : Inj xs ts)(z : _){inj1 inj2 inj3} → 
-            quo (\ x v → i $ (quo {_} {ys} z {inj1} $ v)) {inj3} ≡ quo (\ x v → i $ (z _ v)) {inj2} 
-  lemma i z = quo-ext (λ x₁ v → cong (_$_ i) (iso2 z _ v))
-
-
   cons-id : ∀ {A : Set}{x : A}{xs} -> cons id-i ≡ id-i {_} {x ∷ xs}
   cons-id = cong-∷[] refl (quo-ext (λ x v → cong suc (iso2 _ _ v)))
 
@@ -112,20 +107,26 @@ abstract
                 quo (λ x₁ x₂ → suc (j $ x₂)) $ (i $ v)          ∎) ⟩ 
     quo (λ x v → cons j $ suc (i $ v))                       ≡⟨ sym (lemma (cons j) (λ _ x → suc (i $ x))) ⟩ 
     quo (λ x v → cons j $ (quo (λ z x₁ → suc (i $ x₁)) $ v)) ∎)
+   where
+       lemma : ∀ {A : Set}{xs ys ts : List A} (i : Inj xs ts)(z : _){inj1 inj2 inj3} → 
+            quo (\ x v → i $ (quo {_} {ys} z {inj1} $ v)) {inj3} ≡ quo (\ x v → i $ (z _ v)) {inj2} 
+       lemma i z = quo-ext (λ x₁ v → cong (_$_ i) (iso2 z _ v))
 
-  inter-Inj : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → ∀ {ts} → (r : Inj ts xs) -> 
+
+
+  Equ-universal-quote : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → ∀ {ts} → (r : Inj ts xs) -> 
                (∀ a (y : xs ∋ a) -> i $ y ≡ j $ y -> ∃ \ z -> y ≡ r $ z) ->               
                 {as : List A} (h : Inj as xs) → i ∘i h ≡ j ∘i h → Σ (Inj as ts) (λ z → r ∘i z ≡ h )
-  inter-Inj i j r c h eq = quo (λ x x₁ → proj₁ (c _ (h $ x₁) (trans (sym (apply-∘ i h)) (trans (cong (λ f → f $ x₁) eq) (apply-∘ j h))))) 
+  Equ-universal-quote i j r c h eq = quo (λ x x₁ → proj₁ (c _ (h $ x₁) (trans (sym (apply-∘ i h)) (trans (cong (λ f → f $ x₁) eq) (apply-∘ j h))))) 
                            {λ x x₁ → injective h _ _ (trans (proj₂ (c _ (h $ _) _)) (trans (cong (_$_ r) x₁) (sym (proj₂ (c _ (h $ _) _)))))} 
                            , sym (trans (sym (iso1 h (λ x x₁ → injective h _ _ x₁))) (quo-ext (λ x v → trans (proj₂ (c x (h $ v) _)) (cong (_$_ r) (sym (iso2 _ _ v))))))
   
 
   
-  uni-pullback : ∀ {A : Set} {D1 D2 Du : List A} → (i : Inj D1 D2)(j : Inj Du D2) -> ∀ {Dr} -> (h : Inj Dr Du) (k : Inj Dr D1)
+  Pull-universal-quote : ∀ {A : Set} {D1 D2 Du : List A} → (i : Inj D1 D2)(j : Inj Du D2) -> ∀ {Dr} -> (h : Inj Dr Du) (k : Inj Dr D1)
                  -> (∀ (a : A) (y : Du ∋ a)(x : D1 ∋ a) -> i $ x ≡ j $ y -> (∃ \ z -> k $ z ≡ x × h $ z ≡ y))
                  -> ∀ {Q} -> (h' : Inj Q Du) (k' : Inj Q D1) -> i ∘i k' ≡ j ∘i h' -> ∃ \ q -> k' ≡ k ∘i q × h' ≡ h ∘i q  
-  uni-pullback i j h k uni h' k' eq = quo (λ x x₁ → proj₁ (uni x (h' $ x₁) (k' $ x₁) (cong-$ eq x₁))) 
+  Pull-universal-quote i j h k uni h' k' eq = quo (λ x x₁ → proj₁ (uni x (h' $ x₁) (k' $ x₁) (cong-$ eq x₁))) 
      {λ x x₁ → injective k' _ _
               (trans
                (trans (sym (proj₁ (proj₂ (uni x (h' $ _) (k' $ _) _))))
