@@ -84,10 +84,11 @@ flexRigid {S = S} u i .(∫ C (var x ys)) (G1 , ρ , decr , m) _ | inj₂ (D1 , 
                        | ∫Ctx C (ctx S) | ∫Inj C i | ∫Inj-subC {s = (λ z t → ren id-i (σ z (thin u z t)))} C i
   ... | (b , x≡i$b) | ._ | ._ | refl = ∉-∉Im (∫Inj (subC (λ z t → ren id-i (σ z (thin u z t))) C) i) x x∉i b x≡i$b
 
-flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , eq) = yes (G1 , (DS σ , inj₂ (rigid-decr u (Data.Sum.map proj₁ (\ x -> x) decr))) , 
+flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , renit≡subρs) 
+ = yes (G1 , (DS σ , inj₂ (rigid-decr u (Data.Sum.map proj₁ (\ x -> x) decr))) , 
    ≡-T (begin
      ren i (σ _ u)                              ≡⟨ cong (ren i) σx≡t' ⟩ 
-     ren i t                                    ≡⟨ eq ⟩ 
+     ren i t                                    ≡⟨ renit≡subρs ⟩ 
      sub (toSub ρ) s                            ≡⟨ sub-ext σthiny≡toSubρy s ⟩ 
      sub (λ S v → sub σ (mvar (thin u S v))) s  ≡⟨ sym (sub-∘ s) ⟩ 
      sub σ (sub (λ S v → mvar (thin u S v)) s)  ∎) , maxprop )
@@ -102,8 +103,7 @@ flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , eq) = yes (G1 
       σthiny≡toSubρy S y rewrite thick-thin u y | left-id (ρ-env (ρ S y)) = refl
       maxprop : {G' : List MTy}
         (ρ₁ : (S : MTy) → G ∋ S → Tm Sg G' (ctx S) ([] ->> type S)) →
-        eqT (ren i (ρ₁ _ u))
-        (sub ρ₁ (sub (λ S v → fun (thin u S v) id-i) s)) → ρ₁ ≤ σ
+        (ren i (ρ₁ _ u)) ≡T (sub ρ₁ (sub (λ S v → mvar (thin u S v)) s)) → ρ₁ ≤ σ
       maxprop {G'} ρ₁ eq1 = r , propp where
         eq11 = (trans (T-≡ eq1) (trans (sub-∘ s) (sub-ext (λ S x → ren-id _) s)))
         r = proj₁ (maxρ ρ₁ eq11)
@@ -115,7 +115,7 @@ flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , eq) = yes (G1 
           (begin ren i (ρ₁ _ u) ≡⟨ eq11 ⟩ 
                  sub (λ S v → ρ₁ _ (thin u S v)) s ≡⟨ sub-ext ρ₁∘thin≡rr∘ρ s ⟩ 
                  sub (r ∘s toSub ρ) s ≡⟨ sym (sub-∘ s) ⟩ 
-                 sub r (sub (toSub ρ) s) ≡⟨ cong (sub r) (sym eq) ⟩ 
+                 sub r (sub (toSub ρ) s) ≡⟨ cong (sub r) (sym renit≡subρs) ⟩ 
                  sub r (ren i t) ≡⟨ sub-nat t ⟩ 
                  ren i (sub r t) ∎)
 
