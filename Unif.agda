@@ -26,7 +26,7 @@ open import Equality
 open import RenOrn
 open import OneHoleContext
 open import OccursCheck
-open import Purging
+open import Pruning
 open import Inversion
 
 open import DSub
@@ -122,8 +122,8 @@ flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , eq) = yes (G1 
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (fun u i) t
 flexAny u i t with check u t 
-flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (purge i s (_ , (≤-begin _ ∎-≤))) (λ σo x → 
-        purge-gen i s (_ , (≤-begin _ ∎-≤)) (λ S x₁ → σo _ ((thin u S x₁))) (σo _ u) (≡-T x)) 
+flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (prune i s (_ , (≤-begin _ ∎-≤))) (λ σo x → 
+        prune-gen i s (_ , (≤-begin _ ∎-≤)) (λ S x₁ → σo _ ((thin u S x₁))) (σo _ u) (≡-T x)) 
     where 
       open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _∎-≤) 
 flexAny u i .(fun u j) | inj₂ (G1 , j , [] , refl) = yes (flexSame u i j)

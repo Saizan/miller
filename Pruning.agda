@@ -1,4 +1,4 @@
-module Purging where
+module Pruning where
 
 open import Data.Product renaming (map to mapΣ)
 open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
@@ -92,31 +92,31 @@ open import DSub
 
 mutual
   
-  purge : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
+  prune : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
             -> ∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ / t ∈ i
-  purge i (con c ts) l = purges i ts l
-  purge i (fun u j) l = _ , (singleton u p₂ , decr , _ , _ , _ , refl , aux) where
+  prune i (con c ts) l = prunes i ts l
+  prune i (fun u j) l = _ , (singleton u p₂ , decr , _ , _ , _ , refl , aux) where
     open Pullback (pullback i j)
     aux : ∃ (λ k → i ∘i k ≡ j ∘i ρ-env (singleton u p₂ _ u))
     aux rewrite thick-refl u = p₁ , commutes
     decr = singleton-Decreasing p₂ u (pullback-Decr i j)
-  purge i (var x ts) l = purges i ts l
-  purge i (lam t) l = purge (cons i) t l
+  prune i (var x ts) l = prunes i ts l
+  prune i (lam t) l = prune (cons i) t l
 
-  purges : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
+  prunes : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
            -> ∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing (toSub ρ) × toSub ρ /s t ∈ i
-  purges {Sg}{G} i [] _ = G , idmr , inj₁
+  prunes {Sg}{G} i [] _ = G , idmr , inj₁
                                        (refl ,
                                         ((λ S x → mvar x) , (λ S u → sym (ren-id _))) ,
                                         (λ S u → sym (ren-id _))) , tt
-  purges i (t ∷ t₁) l with purge i t l 
+  prunes i (t ∷ t₁) l with prune i t l 
   ... | (G1 , ρ , ρ-decr , p) = helper-pur i t t₁ l (G1 , ρ , ρ-decr , p)
 
   helper-pur : ∀ {Sg G D1 D2 T Ts } → (i : Inj D1 D2) → (t : Tm Sg G D2 T)(ts : Tms Sg G D2 Ts) → ∃ (\ n -> n ≥ Ctx-length G) 
                -> (∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ / t ∈ i)
                -> ∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ /s (t ∷ ts) ∈ i
 
-  helper-pur i t ts l (_ , σ , (inj₁ (eq , (δ , iso1) , iso2)) , p1) with purges i ts l 
+  helper-pur i t ts l (_ , σ , (inj₁ (eq , (δ , iso1) , iso2)) , p1) with prunes i ts l 
   ... | (G1 , ρ , ρ-decr , p) = G1 , (ρ , (ρ-decr , ((MRP-ext (toSub (ρ ∘mr δ') ∘s toSub σ) (toSub ρ) 
         (λ S u → trans (cong (λ i₁ → fun (body (((ρ ∘mr δ') ∘mr σ) _ u)) i₁) assoc-∘i)
                    (sym
@@ -137,7 +137,7 @@ mutual
   helper-pur2 : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → 
              ∀ {G2} (σ : MetaRen G G2) -> ∀ (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G2 -> 
              ∃ \ G1 → Σ (MetaRen G2 G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ /s (subs (toSub σ) t) ∈ i
-  helper-pur2 i t σ (.(suc n) , _) (s≤s {._} {n} u>smt) = purges i (subs (toSub σ) t) (n , u>smt)
+  helper-pur2 i t σ (.(suc n) , _) (s≤s {._} {n} u>smt) = prunes i (subs (toSub σ) t) (n , u>smt)
 
 
 open import RenOrn
@@ -164,12 +164,12 @@ mutual
   lifts-pullback pull (t ∷ ts) (t₁ ∷ ts₁) (eqt ∷ eqts) = (lift-pullback pull t t₁ eqt) ∷ (lifts-pullback pull ts ts₁ eqts)
  
 mutual
-  purge-gen : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∀ l -> 
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> eqT (ren i z) (sub s t) -> s ≤ toSub (proj₁ (proj₂ (purge i t l)))
-  purge-gen i (con c ts) l s (con c₁ ts₁) (con _ eq) = purge-gens i ts l s ts₁ eq
-  purge-gen i (con c ts) l s (fun u j) ()
-  purge-gen i (con c ts) l s (var x ts₁) ()
-  purge-gen {Sg} {G} i (fun {Ss = Ss} {B} u j) l {G2} s z eq = dif , proof
+  prune-gen : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∀ l -> 
+              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> eqT (ren i z) (sub s t) -> s ≤ toSub (proj₁ (proj₂ (prune i t l)))
+  prune-gen i (con c ts) l s (con c₁ ts₁) (con _ eq) = prune-gens i ts l s ts₁ eq
+  prune-gen i (con c ts) l s (fun u j) ()
+  prune-gen i (con c ts) l s (var x ts₁) ()
+  prune-gen {Sg} {G} i (fun {Ss = Ss} {B} u j) l {G2} s z eq = dif , proof
     where 
       pull = pullback i j
       open Pullback pull
@@ -183,27 +183,27 @@ mutual
       proof S₁ .(thin u S₁ v) | inj₁ (v , refl) = sym (ren-id _)
       proof ._ ._ | inj₂ refl = sym ((proj₂ uniT))
    
-  purge-gen i (var x ts) l s (con c ts₁) ()
-  purge-gen i (var x ts) l s (fun u j) ()
-  purge-gen i (var x ts) l s (var x₁ ts₁) (var eqv eq) = purge-gens i ts l s ts₁ eq
-  purge-gen i (lam t) l s (lam z) (lam eq) = purge-gen (cons i) t l s z eq
+  prune-gen i (var x ts) l s (con c ts₁) ()
+  prune-gen i (var x ts) l s (fun u j) ()
+  prune-gen i (var x ts) l s (var x₁ ts₁) (var eqv eq) = prune-gens i ts l s ts₁ eq
+  prune-gen i (lam t) l s (lam z) (lam eq) = prune-gen (cons i) t l s z eq
 
-  purge-gens : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∀ l ->
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tms Sg G2 D1 T) -> eqT (rens i z) (subs s t) -> s ≤ toSub (proj₁ (proj₂ (purges i t l)))
-  purge-gens i [] l s [] eq = s , (λ S u → sym (ren-id _))
-  purge-gens i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) with purge-gen i t l s z eqt 
-  ... | (r , s≡r∘ρ) with purge i t l 
-  purge-gens i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | proj₁ , σ , inj₁ x , p1 = purge-gens i ts l s zs eqts
-  purge-gens i (t ∷ ts) (n , n≥length) s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | proj₁ , σ , inj₂ y , p1 with
+  prune-gens : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∀ l ->
+              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tms Sg G2 D1 T) -> eqT (rens i z) (subs s t) -> s ≤ toSub (proj₁ (proj₂ (prunes i t l)))
+  prune-gens i [] l s [] eq = s , (λ S u → sym (ren-id _))
+  prune-gens i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) with prune-gen i t l s z eqt 
+  ... | (r , s≡r∘ρ) with prune i t l 
+  prune-gens i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | proj₁ , σ , inj₁ x , p1 = prune-gens i ts l s zs eqts
+  prune-gens i (t ∷ ts) (n , n≥length) s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | proj₁ , σ , inj₂ y , p1 with
     let open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _≤-∎) in  
                (≤-begin _ ≤⟨ y ⟩ _ ≤⟨ n≥length ⟩ (_ ≤-∎)) 
-  purge-gens i (t ∷ ts) (.(suc n) , n≥length) s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | _ , σ , inj₂ y , p1 | s≤s {._} {n} ww 
-   with purge-gens i (subs (toSub σ) ts) (n , ww) r zs (≡-T (trans (T-≡ eqts) 
+  prune-gens i (t ∷ ts) (.(suc n) , n≥length) s (z ∷ zs) (eqt ∷ eqts) | r , s≡r∘ρ | _ , σ , inj₂ y , p1 | s≤s {._} {n} ww 
+   with prune-gens i (subs (toSub σ) ts) (n , ww) r zs (≡-T (trans (T-≡ eqts) 
                          (trans (subs-ext s≡r∘ρ ts) (sym (subs-∘ ts)))))
   ... | (r1 , r≡r1∘ρ1) = r1 , (λ S u → trans (s≡r∘ρ S u) (trans (sub-ext r≡r1∘ρ1 (toSub ρ S u)) (sym (sub-∘ {f = r1} {g = toSub ρ1} (toSub ρ S u)))))
     where
       ρ = σ
-      ρ1 = proj₁ (proj₂ (purges i (subs (toSub ρ) ts) (n , ww)))
+      ρ1 = proj₁ (proj₂ (prunes i (subs (toSub ρ) ts) (n , ww)))
 
 
 

@@ -19,7 +19,7 @@ open import Lists
 
 open import Syntax
 open import OneHoleContext
-open import Purging
+open import Pruning
 open import RenOrn
 open import MetaRens
 
