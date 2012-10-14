@@ -38,23 +38,14 @@ _⊹_ : ∀ {I : Set}{T : I -> I -> Set}{i j k} -> IList T i j -> IList T j k ->
 
 Context : (Sg : Ctx)(G : MCtx) → Index -> Index → Set
 Context Sg G = IList (\ i j → DTm Sg G i j)
+
 ∫oCtx : ∀ {Sg G I1 I2} -> DTm Sg G I1 I2 -> Ctx -> Ctx
 ∫oCtx (lam {S = S}) D = S ∷ D
 ∫oCtx _ D = D
+
 ∫Ctx : ∀ {Sg G I1 I2} -> Context Sg G I1 I2 -> Ctx -> Ctx
 ∫Ctx [] D = D
 ∫Ctx (x ∷ c) D = (∫Ctx c (∫oCtx x D))
-{-
-∫oInj : ∀ {Sg G DI DO I1 I2} -> (d : DTm Sg G I1 I2) -> Inj DI DO -> Inj (∫oCtx d DI) (∫oCtx d DO)
-∫oInj lam i = cons i
-∫oInj (head ts) i = i
-∫oInj (tail t) i = i
-∫oInj (con c) i = i
-∫oInj (var x) i = i
-∫Inj : ∀ {Sg G DI DO I1 I2} -> (c : Context Sg G I1 I2) -> Inj DI DO -> Inj (∫Ctx c DI) (∫Ctx c DO)
-∫Inj [] i = i
-∫Inj (x ∷ c) i = (∫Inj c (∫oInj x i))
--}
 
 ∫oInj : ∀ {Sg G DI I1 I2} -> (d : DTm Sg G I1 I2) -> Inj DI (proj₁ I1) -> Inj (∫oCtx d DI) (proj₁ I2)
 ∫oInj lam i = cons i
@@ -106,6 +97,29 @@ subC s (x ∷ c) = subD s x ∷ (subC s c)
 ∫ [] t = t
 ∫ (x ∷ c) t = ∫once x (∫ c t)
 
+module OnHeight where
+  open import Height
+  open ≤-Reasoning
+  open import Data.Nat.Properties
+  private
+    n≤m⊔n : ∀ m n → Data.Nat._≤_ n (m ⊔ n)
+    n≤m⊔n zero    _       = begin _ ∎
+    n≤m⊔n (suc m) zero    = z≤n
+    n≤m⊔n (suc m) (suc n) = s≤s (n≤m⊔n m n)
+
+  ∫once-height : ∀ {Sg G DI TI DO TO} → (d : DTm Sg G (DI , TI) (DO , TO)) → (t : Term Sg G DO TO) → heightT (∫once d t) > heightT t
+  ∫once-height lam t = s≤s (begin heightT t ∎)
+  ∫once-height (head ts) t = s≤s (m≤m⊔n (height t) (heights ts))
+  ∫once-height (tail t) ts = s≤s (n≤m⊔n (height t) (heights ts))
+  ∫once-height (con c) t = s≤s (begin heightT t ∎)
+  ∫once-height (var x) t = s≤s (begin heightT t ∎)
+
+  ∫-height : ∀ {Sg G I O} → (ps : Context Sg G I O) → (t : Term Sg G (proj₁ O) (proj₂ O)) → heightT (∫ ps t) ≥ heightT t
+  ∫-height [] t = begin heightT t ∎
+  ∫-height (x ∷ ps) t = begin heightT t                  ≤⟨ ≤-step (∫-height ps t) ⟩ 
+                              suc (heightT (∫ ps t))     ≤⟨ ∫once-height x (∫ ps t) ⟩ 
+                              heightT (∫once x (∫ ps t)) ∎
+
 ∫once-sub : ∀ {Sg G1 G2 TI TO} -> (s : Sub Sg G1 G2) -> (d : DTm Sg G1 TI TO) -> ∀ t -> subT s (∫once d t) ≡ ∫once (subD s d) (subT s t)
 ∫once-sub s lam t = refl
 ∫once-sub s (head ts) t = refl
@@ -120,43 +134,3 @@ subC s (x ∷ c) = subD s x ∷ (subC s c)
 ⊹-snoc : ∀ {Sg G I O D T} (ps : Context Sg G I O) (x : DTm _ _ _ (D , T)) t -> ∫ ps (∫once x t) ≡ ∫ (ps ⊹ (x ∷ [])) t
 ⊹-snoc [] x t = refl
 ⊹-snoc (x ∷ ps) x₁ t = cong (∫once x) (⊹-snoc ps x₁ t)
-
-data View {Sg G D T D1} : ∀ {DI TI} (ps : Context Sg G (DI , TI) (D , T))(t : Term Sg G D1 TI) (i : Inj D1 DI) (s : Term Sg G D T) -> Set where
-  [] : ∀ {t i s} -> View [] t i s
-  lam∷ : ∀ {DI S Ss B ps}{t : Tm _ _ (S ∷ D1) (Ss ->> B)}{i : Inj _ DI}{s} -> ren (cons i) t ≡ ∫ ps s -> View (lam ∷ ps) (lam t) i s
-  head∷ : ∀ {DI S Ss ps}{t : Tm _ _ D1 S}{ts : Tms _ _ D1 Ss}{i : Inj _ DI}{s} -> ren i t ≡ ∫ ps s -> View (head (rens i ts) ∷ ps) (t ∷ ts) i s
-  tail∷ : ∀ {DI S Ss ps}{t : Tm _ _ D1 S}{ts : Tms _ _ D1 Ss}{i : Inj _ DI}{s} -> rens i ts ≡ ∫ ps s -> View (tail (ren i t) ∷ ps) (t ∷ ts) i s
-  con∷ : ∀ {DI Ss B ps}{c : Sg ∋ (Ss ->> B)}{ts : Tms _ _ D1 Ss}{i : Inj _ DI}{s} -> rens i ts ≡ ∫ ps s -> View (con c ∷ ps) (con c ts) i s
-  var∷ : ∀ {DI Ss B ps}{x : D1 ∋ (Ss ->> B)}{ts : Tms _ _ D1 Ss}{i : Inj _ DI}{s} -> rens i ts ≡ ∫ ps s -> View (var (i $ x) ∷ ps) (var x ts) i s
-
-view' : ∀ {Sg G DI TI D T D1} (ps : Context Sg G (DI , TI) (D , T))(t : Term Sg G D1 _) (i : Inj D1 DI) (s : Term Sg G D T) 
-     -> eqT (renT i t) (∫ ps s) -> View ps t i s
-view' [] t i ts eq = []
-view' (_∷_ {.(_ ∷ _) , .(inj₁ (_ ->> _))} {_ , _} lam ps) (lam t) i ts (lam eq) = lam∷ (T-≡ eq)
-view' (_∷_ {_ , ._} {_ , _} (head ts) ps) (t ∷ t₁) i ts₁ (eqt ∷ eqts) with T-≡ eqts
-view' (_∷_ {_ , .(inj₁ _)} {_ , _} (head .(rens i t₁)) ps) (t ∷ t₁) i ts₁ (eqt ∷ eqts) | refl = head∷ (T-≡ eqt)
-view' (_∷_ {_ , ._} {_ , _} (tail t) ps) (t₁ ∷ t₂) i ts (eqt ∷ eqts) with T-≡ eqt
-view' (_∷_ {_ , .(inj₂ _)} {_ , _} (tail .(ren i t₁)) ps) (t₁ ∷ t₂) i ts (eqt ∷ eqts) | refl = tail∷ (T-≡ eqts)
-view' (_∷_ {_ , ._} {_ , _} (con c) ps) (con .c ts) i ts₁ (con refl eqts) = con∷ (T-≡ eqts)
-view' (_∷_ {_ , ._} {_ , _} (con c) ps) (fun u j) i ts e with T-≡ e
-... | ()
-view' (_∷_ {_ , ._} (con c) ps) (var x ts) i ts₁ ()
-view' (_∷_ {_ , ._} (var x) ps) (con c ts) i ts₁ ()
-view' (_∷_ {_ , ._} {_ , _} (var x) ps) (fun u j) i ts e with T-≡ e
-... | ()
-view' (_∷_ {_ , ._} {_ , _} (var .(i $ x₁)) ps) (var x₁ ts) i ts₁ (var refl eqts) = var∷ (T-≡ eqts)
-
-view : ∀ {Sg G DI TI D T D1} (ps : Context Sg G (DI , TI) (D , T))(t : Term Sg G D1 _) (i : Inj D1 DI) (s : Term Sg G D T) 
-     -> renT i t ≡ ∫ ps s -> View ps t i s
-view ps t i s eq = view' ps t i s (≡-T eq)
-ren-∫ : ∀ {Sg G DI TI D D1 Ss B} (x : D ∋ (Ss ->> B)) (ps : Context Sg G (DI , TI) (D , inj₁ (! B)))(t : Term Sg G D1 _) (i : Inj D1 DI) 
-      (ts : Tms Sg G D Ss) -> renT i t ≡ ∫ ps (var x ts) -> ∃ \ b -> x ≡ ∫Inj ps i $ b
-ren-∫ x ps t i ts eq with view ps t i (var x ts) eq
-ren-∫ x [] (con c ts) i ts₁ () | []
-ren-∫ x [] (fun u j) i ts () | [] 
-ren-∫ .(i $ x₁) [] (var x₁ ts) i .(rens i ts) refl | [] = x₁ , refl
-ren-∫ x .(lam ∷ ps) .(lam t) i ts eq | lam∷ {._} {S} {Ss₁} {B₁} {ps} {t} x₁ = ren-∫ x ps t (cons i) ts x₁
-ren-∫ x .(head (rens i ts₁) ∷ ps) .(t ∷ ts₁) i ts eq | head∷ {._} {S} {Ss₁} {ps} {t} {ts₁} x₁ = ren-∫ x ps t i ts x₁
-ren-∫ x .(tail (ren i t) ∷ ps) .(t ∷ ts₁) i ts eq | tail∷ {._} {S} {Ss₁} {ps} {t} {ts₁} x₁ = ren-∫ x ps ts₁ i ts x₁
-ren-∫ x .(con c ∷ ps) .(con c ts₁) i ts eq | con∷ {._} {Ss₁} {B₁} {ps} {c} {ts₁} x₁ = ren-∫ x ps ts₁ i ts x₁
-ren-∫ x .(var (i $ x₁) ∷ ps) .(var x₁ ts₁) i ts eq | var∷ {._} {Ss₁} {B₁} {ps} {x₁} {ts₁} x₂ = ren-∫ x ps ts₁ i ts x₂

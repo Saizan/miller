@@ -17,6 +17,7 @@ open import Injection
 open import Lists
 
 open import Syntax
+open import Height
 open import OneHoleContext
 
 mutual
@@ -45,28 +46,21 @@ mutual
   forgets [] = [] , refl
   forgets (t ∷ ts) = proj₁ (forget t) ∷ proj₁ (forgets ts) , (cong₂ _∷_ (proj₂ (forget t)) (proj₂ (forgets ts)))
 
-no-confusion : ∀ {R : Set}{I}{T : I -> I -> Set}{i k j} -> (ps : IList T k j) {x : T j i} -> _≡_ {A = Σ I (\ i -> IList T k i)} (i , (ps ⊹ (x ∷ []))) (k , []) -> R
-no-confusion [] ()
-no-confusion (x ∷ ps) ()
-
-not-nil : ∀ {R : Set}{I}{T : I -> I -> Set}{i k j} -> (ps : IList T k j) {x : T i k} -> 
-        _≡_ {A = Σ I (\ j -> IList T i j)} (j , (x ∷ ps)) (i , []) -> R
-not-nil ps ()
-
-No-Cycle : ∀ {TI Sg G D1 DI DO} -> let TO = TI in (ps : Context Sg G (DI , TI) (DO , TO)) (t : Term Sg G D1 TO) (i : Inj D1 DI)(j : Inj D1 DO) -> 
-                        renT i t ≡ ∫ ps (renT j t) -> _≡_ {A = Σ Index \ D -> Context Sg G (DI , TI) D} ((DO , TO) , ps) ((DI , TI) , [])
-No-Cycle ps t i j eq with view ps t i (renT j t) eq
-No-Cycle .[] t i j eq | [] = refl
-No-Cycle .(lam ∷ ps) .(lam t) i j eq | lam∷ {DO} {S} {Ss} {B} {ps} {t} x = 
-  no-confusion ps (No-Cycle (ps ⊹ (lam ∷ [])) t (cons i) (cons j) (trans x (⊹-snoc ps lam (ren (cons j) t))))
-No-Cycle .(head (rens i ts) ∷ ps) .(t ∷ ts) i j eq | head∷ {DO} {S} {Ss} {ps} {t} {ts} x = 
-  no-confusion ps (No-Cycle (ps ⊹ (head _ ∷ [])) t i j (trans x (⊹-snoc ps (head _) (ren j t))))
-No-Cycle .(tail (ren i t) ∷ ps) .(t ∷ ts) i j eq | tail∷ {DO} {S} {Ss} {ps} {t} {ts} x = 
-  no-confusion ps (No-Cycle (ps ⊹ (tail _ ∷ [])) ts i j (trans x (⊹-snoc ps (tail _) (rens j ts))))
-No-Cycle .(con c ∷ ps) .(con c ts) i j eq | con∷ {DO} {Ss} {B} {ps} {c} {ts} x = 
-  no-confusion ps (No-Cycle (ps ⊹ (con c ∷ [])) ts i j (trans x (⊹-snoc ps (con c) (rens j ts))))
-No-Cycle .(var (i $ x) ∷ ps) .(var x ts) i j eq | var∷ {DO} {Ss} {B} {ps} {x} {ts} x₁ = 
-  no-confusion ps (No-Cycle (ps ⊹ (var _ ∷ [])) ts i j (trans x₁ (⊹-snoc ps (var _) (rens j ts))))
+No-Cycle : ∀ {TI Sg G D1 DI DO X} -> let TO = TI in 
+         (d : DTm Sg G (DI , TI) X) (ps : Context Sg G X (DO , TO)) 
+         (t : Term Sg G D1 TO) (i : Inj D1 DI)(j : Inj D1 DO) -> 
+         ¬ renT i t ≡ ∫ (d ∷ ps) (renT j t)
+No-Cycle d ps t i j eq = ≡-or-> (cong heightT eq) r
+  where open ≤-Reasoning 
+        open import Data.Nat.Properties
+        r = begin
+              suc (heightT (renT i t)) ≡⟨ cong suc (sym (renT-height i t)) ⟩
+              suc (heightT t) ≡⟨ cong suc (renT-height j t) ⟩
+              suc (heightT (renT j t)) ≤⟨ s≤s (OnHeight.∫-height ps (renT j t)) ⟩
+              suc (heightT (∫ ps (renT j t))) ≤⟨ OnHeight.∫once-height d (∫ ps (renT j t)) ⟩ 
+              heightT (∫once d (∫ ps (renT j t))) ∎
+        ≡-or-> : ∀ {m n} -> m ≡ n -> n > m -> ⊥
+        ≡-or-> refl (s≤s ge) = ≡-or-> refl ge
 
 _[_]OccursIn_ : ∀ {Sg G D D' T S} (u : G ∋ S) (j : Inj (ctx S) D') (t : Term Sg G D T) → Set
 u [ j ]OccursIn t = Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (fun u j) ≡ t

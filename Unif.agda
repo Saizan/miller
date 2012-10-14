@@ -78,12 +78,8 @@ flexRigid : ∀ {Sg G D S} →
                   -> (\ S v -> σo _ ((thin u S v))) ≤ toSub (proj₁ (proj₂ p))) ->
                Spec (fun u i) (sub (\ S v -> mvar (thin u S v)) s)
 flexRigid {S = S} u i s (G1 , ρ , decr , m) maxρ with invertTm i s (toSub ρ) m 
-flexRigid {S = S} u i .(∫ C (var x ys)) (G1 , ρ , decr , m) _ | inj₂ (D1 , _ , _ , x , ys , C , refl , x∉i) = no (aux x∉i) where
-  aux : x ∉ ∫Inj C i -> ∃σ (Unifies (fun u i) (sub (λ S v → mvar (thin u S v)) (∫ C (var x ys)))) → ⊥
-  aux x∉i (_ , σ , eq) with ren-∫ x (subC _ C) (σ _ u) i (subs _ ys) (trans (T-≡ eq) (trans (sub-∘ (∫ C (var x ys))) (∫-sub _ C (var x ys))))
-                       | ∫Ctx C (ctx S) | ∫Inj C i | ∫Inj-subC {s = (λ z t → ren id-i (σ z (thin u z t)))} C i
-  ... | (b , x≡i$b) | ._ | ._ | refl = ∉-∉Im (∫Inj (subC (λ z t → ren id-i (σ z (thin u z t))) C) i) x x∉i b x≡i$b
-
+flexRigid {S = S} u i s (G1 , ρ , decr , m) _ | inj₂ notInv = 
+          no (λ {(_ , σ , eq) → notInv (σ ∘s (λ S₁ v → mvar (thin u S₁ v))) ((σ S u) , (≡-T (trans (T-≡ eq) (sub-∘ s))))})
 flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , renit≡subρs) 
  = yes (G1 , (DS σ , inj₂ (rigid-decr u (Data.Sum.map proj₁ (\ x -> x) decr))) , 
    ≡-T (begin
@@ -128,7 +124,8 @@ flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRi
       open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _∎-≤) 
 flexAny u i .(fun u j) | inj₂ (G1 , j , [] , refl) = yes (flexSame u i j)
 flexAny u i .(∫once x (∫ ps (fun u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no λ {(D1 , s , eq) → 
-        not-nil (subC s ps) (No-Cycle (subC s (x ∷ ps)) (s _ u) i j (trans (T-≡ eq) (∫-sub s (x ∷ ps) (fun u j))))}
+        No-Cycle (subD s x) (subC s ps) (s _ u) i j
+          (trans (T-≡ eq) (∫-sub s (x ∷ ps) (fun u j)))} 
 
 
 unify-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → ∃σ Unifies x y → ∃σ Unifies y x
