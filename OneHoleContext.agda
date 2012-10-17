@@ -32,10 +32,6 @@ data IList {I : Set}(T : I → I → Set) (i : I) : (j : I) → Set where
   [] : IList T i i
   _∷_ : ∀ {k j} → T i k → (xs : IList T k j) → IList T i j
 
-_⊹_ : ∀ {I : Set}{T : I -> I -> Set}{i j k} -> IList T i j -> IList T j k -> IList T i k
-[] ⊹ ys = ys
-(x ∷ xs) ⊹ ys = x ∷ (xs ⊹ ys)
-
 Context : (Sg : Ctx)(G : MCtx) → Index -> Index → Set
 Context Sg G = IList (\ i j → DTm Sg G i j)
 
@@ -43,28 +39,12 @@ Context Sg G = IList (\ i j → DTm Sg G i j)
 ∫oCtx (lam {S = S}) D = S ∷ D
 ∫oCtx _ D = D
 
-∫Ctx : ∀ {Sg G I1 I2} -> Context Sg G I1 I2 -> Ctx -> Ctx
-∫Ctx [] D = D
-∫Ctx (x ∷ c) D = (∫Ctx c (∫oCtx x D))
-
 ∫oInj : ∀ {Sg G DI I1 I2} -> (d : DTm Sg G I1 I2) -> Inj DI (proj₁ I1) -> Inj (∫oCtx d DI) (proj₁ I2)
 ∫oInj lam i = cons i
 ∫oInj (head ts) i = i
 ∫oInj (tail t) i = i
 ∫oInj (con c) i = i
 ∫oInj (var x) i = i
-
-∫Inj : ∀ {Sg G DI I1 I2} -> (c : Context Sg G I1 I2) -> Inj DI (proj₁ I1) -> Inj (∫Ctx c DI) (proj₁ I2)
-∫Inj [] i = i
-∫Inj (x ∷ c) i = ∫Inj c (∫oInj x i)
-
-toInj : ∀ {Sg G I1 I2} -> Context Sg G I1 I2 -> Inj (proj₁ I1) (proj₁ I2)
-toInj [] = id-i
-toInj (lam ∷ c) = toInj c ∘i weak id-i 
-toInj (head _ ∷ c) = toInj c
-toInj (tail _ ∷ c) =  toInj c
-toInj (con _ ∷ c) = toInj c
-toInj (var _ ∷ c) = toInj c
 
 subD : ∀ {Sg G1 G2 TI TO} -> (Sub Sg G1 G2) -> DTm Sg G1 TI TO -> DTm Sg G2 TI TO
 subD s lam = lam
@@ -76,15 +56,6 @@ subD s (var x) = var x
 subC : ∀ {Sg G1 G2 TI TO} -> (Sub Sg G1 G2) -> Context Sg G1 TI TO -> Context Sg G2 TI TO
 subC s [] = []
 subC s (x ∷ c) = subD s x ∷ (subC s c)
-
-∫Inj-subC : ∀ {Sg G1 G2 DI I1 I2}{s : Sub Sg G1 G2} -> (c : Context Sg G1 I1 I2) -> (i : Inj DI (proj₁ I1)) 
-                        -> _≡_ {A = Σ Ctx \ D -> Inj D (proj₁ I2)} (∫Ctx c DI , ∫Inj c i) (∫Ctx (subC s c) DI , ∫Inj (subC s c) i)
-∫Inj-subC [] i = refl
-∫Inj-subC (_∷_ lam c) i = ∫Inj-subC c (cons i)
-∫Inj-subC (_∷_ (head ts) c) i = ∫Inj-subC c i
-∫Inj-subC (_∷_ (tail t) c) i = ∫Inj-subC c i
-∫Inj-subC (_∷_ (con c) c₁) i = ∫Inj-subC c₁ i
-∫Inj-subC (_∷_ (var x) c) i = ∫Inj-subC c i
 
 ∫once : ∀ {Sg G DI TI DO TO} → DTm Sg G (DI , TI) (DO , TO) → Term Sg G DO TO → Term Sg G DI TI
 ∫once lam t = lam t
@@ -130,7 +101,3 @@ module OnHeight where
 ∫-sub : ∀ {Sg G1 G2 TI TO} -> (s : Sub Sg G1 G2) -> (c : Context Sg G1 TI TO) -> ∀ t -> subT s (∫ c t) ≡ ∫ (subC s c) (subT s t)
 ∫-sub s [] t = refl
 ∫-sub s (x ∷ c) t = trans (∫once-sub s x _) (cong (∫once (subD s x)) (∫-sub s c t))
-
-⊹-snoc : ∀ {Sg G I O D T} (ps : Context Sg G I O) (x : DTm _ _ _ (D , T)) t -> ∫ ps (∫once x t) ≡ ∫ (ps ⊹ (x ∷ [])) t
-⊹-snoc [] x t = refl
-⊹-snoc (x ∷ ps) x₁ t = cong (∫once x) (⊹-snoc ps x₁ t)
