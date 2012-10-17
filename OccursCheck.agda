@@ -1,12 +1,6 @@
 module OccursCheck where
 
-open import Data.Product renaming (map to mapΣ)
-mapΣ₂ : ∀ {a b c p q r}
-        {A : Set a} {B : Set b}{C : Set c} {P : A → Set p} {Q : B → Set q} {R : C -> Set r}→
-      (f : A -> B -> C) → (∀ {x y} → P x → Q y -> R (f x y)) →
-      Σ A P → Σ B Q -> Σ C R
-mapΣ₂ f g (x₀ , y₀) (x , y) = (f x₀ x , g y₀ y)
-
+open import Data.Product.Extras
 open import Data.Nat renaming (ℕ to Nat)
 open import Relation.Nullary using (¬_)
 open import Relation.Binary.PropositionalEquality

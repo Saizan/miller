@@ -1,6 +1,6 @@
 module RenOrn where
 
-open import Data.Product renaming (map to mapΣ)
+open import Data.Product.Extras
 open import Relation.Binary.PropositionalEquality
 
 open import Injection
@@ -43,10 +43,10 @@ mutual
   forget (fun u j eq) = fun u j , cong (fun u) eq
   forget {i = i} (var v refl x₂) = mapΣ (var v) (cong (var (i $ v))) (forgets x₂)
   forget (lam x) = mapΣ lam (cong lam) (forget x) 
-  
+
   forgets : ∀ {Sg G D D0}{Ts} → {i : Inj D D0} → {t : Tms Sg G D0 Ts} → (x : RTms Sg G D D0 i Ts t) → Σ (Tms Sg G D Ts) \ s → rens i s ≡ t
   forgets [] = [] , refl
-  forgets (x₁ ∷ x₂) = ((proj₁ (forget x₁)) ∷ (proj₁ (forgets x₂))) , (cong₂ _∷_ (proj₂ (forget x₁)) (proj₂ (forgets x₂)))
+  forgets (t ∷ ts) = mapΣ₂ _∷_ (cong₂ _∷_) (forget t) (forgets ts)
 
 mutual
   remember : ∀ {Sg G D D0}{T : Ty} → (i : Inj D D0) → (s : Tm Sg G D T) →
@@ -58,9 +58,7 @@ mutual
 
   remembers : ∀ {Sg G D D0}{T} → (i : Inj D D0) → (s : Tms Sg G D T) → Σ (RTms Sg G D D0 i T (rens i s)) \ rt -> proj₁ (forgets rt) ≡ s
   remembers i [] = [] , refl
-  remembers i (t ∷ ts) = proj₁ rect ∷ proj₁ rects , cong₂ _∷_ (proj₂ rect) (proj₂ rects) where
-    rect = remember i t
-    rects = remembers i ts
+  remembers i (t ∷ ts) = mapΣ₂ _∷_ (cong₂ _∷_) (remember i t) (remembers i ts)
 
 ren-inj : ∀ {Sg G D D0}{T : Ty} → (i : Inj D D0) → (s t : Tm Sg G D T) -> ren i s ≡ ren i t -> s ≡ t
 ren-inj i s t eq with remember i s | remember i t
