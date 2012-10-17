@@ -1,17 +1,19 @@
 module OccursCheck where
 
 open import Data.Product renaming (map to mapΣ)
+mapΣ₂ : ∀ {a b c p q r}
+        {A : Set a} {B : Set b}{C : Set c} {P : A → Set p} {Q : B → Set q} {R : C -> Set r}→
+      (f : A -> B -> C) → (∀ {x y} → P x → Q y -> R (f x y)) →
+      Σ A P → Σ B Q -> Σ C R
+mapΣ₂ f g (x₀ , y₀) (x , y) = (f x₀ x , g y₀ y)
+
 open import Data.Nat renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
+open import Relation.Nullary using (¬_)
 open import Relation.Binary.PropositionalEquality
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum
-open import Data.Maybe
 open import Category.Monad
-import Level
-open RawMonad (monad {Level.zero})
 
 open import Injection
 open import Lists
@@ -19,32 +21,6 @@ open import Lists
 open import Syntax
 open import Height
 open import OneHoleContext
-
-mutual
-  data MRTm (Sg : Ctx)(G : MCtx)(D : Ctx)(K : MCtx) (i : ∀ S → G ∋ S → K ∋ S) : (T : Ty) → Tm Sg K D T → Set where
-    con : {Ss : Fwd Ty}{B : Base} →
-          (c : Sg ∋ (Ss ->> B)) → ∀ {tms} → (MRTms Sg G D K i Ss tms) → MRTm Sg G D K i (! B) (con c tms)
-    fun : {Ss : Bwd Ty}{B : Base} →
-              (u : G ∋ (B <<- Ss)) → (j : Inj Ss D) → ∀ {v} → i _ u ≡ v → MRTm Sg G D K i (! B) (fun v j)
-    var : forall {Ss B} → (x : D ∋ (Ss ->> B)) → ∀ {tms} → MRTms Sg G D K i Ss tms → MRTm Sg G D K i (! B) (var x tms)
-    lam : {S : Ty}{Ss : Fwd Ty}{B : Base} → ∀ {b} →
-          MRTm Sg G (D <: S) K i (Ss ->> B) b → MRTm Sg G D K i (S :> Ss ->> B) (lam b)
-
-  data MRTms (Sg : Ctx)(G : MCtx)(D : Ctx)(K : MCtx)(i : ∀ S → G ∋ S → K ∋ S) : (Ss : Fwd Ty) → Tms Sg K D Ss → Set where
-    [] : MRTms Sg G D K i !> []
-    _∷_ : {S : Ty}{Ss : Fwd Ty} → ∀ {x xs} →
-           MRTm Sg G D K i S x → MRTms Sg G D K i Ss xs → MRTms Sg G D K i (S :> Ss) (x ∷ xs)
-
-mutual
-  forget : ∀ {Sg G D K T}{i}{t} → MRTm Sg G D K i T t → ∃ \ s → sub (\ s v → mvar (i s v)) s ≡ t
-  forget (con c ts) = mapΣ (con c) (cong (con c)) (forgets ts)
-  forget (fun u j refl) = (fun u j) , cong (fun _) (right-id j)
-  forget (var x ts) = mapΣ (var x) (cong (var x)) (forgets ts)
-  forget (lam t) = mapΣ lam (cong lam) (forget t)
-  
-  forgets : ∀ {Sg G D K T}{i}{t} → MRTms Sg G D K i T t → ∃ \ s → subs (\ s v → mvar (i s v)) s ≡ t
-  forgets [] = [] , refl
-  forgets (t ∷ ts) = proj₁ (forget t) ∷ proj₁ (forgets ts) , (cong₂ _∷_ (proj₂ (forget t)) (proj₂ (forgets ts)))
 
 No-Cycle : ∀ {TI Sg G D1 DI DO X} -> let TO = TI in 
          (d : DTm Sg G (DI , TI) X) (ps : Context Sg G X (DO , TO)) 
@@ -68,24 +44,33 @@ u [ j ]OccursIn t = Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (fun u j) �
 _OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
 _OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → u [ j ]OccursIn t
 
+_NotOccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
+u NotOccursIn t = (∃ \ s → subT (\ S v → mvar (thin u S v)) s ≡ t)
+
+Dec_OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
+Dec u OccursIn t = u NotOccursIn t ⊎ u OccursIn t
+
 map-occ : ∀ {Sg G S D T D' T'}{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg G (D' , T') (D , T)) → u OccursIn t → u OccursIn ∫once d t
 map-occ d (Dj , j , C , eq) = (Dj , j , (d ∷ C) , cong (∫once d) eq)
-  
+
+_∙_ : ∀ {Sg G S D T D' T'}{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg (G - u) (D' , T') (D , T)) 
+        → Dec u OccursIn t → Dec u OccursIn ∫once (subD (λ S₁ v → mvar (thin u S₁ v)) d) t
+_∙_ {u = u} d (inj₂ occ) = inj₂ (map-occ (subD (λ S₁ v → mvar (thin u S₁ v)) d) occ)
+_∙_ {u = u} d (inj₁ (s , eq)) = inj₁ (∫once d s , trans (∫once-sub _ d s) (cong (∫once (subD (λ S₁ v → mvar (thin u S₁ v)) d)) eq))
+
 mutual
-  check' : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → MRTm Sg (G - u) D G (thin u) T t ⊎ u OccursIn t
-  check' u (con c ts) = Data.Sum.map (con c) (map-occ (con c)) (check's u ts) 
-  check' u (fun w j) with thick u w
-  ... | inj₁ (z , eq) = inj₁ (fun z j eq)
-  check' u (fun .u j) | inj₂ refl = inj₂ (_ , (j , ([] , refl)))
-  check' u (var x ts) = Data.Sum.map (var x) (map-occ (var x)) (check's u ts)
-  check' u (lam t) = Data.Sum.map lam (map-occ lam) (check' u t)
+  check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → Dec u OccursIn t
+  check u (con c ts) = con c ∙ checks u ts 
+  check u (fun w j) with thick u w
+  ... | inj₁ (z , eq) = inj₁ (fun z j , cong₂ fun eq (right-id j))
+  check u (fun .u j) | inj₂ refl = inj₂ (_ , (j , ([] , refl)))
+  check u (var x ts) = var x ∙ checks u ts
+  check u (lam t) = lam ∙ check u t
   
-  check's : ∀ {Sg G D Ts S} (u : G ∋ S) (ts : Tms Sg G D Ts) → MRTms Sg (G - u) D G (thin u) Ts ts ⊎ u OccursIn ts
-  check's u [] = inj₁ []
-  check's u (t ∷ ts) with check' u t | check's u ts 
+  checks : ∀ {Sg G D Ts S} (u : G ∋ S) (ts : Tms Sg G D Ts) → Dec u OccursIn ts
+  checks u [] = inj₁ ([] , refl)
+  checks u (t ∷ ts) with check u t | checks u ts 
   ... | inj₂ x | _ = inj₂ (map-occ (head ts) x)
-  ... | inj₁ x | inj₁ xs = inj₁ (x ∷ xs)
+  ... | inj₁ x | inj₁ xs = inj₁ (mapΣ₂ _∷_ (cong₂ _∷_) x xs)
   ... | _ | inj₂ xs = inj₂ (map-occ (tail t) xs)
 
-check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → (∃ \ s → sub (\ S v → mvar (thin u S v)) s ≡ t) ⊎ u OccursIn t
-check u t = Data.Sum.map forget (\ x → x) (check' u t)
