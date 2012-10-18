@@ -159,18 +159,20 @@ mutual
   unifyTms [] [] _ = yes (refl-Unifies [])
   unifyTms (s ∷ xs) (t ∷ ys) l with unify s t l
   ... | no p = no λ {(_ , ρ , eq ∷ _) → p (_ , ρ , eq)}
-  ... | yes (_ , σ , eq , max) with helper l σ xs ys
-  ... | no p = no λ {(_ , σ1 , eqt ∷ eqts) → p (shift2 xs ys σ1 ⟦ σ ⟧ (max σ1 eqt) eqts) }
+  ... | yes (_ , σ , eq , max) with under σ unifyTms xs ys l
+  ... | no p = no λ {(_ , σ1 , eqt ∷ eqts) → p (shift eqts under ⟦ σ ⟧ by max σ1 eqt) }
   ... | yes (_ , σ1 , eq1 , max1) = yes (_ , (σ1 ∘ds σ) , optimist-Unifies s t xs ys ⟦ σ ⟧ ⟦ σ1 ⟧ (eq , max) (eq1 , max1))
 
 
+  under_unifyTms : ∀ {Sg G D Ts} -> 
+             ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> ∃ (\ n -> n ≥ Ctx-length G) -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
+  under (DS σ , inj₁ (G~G1 , σ-is-iso)) unifyTms xs ys l = Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 σ-is-iso (unifyTms xs ys l)
+  under (DS σ , inj₂ G>G1) unifyTms xs ys (n , n≥length) = under-not-iso σ unifyTms xs ys (n , n≥length) n>Ctx-length[G1]
+    where 
+      open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _≤-∎)      
+      n>Ctx-length[G1] = ≤-begin _ ≤⟨ G>G1 ⟩ _ ≤⟨ n≥length ⟩ _ ≤-∎
 
-  helper : ∀ {Sg G D Ts} -> ∃ (\ n -> n ≥ Ctx-length G) ->
-             ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
-  helper l (DS σ , inj₁ (eq , σ-is-iso)) xs ys = Spec[xs,ys]⇒Spec[σxs,σys] xs ys σ eq (proj₁ σ-is-iso) (proj₂ σ-is-iso) (unifyTms xs ys l)
-  helper (n , n≥length) (DS σ , inj₂ G>G1) xs ys = helper2 (n , n≥length) σ xs ys (≤-begin _ ≤⟨ G>G1 ⟩ _ ≤⟨ n≥length ⟩ (_ ≤-∎)) 
-         where open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _≤-∎)
-
-  helper2 : ∀ {Sg G D Ts} -> (u : ∃ (\ n -> n ≥ Ctx-length G)) ->
-             ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> proj₁ u > Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
-  helper2 (.(suc n) , n≥length) σ xs ys (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) (n , z)
+  under-not-iso_unifyTms : ∀ {Sg G D Ts} -> 
+             ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> 
+             (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
+  under-not-iso σ unifyTms xs ys (.(suc n) , n≥length) (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) (n , z)

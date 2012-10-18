@@ -22,8 +22,11 @@ abstract
     aux S x | fun u j | w = (j / u) , refl
     aux S x | var x₁ ts | ()
 
+IsIso : ∀ {Sg G1 G2} -> (s : Sub Sg G1 G2) -> Set
+IsIso s = Σ (id-s ≤ s) \le -> ∀ S u -> id-s S u ≡ (s ∘s proj₁ le) S u
+
 Decreasing : ∀ {Sg}{G1}{G2} -> (s : Sub Sg G1 G2) -> Set
-Decreasing {Sg} {G1} {G2} s = (Ctx-length G1 ≡ Ctx-length G2 × Σ (id-s ≤ s) \le -> ∀ S u -> id-s S u ≡ (s ∘s proj₁ le) S u) 
+Decreasing {Sg} {G1} {G2} s = (Ctx-length G1 ≡ Ctx-length G2 × IsIso s) 
                             ⊎ (Ctx-length G1 > Ctx-length G2) 
 
 record DSub (Sg : Ctx) (G1 : MCtx) (G2 : MCtx) : Set where

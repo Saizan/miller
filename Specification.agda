@@ -82,9 +82,9 @@ shift : ∀ {Sg G G1 G2 D S} (x y : Term Sg G D S) (f : Sub Sg G G1)(g : Sub Sg 
           Max (Unifies (subT f x) (subT f y)) g -> Max (\ s -> Unifies x y (s ∘s f)) g
 shift x y f g (eq , max) = sandwich subT-∘ eq , (λ ρ x₁ → max ρ (sandwich (λ x₂ → sym (subT-∘ x₂)) x₁)) 
 
-shift2 : ∀ {Sg G h1 h2 D T} (xs ys : Term Sg G D T) (σ1 : Sub Sg G h1)(σ : Sub Sg G h2) -> σ1 ≤ σ -> 
-                                                    Unifies xs ys σ1 -> ∃σ (Unifies (subT σ xs) (subT σ ys))
-shift2 xs ys σ1 σ (δ , σ1≡δ∘σ) eq = _ ,
+shift_under_by_ : ∀ {Sg G h1 h2 D T} {xs ys : Term Sg G D T} {σ1 : Sub Sg G h1} -> Unifies xs ys σ1 -> (σ : Sub Sg G h2) -> σ1 ≤ σ -> 
+                                                    ∃σ (Unifies (subT σ xs) (subT σ ys))
+shift_under_by_ eq σ (δ , σ1≡δ∘σ) = _ ,
                                       δ ,
                                       sandwich
                                       (λ xs₁ → sym (trans (subT-∘ xs₁) (sym (subT-ext σ1≡δ∘σ xs₁)))) eq
@@ -102,13 +102,13 @@ refl-Unifies : ∀ {Sg G D T} (x : Term Sg G D T) -> ∃⟦σ⟧ Max (Unifies x 
 refl-Unifies x = (_ , ((DS (λ S x → mvar x) , inj₁ (refl , ((λ S x → mvar x) , (λ S u → sym (ren-id _))) , (λ S u → sym (ren-id _)))) 
                           , refl-T _ , (λ ρ x → ρ , (λ S u → sym (ren-id _)))))
 
-Spec[xs,ys]⇒Spec[σxs,σys] : ∀ {Sg G G1 D T} (xs ys : Term Sg G D T) (σ : Sub Sg G G1) -> Ctx-length G ≡ Ctx-length G1 -> 
-        (le : (\ S x -> mvar x) ≤ σ) -> (∀ S u -> id-s S u ≡ (σ ∘s proj₁ le) S u) -> Spec xs ys -> Spec (subT σ xs) (subT σ ys)
-Spec[xs,ys]⇒Spec[σxs,σys] xs ys σ G~G1 (δ , id≡δ∘σ) id≡σ∘δ (inj₁ (_ , σ₁ , eq , max)) 
+Spec[xs,ys]⇒Spec[σxs,σys] : ∀ {Sg G G1 D T} {xs ys : Term Sg G D T} (σ : Sub Sg G G1) -> Ctx-length G ≡ Ctx-length G1 -> 
+        IsIso σ -> Spec xs ys -> Spec (subT σ xs) (subT σ ys)
+Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 ((δ , id≡δ∘σ) , id≡σ∘δ) (inj₁ (_ , σ₁ , eq , max)) 
   = inj₁ (_ , ((σ₁ ∘ds (DS δ , inj₁ (sym G~G1 , (σ , id≡σ∘δ) , id≡δ∘σ))) , 
    sandwich (\ ys -> ((((trans (cong (subT ⟦ σ₁ ⟧) (trans (sym (subT-id ys)) (subT-ext id≡δ∘σ ys))) 
    (trans (subT-∘ ys) (trans (subT-ext (λ S x → subT-∘ (σ S x)) ys) (sym (subT-∘ ys))))))))) eq , 
           (λ ρ x → let rq : _
                        rq = max (ρ ∘s σ) (sandwich subT-∘ x)
                      in (proj₁ rq) , (λ S u → trans (trans (trans (sym (ren-id (ρ S u))) (cong (sub ρ) (trans refl (id≡σ∘δ S u)))) (sub-∘ {f = ρ} {σ} (δ S u))) (trans (subT-ext (proj₂ rq) (δ S u)) (sym (subT-∘ (δ S u))))))))
-Spec[xs,ys]⇒Spec[σxs,σys] xs ys σ G~G1 id≤σ _ (inj₂ y) = inj₂ (λ {(_ , σ₁ , eq) → y (_ , (σ₁ ∘s σ) , (sandwich (λ x → (subT-∘ x)) eq))})
+Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 _ (inj₂ y) = inj₂ (λ {(_ , σ₁ , eq) → y (_ , (σ₁ ∘s σ) , (sandwich (λ x → (subT-∘ x)) eq))})
