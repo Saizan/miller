@@ -11,10 +11,6 @@ open import Data.Empty
 open import Data.Unit hiding (_≤_)
 open import Data.Sum
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
-open import Data.Maybe
-open import Category.Monad
-import Level
-open RawMonad (monad {Level.zero})
 
 open import Injection
 open import Injection.Objects
@@ -121,7 +117,7 @@ flexAny u i t with check u t
 flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (prune i s (_ , (≤-begin _ ∎-≤))) (λ σo x → 
         prune-gen i s (_ , (≤-begin _ ∎-≤)) (λ S x₁ → σo _ ((thin u S x₁))) (σo _ u) (≡-T x)) 
     where 
-      open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _∎-≤) 
+      open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _∎-≤)
 flexAny u i .(fun u j) | inj₂ (G1 , j , [] , refl) = yes (flexSame u i j)
 flexAny u i .(∫once x (∫ ps (fun u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no λ {(D1 , s , eq) → 
         No-Cycle (subD s x) (subC s ps) (s _ u) i j
@@ -161,7 +157,7 @@ mutual
   ... | no p = no λ {(_ , ρ , eq ∷ _) → p (_ , ρ , eq)}
   ... | yes (_ , σ , eq , max) with under σ unifyTms xs ys l
   ... | no p = no λ {(_ , σ1 , eqt ∷ eqts) → p (shift eqts under ⟦ σ ⟧ by max σ1 eqt) }
-  ... | yes (_ , σ1 , eq1 , max1) = yes (_ , (σ1 ∘ds σ) , optimist-Unifies s t xs ys ⟦ σ ⟧ ⟦ σ1 ⟧ (eq , max) (eq1 , max1))
+  ... | yes (_ , σ1 , eq1 , max1) = yes (_ , (σ1 ∘ds σ) , optimist s t xs ys ⟦ σ ⟧ ⟦ σ1 ⟧ (eq , max) (eq1 , max1))
 
 
   under_unifyTms : ∀ {Sg G D Ts} -> 
