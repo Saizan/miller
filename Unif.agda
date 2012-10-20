@@ -4,11 +4,11 @@ module Unif where
 open import Data.Product renaming (map to mapΣ)
 open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
 open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
+open import Relation.Binary
+open DecTotalOrder Data.Nat.decTotalOrder using () renaming (trans to ≤-trans)         
 open import Relation.Binary.PropositionalEquality
 open ≡-Reasoning
 open import Data.Empty
-open import Data.Unit hiding (_≤_)
 open import Data.Sum
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 
@@ -31,7 +31,7 @@ open import MetaRens
 
 mutual
   lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tm Sg G X S) 
-                 -> (ren i t) ≡T (ren j t) -> let open Equalizer equ in RTm Sg G E X e _ t
+                   -> ren i t ≡T ren j t -> let open Equalizer equ in RTm Sg G E X e _ t
   lift-equalizer equ (con c ts) (con refl eq) = con c (lifts-equalizer equ ts eq)
   lift-equalizer equ (fun u j₁) (fun refl eq) = fun u (universal j₁ eq) e∘universal≡m
     where open Equalizer equ
@@ -40,38 +40,43 @@ mutual
   lift-equalizer equ (lam t) (lam eq) = lam (lift-equalizer (cons-equalizer _ _ equ) t eq)
 
   lifts-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tms Sg G X S) 
-                 -> (rens i t) ≡T (rens j t) -> let open Equalizer equ in RTms Sg G E X e _ t
+                    -> rens i t ≡T rens j t -> let open Equalizer equ in RTms Sg G E X e _ t
   lifts-equalizer equ [] eq = []
   lifts-equalizer equ (t ∷ ts) (eqt ∷ eqts) = (lift-equalizer equ t eqt) ∷ (lifts-equalizer equ ts eqts)
 
 flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃⟦σ⟧ Max (Unifies {Sg} (Tm.fun u i) (fun u j))
-flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (equalizer-Decr i j)) , aux , maxprop
+flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (equalizer-Decr i j)) 
+                                           , [σ]Unifies[fun[u,i],fun[u,j]] 
+                                           , sup-σ
   where
     i,j⇒e = equalizer i j
     open Equalizer i,j⇒e
-    σ = (toSub (singleton u e))
-    aux : eqT (ren i (σ _ u)) (ren j (σ _ u))
-    aux rewrite thick-refl u = ≡-T (cong (fun zero) commutes)
-    maxprop : {G' : List MTy}
-      (ρ : (S : MTy) → G ∋ S → Tm Sg G' (ctx S) (! type S)) →
-      eqT (ren i (ρ _ u)) (ren j (ρ _ u)) → ρ ≤ σ
-    maxprop {G'} ρ eq = dif , proof where
-      dif : (S₁ : MTy) →
-        B <<- E ∷ G - u ∋ S₁ →
-        Tm Sg G' (ctx S₁) ([] ->> type S₁)
-      dif ._ zero = proj₁ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) eq))
-      dif S₁ (suc v) = ρ _ (thin u _ v)
-      proof : (S₁ : MTy) (u₁ : G ∋ S₁) → ρ S₁ u₁ ≡ (dif ∘s σ) S₁ u₁
-      proof S₁ u₁ with thick u u₁ 
-      proof S₁ u₁ | inj₁ (v , eq') rewrite eq' = sym (ren-id (ρ _ u₁))
-      proof .(B <<- Ss) .u | inj₂ refl = sym (proj₂ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) eq)))
+
+    σ = toSub (singleton u e)
+
+    [σ]Unifies[fun[u,i],fun[u,j]] : ren i (σ _ u) ≡T ren j (σ _ u)
+    [σ]Unifies[fun[u,i],fun[u,j]] rewrite thick-refl u = ≡-T (cong (fun zero) commutes)
+
+    sup-σ : {G' : List MTy} (ρ : (S : MTy) → G ∋ S → Tm Sg G' (ctx S) (! type S)) →
+            ren i (ρ _ u) ≡T ren j (ρ _ u) → ρ ≤ σ
+    sup-σ {G'} ρ eq = δ , ρ≡δ∘σ where
+
+      δ : (S₁ : MTy) → B <<- E ∷ G - u ∋ S₁ → Tm Sg G' (ctx S₁) ([] ->> type S₁)
+      δ ._ zero = proj₁ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) eq))
+      δ S₁ (suc v) = ρ _ (thin u _ v)
+
+      ρ≡δ∘σ : (S₁ : MTy) (u₁ : G ∋ S₁) → ρ S₁ u₁ ≡ (δ ∘s σ) S₁ u₁
+      ρ≡δ∘σ S₁ u₁ with thick u u₁ 
+      ρ≡δ∘σ S₁ u₁ | inj₁ (v , eq') rewrite eq' = sym (ren-id (ρ _ u₁))
+      ρ≡δ∘σ .(B <<- Ss) .u | inj₂ refl = sym (proj₂ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) eq)))
+
 
 flexRigid : ∀ {Sg G D S} →
                (u : G ∋ S) →
                (i : Inj (ctx S) D) →
                (s : Tm Sg (G - u) D (! type S)) → (p : ∃ \ G1 → Σ (MetaRen (G - u) G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ / s ∈ i) ->
-               (∀ {G1} (σo : Sub Sg G G1) -> sub σo (fun u i) ≡ sub (\ S v -> σo _ ((thin u S v))) s 
-                  -> (\ S v -> σo _ ((thin u S v))) ≤ toSub (proj₁ (proj₂ p))) ->
+               (∀ {G1} (σo : Sub Sg G G1) -> sub σo (fun u i) ≡ sub (\ S v -> σo _ (thin u S v)) s 
+                  -> (\ S v -> σo _ (thin u S v)) ≤ toSub (proj₁ (proj₂ p))) ->
                Spec (fun u i) (sub (\ S v -> mvar (thin u S v)) s)
 flexRigid {S = S} u i s (G1 , ρ , decr , m) maxρ with invertTm i s (toSub ρ) m 
 flexRigid {S = S} u i s (G1 , ρ , decr , m) _ | inj₂ notInv = 
@@ -96,20 +101,22 @@ flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , renit≡subρs
       maxprop : {G' : List MTy}
         (ρ₁ : (S : MTy) → G ∋ S → Tm Sg G' (ctx S) ([] ->> type S)) →
         (ren i (ρ₁ _ u)) ≡T (sub ρ₁ (sub (λ S v → mvar (thin u S v)) s)) → ρ₁ ≤ σ
-      maxprop {G'} ρ₁ eq1 = r , propp where
+      maxprop {G'} ρ₁ eq1 = δ , ρ₁≡δ∘σ where
+        eq11 : {!ren i (ρ₁ _ u) ≡
+                 sub (λ S z → ρ₁ (type S <<- ctx S) (thin u S z)) s!}
         eq11 = (trans (T-≡ eq1) (trans (sub-∘ s) (sub-ext (λ S x → ren-id _) s)))
-        r = proj₁ (maxρ ρ₁ eq11)
+        δ = proj₁ (maxρ ρ₁ eq11)
         ρ₁∘thin≡rr∘ρ = proj₂ (maxρ ρ₁ eq11)
-        propp : (S : MTy) (u₁ : G ∋ S) → ρ₁ S u₁ ≡ sub r (σ S u₁)
-        propp S u₁ with thick u u₁
-        propp S ._ | inj₁ (v , refl) = ρ₁∘thin≡rr∘ρ _ v
-        propp ._ .u | inj₂ refl = ren-inj i (ρ₁ _ u) (sub r t) 
+        ρ₁≡δ∘σ : (S : MTy) (u₁ : G ∋ S) → ρ₁ S u₁ ≡ sub δ (σ S u₁)
+        ρ₁≡δ∘σ S u₁ with thick u u₁
+        ρ₁≡δ∘σ S ._ | inj₁ (v , refl) = ρ₁∘thin≡rr∘ρ _ v
+        ρ₁≡δ∘σ ._ .u | inj₂ refl = ren-inj i (ρ₁ _ u) (sub δ t) 
           (begin ren i (ρ₁ _ u) ≡⟨ eq11 ⟩ 
                  sub (λ S v → ρ₁ _ (thin u S v)) s ≡⟨ sub-ext ρ₁∘thin≡rr∘ρ s ⟩ 
-                 sub (r ∘s toSub ρ) s ≡⟨ sym (sub-∘ s) ⟩ 
-                 sub r (sub (toSub ρ) s) ≡⟨ cong (sub r) (sym renit≡subρs) ⟩ 
-                 sub r (ren i t) ≡⟨ sub-nat t ⟩ 
-                 ren i (sub r t) ∎)
+                 sub (δ ∘s toSub ρ) s ≡⟨ sym (sub-∘ s) ⟩ 
+                 sub δ (sub (toSub ρ) s) ≡⟨ cong (sub δ) (sym renit≡subρs) ⟩ 
+                 sub δ (ren i t) ≡⟨ sub-nat t ⟩ 
+                 ren i (sub δ t) ∎)
 
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (fun u i) t
@@ -150,9 +157,8 @@ mutual
   unify (con _ _) (var _ _) l = no λ {(_ , _ , ())}
   unify (var _ _) (con _ _) l = no λ {(_ , _ , ())}
  
-
   unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
-  unifyTms [] [] _ = yes (refl-Unifies [])
+  unifyTms [] [] _ = yes (∃σMax[Unifies[x,x]] [])
   unifyTms (s ∷ xs) (t ∷ ys) l with unify s t l
   ... | no p = no λ {(_ , ρ , eq ∷ _) → p (_ , ρ , eq)}
   ... | yes (_ , σ , eq , max) with under σ unifyTms xs ys l
@@ -163,12 +169,9 @@ mutual
   under_unifyTms : ∀ {Sg G D Ts} -> 
              ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> ∃ (\ n -> n ≥ Ctx-length G) -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
   under (DS σ , inj₁ (G~G1 , σ-is-iso)) unifyTms xs ys l = Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 σ-is-iso (unifyTms xs ys l)
-  under (DS σ , inj₂ G>G1) unifyTms xs ys (n , n≥length) = under-not-iso σ unifyTms xs ys (n , n≥length) n>Ctx-length[G1]
-    where 
-      open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _≤-∎)      
-      n>Ctx-length[G1] = ≤-begin _ ≤⟨ G>G1 ⟩ _ ≤⟨ n≥length ⟩ _ ≤-∎
+  under (DS σ , inj₂ G>G1) unifyTms xs ys (n , n≥G) = under-not-iso σ unifyTms xs ys (n , n≥G) (≤-trans G>G1 n≥G) 
 
   under-not-iso_unifyTms : ∀ {Sg G D Ts} -> 
              ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> 
              (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
-  under-not-iso σ unifyTms xs ys (.(suc n) , n≥length) (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) (n , z)
+  under-not-iso σ unifyTms xs ys (.(suc n) , n≥G) (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) (n , z)

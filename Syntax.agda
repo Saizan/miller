@@ -98,6 +98,7 @@ mutual
 
 id-s : ∀ {Sg G} -> Sub Sg G G
 id-s = \ S x -> mvar x
+
 _∘s_ : ∀ {Sg G1 G2 G3} -> Sub Sg G2 G3 -> Sub Sg G1 G2 -> Sub Sg G1 G3
 r ∘s s = λ S x → sub r (s S x)
 

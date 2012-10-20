@@ -53,27 +53,24 @@ mutual
   DClosedMRPs : ∀ {Sg G1 G2 G3} → (f : MetaRen G2 G3)(g : Sub Sg G1 G2) → ∀ {D1 D2 : Ctx} → (i : Inj D1 D2) ->
                ∀ {T} → (t : Tms Sg G1 D2 T) → g /s t ∈ i → (toSub f ∘s g) /s t ∈ i
   DClosedMRPs f g i [] m = _
-  DClosedMRPs f g i (t ∷ ts) m = (DClosedMRP f g i t (proj₁ m)) , (DClosedMRPs f g i ts (proj₂ m))
+  DClosedMRPs f g i (t ∷ ts) (mt , mts) = DClosedMRP f g i t mt , DClosedMRPs f g i ts mts
 
   step-MRP : ∀ {Sg G1 G2 G3} (f : Sub Sg G2 G3)(g : MetaRen G1 G2) {D1 D2 : Ctx} (i : Inj D1 D2) ->
                ∀ {T} → (t : Tm Sg G1 D2 T) → f / sub (toSub g) t ∈ i → (f ∘s toSub g) / t ∈ i
   step-MRP f g i (con c ts) m = step-MRPs f g i ts m
-  step-MRP f g i (fun u j) (H , v , h , eq , k , p) rewrite eq = _ ,
-                                                                   v ,
-                                                                   ρ-env (g _ u) ∘i h ,
-                                                                   refl ,
-                                                                   k ,
-                                                                   (begin
-                                                                    i ∘i k ≡⟨ p ⟩
-                                                                    (j ∘i ρ-env (g _ u)) ∘i h ≡⟨ sym assoc-∘i ⟩
-                                                                    (j ∘i (ρ-env (g _ u) ∘i h) ∎))
+  step-MRP f g i (fun u j) (H , v , h , eq , k , p) rewrite eq 
+    = _ , v , ρ-env (g _ u) ∘i h , refl , k ,
+      (begin
+             i ∘i k                    ≡⟨ p ⟩
+             (j ∘i ρ-env (g _ u)) ∘i h ≡⟨ sym assoc-∘i ⟩
+             j ∘i (ρ-env (g _ u) ∘i h) ∎)
   step-MRP f g i (var x ts) m = step-MRPs f g i ts m
   step-MRP f g i (lam t) m = step-MRP f g (cons i) t m
   
   step-MRPs : ∀ {Sg G1 G2 G3} (f : Sub Sg G2 G3)(g : MetaRen G1 G2) {D1 D2 : Ctx} (i : Inj D1 D2) ->
                ∀ {T} → (t : Tms Sg G1 D2 T) → f /s subs (toSub g) t ∈ i  → (f ∘s toSub g) /s t ∈ i
   step-MRPs f g i [] ms = _
-  step-MRPs f g i (t ∷ ts) ms = step-MRP f g i t (proj₁ ms) , step-MRPs f g i ts (proj₂ ms)
+  step-MRPs f g i (t ∷ ts) (mt , mts) = step-MRP f g i t mt , step-MRPs f g i ts mts
 
 mutual
   MRP-ext : ∀ {Sg : Ctx} {G1 G2 : MCtx} → (f g : Sub Sg G1 G2) → (∀ S u -> f S u ≡ g S u) -> 
@@ -86,7 +83,7 @@ mutual
   MRPs-ext : ∀ {Sg : Ctx} {G1 G2 : MCtx} → (f g : Sub Sg G1 G2) → (∀ S u -> f S u ≡ g S u) -> 
             ∀ {D1 D2 : Ctx} → (i : Inj D1 D2) →  ∀ {T} → (t : Tms Sg G1 D2 T) → f /s t ∈ i -> g /s t ∈ i
   MRPs-ext f g eq i [] m = _
-  MRPs-ext f g eq i (t ∷ ts) m = (MRP-ext f g eq i t (proj₁ m)) , (MRPs-ext f g eq i ts (proj₂ m))
+  MRPs-ext f g eq i (t ∷ ts) (mt , mts) = MRP-ext f g eq i t mt , MRPs-ext f g eq i ts mts
 
 open import DSub
 
@@ -105,27 +102,28 @@ mutual
 
   prunes : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
            -> ∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing (toSub ρ) × toSub ρ /s t ∈ i
-  prunes {Sg}{G} i [] _ = G , idmr , inj₁
-                                       (refl ,
-                                        ((λ S x → mvar x) , (λ S u → sym (ren-id _))) ,
-                                        (λ S u → sym (ren-id _))) , tt
-  prunes i (t ∷ t₁) l with prune i t l 
-  ... | (G1 , ρ , ρ-decr , p) = helper-pur i t t₁ l (G1 , ρ , ρ-decr , p)
+  prunes {Sg}{G} i [] _ = G , idmr , inj₁ (refl , IsIso-id) , tt
+  prunes i (t ∷ ts) l = helper-pur i t ts l (prune i t l)
 
   helper-pur : ∀ {Sg G D1 D2 T Ts } → (i : Inj D1 D2) → (t : Tm Sg G D2 T)(ts : Tms Sg G D2 Ts) → ∃ (\ n -> n ≥ Ctx-length G) 
                -> (∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ / t ∈ i)
                -> ∃ \ G1 → Σ (MetaRen G G1) \ ρ → Decreasing {Sg} (toSub ρ) × toSub ρ /s (t ∷ ts) ∈ i
 
   helper-pur i t ts l (_ , σ , (inj₁ (eq , (δ , iso1) , iso2)) , p1) with prunes i ts l 
-  ... | (G1 , ρ , ρ-decr , p) = G1 , (ρ , (ρ-decr , ((MRP-ext (toSub (ρ ∘mr δ') ∘s toSub σ) (toSub ρ) 
-        (λ S u → trans (cong (λ i₁ → fun (body (((ρ ∘mr δ') ∘mr σ) _ u)) i₁) assoc-∘i)
-                   (sym
-                    (trans (sym (ren-id (toSub ρ _ u)))
-                     (cong (sub (toSub ρ))
-                      (trans (iso1 S u) (sym (sub-ext δ≡δ' (toSub σ _ u)))))))) 
-      i t (DClosedMRP (ρ ∘mr δ') (toSub σ) i t p1)) , p)))
-      where δ' = proj₁ (toMRen δ ((toSub σ) , iso2))
-            δ≡δ' = proj₂ (toMRen δ ((toSub σ) , iso2))
+  ... | (G1 , ρ , ρ-decr , p) 
+    = G1 , ρ , ρ-decr ,
+        MRP-ext (toSub (ρ ∘mr δ') ∘s toSub σ) (toSub ρ)
+        (λ S u →
+           trans
+           (cong (λ i₁ → fun (body (((ρ ∘mr δ') ∘mr σ) _ u)) i₁) assoc-∘i)
+           (sym
+            (trans (sym (ren-id (toSub ρ _ u)))
+             (cong (sub (toSub ρ))
+              (trans (iso1 S u) (sym (sub-ext δ≡δ' (toSub σ _ u))))))))
+        i t (DClosedMRP (ρ ∘mr δ') (toSub σ) i t p1)
+        , p
+    where δ' = proj₁ (toMRen δ ((toSub σ) , iso2))
+          δ≡δ' = proj₂ (toMRen δ ((toSub σ) , iso2))
   helper-pur i t ts (n , n≥length) (_ , σ , (inj₂ G>G2) , p1) with 
              let open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _≤-∎) in  
                helper-pur2 i ts σ (n , n≥length) (≤-begin _ ≤⟨ G>G2 ⟩ _ ≤⟨ n≥length ⟩ (_ ≤-∎))
@@ -165,7 +163,7 @@ mutual
  
 mutual
   prune-gen : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∀ l -> 
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> eqT (ren i z) (sub s t) -> s ≤ toSub (proj₁ (proj₂ (prune i t l)))
+              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> ren i z ≡T sub s t -> s ≤ toSub (proj₁ (proj₂ (prune i t l)))
   prune-gen i (con c ts) l s (con c₁ ts₁) (con _ eq) = prune-gens i ts l s ts₁ eq
   prune-gen i (con c ts) l s (fun u j) ()
   prune-gen i (con c ts) l s (var x ts₁) ()

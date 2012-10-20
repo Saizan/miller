@@ -86,9 +86,9 @@ optimist x y xs ys p q ([p]Unifies[x,y] , sup-p) ([q]Unifies[px,py] , sup-q) =
                 in ≤-∘ ρ p q ρ≤p δ≤q })
 
 
-refl-Unifies : ∀ {Sg G D T} (x : Term Sg G D T) -> ∃⟦σ⟧ Max (Unifies x x)
-refl-Unifies x = _ ,
-                 (DS id-s , inj₁ (refl , (id-s , (λ S u → sym (ren-id _))) , (λ S u → sym (ren-id _)))) ,
+∃σMax[Unifies[x,x]] : ∀ {Sg G D T} (x : Term Sg G D T) -> ∃⟦σ⟧ Max (Unifies x x)
+∃σMax[Unifies[x,x]] x = _ ,
+                 (DS id-s , inj₁ (refl , IsIso-id)) ,
                  refl-T _ ,
                  (λ ρ x₁ → ρ , (λ S u → sym (ren-id _)))
 
