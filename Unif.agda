@@ -102,8 +102,7 @@ flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , renit≡subρs
         (ρ₁ : (S : MTy) → G ∋ S → Tm Sg G' (ctx S) ([] ->> type S)) →
         (ren i (ρ₁ _ u)) ≡T (sub ρ₁ (sub (λ S v → mvar (thin u S v)) s)) → ρ₁ ≤ σ
       maxprop {G'} ρ₁ eq1 = δ , ρ₁≡δ∘σ where
-        eq11 : {!ren i (ρ₁ _ u) ≡
-                 sub (λ S z → ρ₁ (type S <<- ctx S) (thin u S z)) s!}
+        eq11 : ren i (ρ₁ _ u) ≡ sub (λ S z → ρ₁ S (thin u S z)) s
         eq11 = (trans (T-≡ eq1) (trans (sub-∘ s) (sub-ext (λ S x → ren-id _) s)))
         δ = proj₁ (maxρ ρ₁ eq11)
         ρ₁∘thin≡rr∘ρ = proj₂ (maxρ ρ₁ eq11)
@@ -121,7 +120,7 @@ flexRigid {Sg} {G} u i s (G1 , ρ , decr , m) maxρ | inj₁ (t , renit≡subρs
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (fun u i) t
 flexAny u i t with check u t 
-flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (prune i s (_ , (≤-begin _ ∎-≤))) (λ σo x → 
+flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl) = flexRigid u i s (prune s (_ , (≤-begin _ ∎-≤))) (λ σo x → 
         prune-gen i s (_ , (≤-begin _ ∎-≤)) (λ S x₁ → σo _ ((thin u S x₁))) (σo _ u) (≡-T x)) 
     where 
       open ≤-Reasoning renaming (begin_ to ≤-begin_; _∎ to _∎-≤)

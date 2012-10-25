@@ -43,19 +43,19 @@ map-occ (var ._) notinv σ (var x₁ ts , var refl eq) = notinv σ (ts , eq)
 mutual
   invertTm' : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : Sub Sg G G1) → ρ / t ∈ i
     → RTm Sg G1 Ss D i T (sub ρ t) ⊎ notInv i t
-  invertTm' i (con c ts) r m = map⊎ (con c) (map-occ (con c)) (invertTm's i ts r m)
-  invertTm' i (fun u j) r (H , v , h , eq , k , comm) rewrite eq = yes (fun v k comm)
-  invertTm' i (var x ts) r m 
+  invertTm' i (con c ts) r (con m) = map⊎ (con c) (map-occ (con c)) (invertTm's i ts r m)
+  invertTm' i (fun u j) r (fun v h eq k comm) rewrite eq = yes (fun v k comm)
+  invertTm' i (var x ts) r (var m) 
    with invert i x   | invertTm's i ts r m 
   ... | yes (y , eq) | yes p₁ = yes (var y eq p₁)
   ... | yes p        | no ¬p  = no (map-occ (var x) ¬p)
   ... | no ¬p        | q      = no (λ σ → λ {(var z ts , var eqz eqts) → ¬p (z , eqz); (con _ _ , ()); (fun _ _ , ())})
-  invertTm' i (lam t) r m = map⊎ lam (map-occ {t = t} lam) (invertTm' (cons i) t r m)
+  invertTm' i (lam t) r (lam m) = map⊎ lam (map-occ {t = t} lam) (invertTm' (cons i) t r m)
 
-  invertTm's : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → (ρ : Sub Sg G G1) → ρ /s t ∈ i 
+  invertTm's : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → (ρ : Sub Sg G G1) → ρ / t ∈ i 
                 → RTms Sg G1 Ss D i T (subs ρ t) ⊎ notInv i t
   invertTm's i [] r m = yes []
-  invertTm's i (t ∷ ts) r (mt , mts) 
+  invertTm's i (t ∷ ts) r (mt ∷ mts) 
    with invertTm' i t r mt | invertTm's i ts r mts
   ... | yes p              | yes ps = yes (p ∷ ps) 
   ... | yes p              | no ¬ps = no (map-occ (tail t) ¬ps) 

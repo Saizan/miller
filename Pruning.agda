@@ -88,27 +88,26 @@ f ∙ (_ , ρ , ρ-decr , m) = _ , ρ , ρ-decr , f m
 
 mutual
   
-  prune : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
+  prune : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} → (t : Tm Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
             -> Pruner i t
-  prune i (con c ts) l = con ∙ prunes i ts l
-  prune i (fun u j) l = _ , singleton u p₂ , decr , fun _ _ refl (proj₁ aux) (proj₂ aux) where
+  prune (con c ts) l = con ∙ prunes ts l
+  prune {i = i} (fun u j) l = _ , singleton u p₂ , decr , fun _ _ refl (proj₁ aux) (proj₂ aux) where
     open Pullback (pullback i j)
     aux : ∃ \ k -> i ∘i k ≡ j ∘i ρ-env (singleton u p₂ _ u)
     aux rewrite thick-refl u = p₁ , commutes
     decr = singleton-Decreasing p₂ u (pullback-Decr i j)
-  prune i (var x ts) l = var ∙ prunes i ts l
-  prune i (lam t) l = lam ∙ prune (cons i) t l
+  prune (var x ts) l = var ∙ prunes ts l
+  prune (lam t) l = lam ∙ prune t l
 
-  prunes : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
+  prunes : ∀ {Sg G D1 D2 T} → {i : Inj D1 D2} → (t : Tms Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
            -> Pruner i t
-  prunes {Sg}{G} i [] _ = G , idmr , inj₁ (refl , IsIso-id) , []
-  prunes i (t ∷ ts) l = helper-pur i ts l (prune i t l)
+  prunes {Sg}{G} [] _ = G , idmr , inj₁ (refl , IsIso-id) , []
+  prunes (t ∷ ts) l = given (prune t l) prunes ts l
 
-  helper-pur : ∀ {Sg G D1 D2 T Ts } → (i : Inj D1 D2) → {t : Tm Sg G D2 T}(ts : Tms Sg G D2 Ts) → ∃ (\ n -> n ≥ Ctx-length G) 
-               -> Pruner i t
-               -> Pruner i (t ∷ ts)
+  given_prunes  : ∀ {Sg G D1 D2 T Ts } {i : Inj D1 D2} {t : Tm Sg G D2 T} -> Pruner i t → (ts : Tms Sg G D2 Ts) → ∃ (\ n -> n ≥ Ctx-length G) 
+                -> Pruner i (t ∷ ts)
 
-  helper-pur i ts l (_ , σ , (inj₁ (eq , (δ , iso1) , iso2)) , p1) with prunes i ts l 
+  given (_ , σ , (inj₁ (eq , (δ , iso1) , iso2)) , p1) prunes ts l with prunes ts l 
   ... | G1 , ρ , ρ-decr , p 
       = G1 , ρ , ρ-decr , MRP-ext ρ∘δ'∘σ≡ρ (DClosedMRP (ρ ∘mr δ') p1) ∷ p
     where 
@@ -121,17 +120,17 @@ mutual
               sub (toSub ρ) (sub δ          (toSub σ S u))  ≡⟨ cong (sub (toSub ρ)) (sym (iso1 S u)) ⟩ 
               sub (toSub ρ) (id-s S u)                      ≡⟨ ren-id (toSub ρ _ u) ⟩ 
               toSub ρ S u                                   ∎
-  helper-pur i ts (n , n≥length) (_ , σ , (inj₂ G>G2) , p1) 
-   with helper-pur2 i ts σ (n , n≥length) (≤-trans G>G2 n≥length)
+  given (_ , σ , (inj₂ G>G2) , p1) prunes ts (n , n≥length) 
+   with under σ prunes ts (n , n≥length) (≤-trans G>G2 n≥length)
   ... | (G2 , ρ2 , ρ2-decr , p2) = G2 ,
                                      ρ2 ∘mr σ ,
                                      decreasing ((DS toSub ρ2 , ρ2-decr) ∘ds (DS toSub σ , inj₂ G>G2)) 
                                    , DClosedMRP ρ2 p1 ∷ step-MRPs σ ts p2
 
-  helper-pur2 : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (ts : Tms Sg G D2 T) → 
-                ∀ {G2} (σ : MetaRen G G2) -> ∀ (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G2 -> 
+  under_prunes : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} → ∀ {G2} (σ : MetaRen G G2) -> (ts : Tms Sg G D2 T) → 
+                ∀ (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G2 -> 
                 Pruner i (subs (toSub σ) ts)
-  helper-pur2 i ts σ (.(suc n) , _) (s≤s {._} {n} u>smt) = prunes i (subs (toSub σ) ts) (n , u>smt)
+  under σ prunes ts (.(suc n) , _) (s≤s {._} {n} u>smt) = prunes (subs (toSub σ) ts) (n , u>smt)
 
 
 open import RenOrn
@@ -159,7 +158,7 @@ mutual
  
 mutual
   prune-gen : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∀ l -> 
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> ren i z ≡T sub s t -> s ≤ toSub (proj₁ (proj₂ (prune i t l)))
+              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> ren i z ≡T sub s t -> s ≤ toSub (proj₁ (proj₂ (prune {i = i} t l)))
   prune-gen i (con c ts) l s (con c₁ ts₁) (con _ eq) = prune-gens i ts l s ts₁ eq
   prune-gen i (con c ts) l s (fun u j) ()
   prune-gen i (con c ts) l s (var x ts₁) ()
@@ -183,10 +182,10 @@ mutual
   prune-gen i (lam t) l s (lam z) (lam eq) = prune-gen (cons i) t l s z eq
 
   prune-gens : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∀ l ->
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tms Sg G2 D1 T) -> rens i z ≡T subs s t -> s ≤ toSub (proj₁ (proj₂ (prunes i t l)))
+              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tms Sg G2 D1 T) -> rens i z ≡T subs s t -> s ≤ toSub (proj₁ (proj₂ (prunes {i = i} t l)))
   prune-gens i [] l s [] eq = s , (λ S u → sym (ren-id _))
   prune-gens i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) with prune-gen i t l s z eqt 
-  ... | (r , s≡r∘ρ) with prune i t l 
+  ... | (r , s≡r∘ρ) with prune {i = i} t l 
   ...               | _ , σ , inj₁ x , p1 = prune-gens i ts l s zs eqts
   ...               | _ , σ , inj₂ y , p1 
    with l                     | ≤-trans y (proj₂ l)    
@@ -195,7 +194,5 @@ mutual
   ... | (r1 , r≡r1∘ρ1) = r1 , (λ S u → trans (s≡r∘ρ S u) (trans (sub-ext r≡r1∘ρ1 (toSub ρ S u)) (sym (sub-∘ {f = r1} {g = toSub ρ1} (toSub ρ S u)))))
     where
       ρ = σ
-      ρ1 = proj₁ (proj₂ (prunes i (subs (toSub ρ) ts) (n , ww)))
-
-
+      ρ1 = proj₁ (proj₂ (prunes (subs (toSub ρ) ts) (n , ww)))
 
