@@ -24,7 +24,7 @@ Property : ∀ Sg G -> Set₁
 Property Sg G = (∀ {G2} -> Sub Sg G G2 -> Set)
 
 Unifies : ∀ {Sg G1 D S} (x y : Term Sg G1 D S) -> Property Sg G1
-Unifies x y σ = eqT (subT σ x) (subT σ y)
+Unifies x y σ = subT σ x ≡T subT σ y
 
 ∃⟦σ⟧_ : ∀ {Sg G1} -> Property Sg G1 -> Set
 ∃⟦σ⟧ P = ∃ \ G2 -> ∃ \ σ -> P {G2} ⟦ σ ⟧
@@ -39,7 +39,7 @@ Max : ∀ {Sg G1} -> Property Sg G1 -> Property Sg G1
 Max P σ = P σ × Sup P σ
 
 Extensional : ∀ {Sg G} -> Property Sg G -> Set
-Extensional P = ∀ {G f g} -> (∀ S u -> f S u ≡ g S u) -> P {G} f -> P g
+Extensional P = ∀ {G f g} -> f ≡s g -> P {G} f -> P g
 
 Spec : ∀ {Sg G1 D S} (x y : Term Sg G1 D S) -> Set
 Spec x y = ∃⟦σ⟧ Max (Unifies x y) ⊎ ¬ ∃σ Unifies x y

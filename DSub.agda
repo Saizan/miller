@@ -33,7 +33,7 @@ Ctx-length-lemma {._ ∷ G} {Ss} (suc {S = _ <<- ctx} u) =
   where open ≡-Reasoning
 
 abstract
-  toMRen : ∀ {Sg G G1} (s : Sub Sg G G1) -> (id-s ≤ s) -> Σ (MetaRen G G1) \ ρ -> ∀ S x -> toSub ρ S x ≡ s S x
+  toMRen : ∀ {Sg G G1} (s : Sub Sg G G1) -> (id-s ≤ s) -> Σ (MetaRen G G1) \ ρ -> toSub ρ ≡s s
   toMRen {Sg} {G} {G1} s (δ , id≡δ∘s) = (λ S x → proj₁ (aux S x)) , (λ S x → proj₂ (aux S x)) where
     aux : ∀ S x -> ∃ \ (c : VarClosure G1 S) -> Tm.fun (body c) (ρ-env c) ≡ s S x
     aux S x with s S x | id≡δ∘s S x
@@ -42,7 +42,7 @@ abstract
     aux S x | var x₁ ts | ()
 
 IsIso : ∀ {Sg G1 G2} -> (s : Sub Sg G1 G2) -> Set
-IsIso s = Σ (id-s ≤ s) \le -> ∀ S u -> id-s S u ≡ (s ∘s proj₁ le) S u
+IsIso s = Σ (id-s ≤ s) \le -> id-s ≡s (s ∘s proj₁ le)
 
 IsIso-id : ∀ {Sg G} -> IsIso {Sg} {G} {G} id-s
 IsIso-id = λ {Sg} {G} → (id-s , (λ S u → sym (ren-id _))) , (λ S u → sym (ren-id _))
@@ -107,7 +107,7 @@ trans-dec s (inj₂ y) s' (inj₂ y₁) = inj₂ (trans-> y₁ y)
 _∘ds_ : ∀ {Sg G1 G2 G3} -> DSub Sg G2 G3 -> DSub Sg G1 G2 -> DSub Sg G1 G3
 (DS σ , G2>G3) ∘ds (DS σ₁ , G1>G2) = DS (σ ∘s σ₁) , trans-dec σ G2>G3 σ₁ G1>G2
   
-⟦⟧-∘ : ∀ {Sg g h i} (s : DSub Sg h i) (s₁ : DSub Sg g h) -> ∀ S x -> ⟦ s ∘ds s₁ ⟧ S x ≡ (⟦ s ⟧ ∘s ⟦ s₁ ⟧) S x
+⟦⟧-∘ : ∀ {Sg g h i} (s : DSub Sg h i) (s₁ : DSub Sg g h) -> ⟦ s ∘ds s₁ ⟧ ≡s (⟦ s ⟧ ∘s ⟦ s₁ ⟧)
 ⟦⟧-∘ s s1 S x = refl
 
 
@@ -136,12 +136,12 @@ singleton-Decreasing {Sg} {G} {.Ss} {Ss} {B} .id-i u (inj₁ (refl , Het.refl)) 
   δ : (S : MTy) → B <<- Ss ∷ G - u ∋ S → Tm Sg G (ctx S) ([] ->> type S)
   δ .(B <<- Ss) zero = fun u id-i
   δ S (suc u₁) = fun (thin u S u₁) id-i
-  eq1 : (S : MTy) (u₁ : G ∋ S) → id-s S u₁ ≡ (δ ∘s toSub (singleton u id-i)) S u₁
+  eq1 : id-s ≡s (δ ∘s toSub (singleton u id-i))
   eq1 S u₁ with thick u u₁ 
   eq1 S .(thin u S x) | inj₁ (x , refl) = cong (fun _) (sym (right-id id-i))
   eq1 .(B <<- Ss) .u | inj₂ refl = cong (fun u) (sym (right-id id-i))
 
-  eq2 : ∀ S -> (u₁ : G - u <: B <<- Ss ∋ S) → id-s _ u₁ ≡ (toSub (singleton u id-i) ∘s δ) _ u₁
+  eq2 : id-s ≡s (toSub (singleton u id-i) ∘s δ)
   eq2 ._ (zero {._} {.(_ <<- _)}) rewrite thick-refl u = cong (fun _) (sym (right-id id-i))
   eq2 S (suc {._} {._} {.(_ <<- _)} v) rewrite thick-thin u v = cong (fun _) (sym (right-id id-i))
   

@@ -62,9 +62,6 @@ Term : (Sg : Ctx)(G : MCtx)(DI : Ctx) (TI : Ty ⊎ Fwd Ty) → Set
 Term Sg G D (inj₁ T) = Tm Sg G D T 
 Term Sg G D (inj₂ Ts) = Tms Sg G D Ts
 
-mvar : ∀ {Sg}{G T} → T ∈ G → Tm Sg G (ctx T) (! (type T))
-mvar {T = _ <<- _} u = fun u id-i
-
 mutual
   ren : ∀ {Sg G D D0}{T : Ty} → Inj D D0 → Tm Sg G D T → Tm Sg G D0 T
   ren rho (con c ts) = con c (rens rho ts) 
@@ -84,6 +81,14 @@ renT {inj₂ _} i ts = rens i ts
 Sub : Ctx → MCtx → MCtx → Set
 Sub Sg G1 G2 = ∀ S → G1 ∋ S → Tm Sg G2 (ctx S) (! type S)
 
+_≡s_ : ∀ {Sg G G1}(s s₁ : Sub Sg G G1) -> Set
+s ≡s s₁ = ∀ S u -> s S u ≡ s₁ S u
+ 
+mvar : ∀ {Sg}{G} → ∀ {T} -> G ∋ T -> Tm Sg G (ctx T) (! type T)
+mvar u = fun u id-i
+
+thin-s : ∀ {Sg}{G T} -> (u : G ∋ T) -> Sub Sg (G - u) G
+thin-s u = \ S v -> mvar (thin u S v)
 
 mutual
   sub : ∀ {Sg G1 G2 D T} → Sub Sg G1 G2 → Tm Sg G1 D T → Tm Sg G2 D T
@@ -160,26 +165,26 @@ mutual
   sub-id (var x ts) = cong (var x) (subs-id ts)
   sub-id (lam t) = cong lam (sub-id t)
   
-  subs-id : ∀ {Sg G D T} (t : Tms Sg G D T) → subs (\ S u -> fun u id-i) t ≡ t
+  subs-id : ∀ {Sg G D T} (t : Tms Sg G D T) → subs id-s t ≡ t
   subs-id [] = refl
   subs-id (t ∷ ts) = cong₂ _∷_ (sub-id t) (subs-id ts)
 
 mutual
-  sub-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → (∀ S x → f S x ≡ g S x) → (t : Tm Sg G1 D T) → sub f t ≡ sub g t
+  sub-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → f ≡s g  → (t : Tm Sg G1 D T) → sub f t ≡ sub g t
   sub-ext q (con c ts) = cong (con c) (subs-ext q ts)
   sub-ext q (fun u j) = cong (ren j) (q _ u)
   sub-ext q (var x ts) = cong (var x) (subs-ext q ts)
   sub-ext q (lam t) = cong lam (sub-ext q t)
 
-  subs-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → (∀ S x → f S x ≡ g S x) → (t : Tms Sg G1 D T) → subs f t ≡ subs g t
+  subs-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → f ≡s g → (t : Tms Sg G1 D T) → subs f t ≡ subs g t
   subs-ext q [] = refl
   subs-ext q (t ∷ ts) = cong₂ _∷_ (sub-ext q t) (subs-ext q ts)
 
-subT-id : ∀ {Sg G D T} (t : Term Sg G D T) → subT (\ S u -> fun u id-i) t ≡ t
+subT-id : ∀ {Sg G D T} (t : Term Sg G D T) → subT id-s t ≡ t
 subT-id {Sg} {G} {D} {inj₁ x} t = sub-id t
 subT-id {Sg} {G} {D} {inj₂ y} t = subs-id t
 
-subT-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → (∀ S x → f S x ≡ g S x) → (t : Term Sg G1 D T) → subT f t ≡ subT g t
+subT-ext : ∀ {Sg G1 G2 D T} {f g : Sub Sg G1 G2} → f ≡s g → (t : Term Sg G1 D T) → subT f t ≡ subT g t
 subT-ext {Sg} {G1} {G2} {D} {inj₁ x} eq t = sub-ext eq t
 subT-ext {Sg} {G1} {G2} {D} {inj₂ y} eq t = subs-ext eq t
 
