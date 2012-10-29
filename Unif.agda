@@ -60,7 +60,7 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
     sup-σ : Sup (Unifies (fun u i) (fun u j)) σ
     sup-σ {G'} ρ ρ-unifies = δ , ρ≡δ∘σ where
 
-      δ : (S₁ : MTy) → B <<- E ∷ G - u ∋ S₁ → Tm Sg G' (ctx S₁) ([] ->> type S₁)
+      δ : Sub (B <<- E ∷ G - u) G'
       δ ._ zero = proj₁ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) ρ-unifies))
       δ S₁ (suc v) = ρ _ (thin u _ v)
 
