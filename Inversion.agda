@@ -40,7 +40,7 @@ map-NI (var ._) notinv σ (var x₁ ts , var refl eq) = notinv σ (ts , eq)
 
 mutual
   invertTm' : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → (ρ : Sub Sg G G1) → ρ / t ∈ i
-    → RTm Sg G1 Ss D i T (sub ρ t) ⊎ NotInv i t
+    → RTm i (sub ρ t) ⊎ NotInv i t
   invertTm' i (con c ts) r (con m) = map⊎ (con c) (map-NI (con c)) (invertTm's i ts r m)
   invertTm' i (fun u j) r (fun v h eq k comm) rewrite eq = yes (fun v k comm)
   invertTm' i (var x ts) r (var m) 
@@ -51,7 +51,7 @@ mutual
   invertTm' i (lam t) r (lam m) = map⊎ lam (map-NI {t = t} lam) (invertTm' (cons i) t r m)
 
   invertTm's : ∀ {Sg G G1 Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → (ρ : Sub Sg G G1) → ρ / t ∈ i 
-                → RTms Sg G1 Ss D i T (subs ρ t) ⊎ NotInv i t
+                → RTms i (subs ρ t) ⊎ NotInv i t
   invertTm's i [] r m = yes []
   invertTm's i (t ∷ ts) r (mt ∷ mts) 
    with invertTm' i t r mt | invertTm's i ts r mts

@@ -31,7 +31,7 @@ open import MetaRens
 
 mutual
   lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tm Sg G X S) 
-                   -> ren i t ≡T ren j t -> let open Equalizer equ in RTm Sg G E X e _ t
+                   -> ren i t ≡T ren j t -> let open Equalizer equ in RTm e t
   lift-equalizer equ (con c ts) (con refl eq) = con c (lifts-equalizer equ ts eq)
   lift-equalizer equ (fun u j₁) (fun refl eq) = fun u (universal j₁ eq) e∘universal≡m
     where open Equalizer equ
@@ -40,7 +40,7 @@ mutual
   lift-equalizer equ (lam t) (lam eq) = lam (lift-equalizer (cons-equalizer _ _ equ) t eq)
 
   lifts-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tms Sg G X S) 
-                    -> rens i t ≡T rens j t -> let open Equalizer equ in RTms Sg G E X e _ t
+                    -> rens i t ≡T rens j t -> let open Equalizer equ in RTms e t
   lifts-equalizer equ [] eq = []
   lifts-equalizer equ (t ∷ ts) (eqt ∷ eqts) = (lift-equalizer equ t eqt) ∷ (lifts-equalizer equ ts eqts)
 

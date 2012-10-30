@@ -137,7 +137,7 @@ open import RenOrn
 
 mutual
   lift-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) -> let open Pullback pull in 
-                  ∀ {Sg G T} (t : Tm Sg G _ T) s -> ren i t ≡T ren j s -> RTm Sg G P Y p₂ _ s
+                  ∀ {Sg G T} (t : Tm Sg G _ T) s -> ren i t ≡T ren j s -> RTm p₂ s
   lift-pullback pull (con c ts) (con .c ts₁) (con refl eq) = con c (lifts-pullback pull ts ts₁ eq)
   lift-pullback pull (con c ts) (fun u j₁) ()
   lift-pullback pull (con c ts) (var x ts₁) ()
@@ -152,7 +152,7 @@ mutual
   lift-pullback pull (lam t) (lam s) (lam eq) = lam (lift-pullback (cons-pullback _ _ pull) t s eq)
 
   lifts-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) -> let open Pullback pull in 
-                  ∀ {Sg G T} (t : Tms Sg G _ T) s -> rens i t ≡T rens j s -> RTms Sg G P Y p₂ _ s
+                  ∀ {Sg G T} (t : Tms Sg G _ T) s -> rens i t ≡T rens j s -> RTms p₂ s
   lifts-pullback pull [] [] eq = []
   lifts-pullback pull (t ∷ ts) (t₁ ∷ ts₁) (eqt ∷ eqts) = (lift-pullback pull t t₁ eqt) ∷ (lifts-pullback pull ts ts₁ eqts)
  
