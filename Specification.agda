@@ -17,6 +17,7 @@ open import Lists
 
 open import Syntax
 open import Equality
+open import OneHoleContext
 
 open import DSub
 
@@ -68,7 +69,11 @@ map-Unifies {σ = σ} {σ'} (δ , σ≡δ∘σ') {x} {y} σ'Unifies[x,y] = ≡-T
 shift_under_by_ : ∀ {Sg G h1 h2 D T} {xs ys : Term Sg G D T} {σ1 : Sub Sg G h1} 
                   -> Unifies xs ys σ1 -> (σ : Sub Sg G h2) -> σ1 ≤ σ -> ∃σ Unifies (subT σ xs) (subT σ ys)
 shift_under_by_ eq σ (δ , σ1≡δ∘σ) = _ , δ , sandwich (λ xs₁ → sym (trans (subT-∘ xs₁) (sym (subT-ext σ1≡δ∘σ xs₁)))) eq
- 
+
+cong-spec : ∀ {Sg G D D' T T'} → (d : DTm Sg G (D' , T') (D , T)) -> {x y : Term Sg G D T} → Spec x y → Spec (∫once d x) (∫once d y)
+cong-spec d (inj₁ (_ , σ , unifies , sup)) = inj₁ (_ , (σ , (cong-∫once d unifies , (λ ρ ρ-unifies → sup ρ (inv-∫once d ρ-unifies)))))
+cong-spec d (inj₂ no-unifier) = inj₂ (λ {(_ , σ , σ-unifies) → no-unifier (_ , (σ , inv-∫once d σ-unifies)) })
+
 optimist : ∀ {Sg m l o D T Ts}(x y : Tm Sg m D T)(xs ys : Tms Sg m D Ts) ->
            (p : Sub Sg m o) (q : Sub Sg o l) ->
            Max (Unifies x y) p 
@@ -119,3 +124,4 @@ Spec[xs,ys]⇒Spec[σxs,σys] {xs = xs} {ys = ys} σ G~G1 ((δ , id≡δ∘σ) ,
          δ' = proj₁ ρ∘σ≤σ₁
       
 Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 _ (no ¬p) = no (λ {(_ , σ₁ , eq) → ¬p (_ , σ₁ ∘s σ , sandwich subT-∘ eq)})
+

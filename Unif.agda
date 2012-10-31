@@ -1,7 +1,6 @@
 module Unif where
 
-
-open import Data.Product renaming (map to mapΣ)
+open import Data.Product.Extras
 open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
 open import Relation.Nullary
 open import Relation.Binary
@@ -137,33 +136,32 @@ spec-comm _ _ = map⊎ (λ {(G , σ , eq , max) → G , σ , T.sym eq , (λ {_} 
 
 mutual
   unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
-  unify (con x xs) (con y ys) l with eq-∋ (_ , x) (_ , y) 
-  ... | no ¬p = no (λ {(_ , _ , eq) → ¬p (con-inj₁ eq)})
-  unify (con x xs) (con .x ys) l | yes refl with unifyTms xs ys l
-  ... | no p = no (λ { (_ , σ , con _ eq) → p (_ , (σ , eq))})
-  ... | yes (_ , σ , eq , max) = yes (_ , σ , T.cong (con x) eq , λ { ρ (con _ eq) → max ρ eq})
-  unify (fun x xs) t l = flexAny x xs t
-  unify s (fun y ys) l = spec-comm (fun y ys) s (flexAny y ys s)
-  unify (var x xs) (var y ys) l with eq-∋ (_ , x) (_ , y) 
-  ... | no ¬p = no (λ {(_ , _ , eq) → ¬p (var-inj₁ eq)})
-  unify (var x xs) (var .x ys) l | yes refl with unifyTms xs ys l
-  ... | no p = no λ {(_ , σ , var _ eq) → p (_ , σ , eq)}
-  ... | yes (_ , σ , eq , max) = yes (_ , σ , T.cong (var x) eq , λ { ρ (var _ eq) → max ρ eq})
-  unify (lam x) (lam y) l with unify x y l
-  ... | no p = no λ {(_ , σ , lam eq) → p (_ , σ , eq)}
-  ... | yes (_ , σ , eq , max) = yes (_ , σ , T.cong lam eq , λ {ρ (lam eq) → max ρ eq})
-  unify (con _ _) (var _ _) l = no λ {(_ , _ , ())}
-  unify (var _ _) (con _ _) l = no λ {(_ , _ , ())}
+  -- congruence and directly failing cases
+  unify (con c xs) (con c₁ ys) l with eq-∋ (_ , c) (_ , c₁) 
+  unify (con c xs) (con c₁ ys) l | no  c≢c₁ = no (λ {(_ , _ , eq) → c≢c₁ (con-inj₁ eq)})
+  unify (con c xs) (con .c ys) l | yes refl = cong-spec (con c) (unifyTms xs ys l)
+  unify (var x xs) (var y  ys) l with eq-∋ (_ , x) (_ , y) 
+  unify (var x xs) (var y  ys) l | no  x≢y  = no (λ {(_ , _ , eq) → x≢y (var-inj₁ eq)})
+  unify (var x xs) (var .x ys) l | yes refl = cong-spec (var x) (unifyTms xs ys l)
+  unify (lam x)    (lam y)     l = cong-spec lam {x} {y} (unify x y l)
+  unify (con _ _)  (var _ _)   l = no λ {(_ , _ , ())}
+  unify (var _ _)  (con _ _)   l = no λ {(_ , _ , ())}
+
+  -- flexible cases
+  unify (fun u i) t         l = flexAny u i t
+  unify t         (fun u i) l = spec-comm (fun u i) t (flexAny u i t)
  
   unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
-  unifyTms [] [] _ = yes (∃σMax[Unifies[x,x]] [])
-  unifyTms (s ∷ xs) (t ∷ ys) l with unify s t l
-  ... | no p = no λ {(_ , ρ , eq ∷ _) → p (_ , ρ , eq)}
-  ... | yes (_ , σ , eq , max) with under σ unifyTms xs ys l
-  ... | no p = no λ {(_ , σ1 , eqt ∷ eqts) → p (shift eqts under ⟦ σ ⟧ by max σ1 eqt) }
-  ... | yes (_ , σ1 , eq1 , max1) = yes (_ , (σ1 ∘ds σ) , optimist s t xs ys ⟦ σ ⟧ ⟦ σ1 ⟧ (eq , max) (eq1 , max1))
+  unifyTms []       []       _ = yes (∃σMax[Unifies[x,x]] [])
+  unifyTms (s ∷ xs) (t ∷ ys) l 
+   with unify s t l
+  ... | no  ¬unify[s,t]        = no λ {(_ , ρ , eq ∷ _) → ¬unify[s,t] (_ , ρ , eq)}
+  ... | yes (_ , σ , eq , sup) 
+     with under σ unifyTms xs ys l
+  ...   | no  ¬unify[σxs,σys]       = no  λ {(_ , σ1 , eqt ∷ eqts) → ¬unify[σxs,σys] (shift eqts under ⟦ σ ⟧ by sup σ1 eqt) }
+  ...   | yes (_ , σ1 , eq1 , sup1) = yes (_ , (σ1 ∘ds σ) , optimist s t xs ys ⟦ σ ⟧ ⟦ σ1 ⟧ (eq , sup) (eq1 , sup1))
 
-
+  -- termination overhead
   under_unifyTms : ∀ {Sg G D Ts} -> 
              ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> ∃ (\ n -> n ≥ Ctx-length G) -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
   under (DS σ , inj₁ (G~G1 , σ-is-iso)) unifyTms xs ys l = Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 σ-is-iso (unifyTms xs ys l)

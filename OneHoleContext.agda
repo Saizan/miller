@@ -101,3 +101,30 @@ module OnHeight where
 ∫-sub : ∀ {Sg G1 G2 TI TO} -> (s : Sub Sg G1 G2) -> (c : Context Sg G1 TI TO) -> ∀ t -> subT s (∫ c t) ≡ ∫ (subC s c) (subT s t)
 ∫-sub s [] t = refl
 ∫-sub s (x ∷ c) t = trans (∫once-sub s x _) (cong (∫once (subD s x)) (∫-sub s c t))
+
+open ≡-Reasoning
+
+cong-∫once : ∀ {Sg G1 G2 TI TO} -> {s : Sub Sg G1 G2} -> (d : DTm Sg G1 TI TO) -> 
+             ∀ {x y} -> subT s x ≡T subT s y -> subT s (∫once d x) ≡T subT s (∫once d y)
+cong-∫once {s = s} d {x} {y} eq = ≡-T (
+  begin
+    subT s (∫once d x)          ≡⟨ ∫once-sub s d x ⟩
+    ∫once (subD s d) (subT s x) ≡⟨ cong (∫once (subD s d)) (T-≡ eq) ⟩
+    ∫once (subD s d) (subT s y) ≡⟨ sym (∫once-sub s d y) ⟩
+    subT s (∫once d y)          ∎)
+
+∫once-inj : ∀ {Sg G1 TI TO} -> (d : DTm Sg G1 TI TO) -> ∀ {x y} -> ∫once d x ≡ ∫once d y -> x ≡ y
+∫once-inj lam refl = refl
+∫once-inj (head ts) refl = refl
+∫once-inj (tail t) refl = refl
+∫once-inj (con c) refl = refl
+∫once-inj (var x) refl = refl
+
+inv-∫once : ∀ {Sg G1 G2 TI TO} -> {s : Sub Sg G1 G2} -> (d : DTm Sg G1 TI TO) -> 
+            ∀ {x y} -> subT s (∫once d x) ≡T subT s (∫once d y) -> subT s x ≡T subT s y
+inv-∫once {s = s} d {x} {y} eq = ≡-T (∫once-inj (subD s d)  
+   (begin
+      ∫once (subD s d) (subT s x) ≡⟨ sym (∫once-sub s d x) ⟩
+      subT s (∫once d x)          ≡⟨ T-≡ eq ⟩
+      subT s (∫once d y)          ≡⟨ ∫once-sub s d y ⟩ 
+      ∫once (subD s d) (subT s y) ∎))
