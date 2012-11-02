@@ -122,6 +122,7 @@ ext-∘ : ∀ {A : Set}{xs ys zs ws : List A} {f : Inj ys zs}{g : Inj xs ys}{f1 
   (∀ x (v : xs ∋ x) -> f $ (g $ v) ≡ f1 $ (g1 $ v)) -> f ∘i g ≡ f1 ∘i g1
 ext-∘ eq = ext-$ _ _ (\ x v -> trans (apply-∘ _ _) (trans (eq x v) (sym (apply-∘ _ _))))
 
+-- Transforming pointwise representations of universal morphisms into Inj ones.
 Equ-universal-quote : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → ∀ {E} → (e : Inj E xs) -> 
                (∀ a (y : xs ∋ a) -> i $ y ≡ j $ y -> ∃ \ z -> y ≡ e $ z) ->               
                 {as : List A} (h : Inj as xs) → i ∘i h ≡ j ∘i h → Σ (Inj as E) (λ z → e ∘i z ≡ h )

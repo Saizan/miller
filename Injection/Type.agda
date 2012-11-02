@@ -14,6 +14,13 @@ open import Data.Sum
 
 open import Vars
 
+-- Inj X Y is a first-order representation for injective maps (∀ S → X ∋ S -> Y ∋ S). 
+-- It's a little clunkier to work with but its propositional equality
+-- is extensional which saves the trouble of proving that
+-- the properties we'll care about respect the pointwise equality.
+--
+-- The isomorphism with the functional representation is witnessed by quo and _$_ below,
+-- among some convenience lemmas.
 mutual
   data Inj {A : Set}: (List A) → List A → Set where
     []  : ∀ {xs} → Inj [] xs

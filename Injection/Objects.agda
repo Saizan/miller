@@ -19,8 +19,18 @@ module Dummy {A : Set} where
   open Category (List A) Inj _∘i_ id-i _≡_ public
 open Dummy public
 
-abstract
+-- The category of injective maps between finite sets has all the
+-- pullbacks and equalizers, "pullback" and "equalizer" compute
+-- them.
+--
+-- In this category both Equalizers and Pullbacks are ways to select
+-- the largest subset of the input where the maps agree, the
+-- difference is that Pullbacks allow for mediating permutations while
+-- Equalizers don't.
+--
+-- The implementation takes a bit of record field's shuffling but it's straightforward.  
 
+abstract
   e$u≡m : ∀ {A : Set}{S T : List A}{f g : Inj S T} -> (equ : Equalizer f g) -> let open Equalizer equ in 
                (a : A) (m : S ∋ a) → f $ m ≡ g $ m → Σ (E ∋ a) (λ u → m ≡ e $ u)
   e$u≡m equ a m eq =  
