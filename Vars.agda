@@ -14,7 +14,7 @@ open import Data.Sum
 
 infix 4 _∋_
 
--- Proofs of membership in finite (multi-)sets (as lists)
+-- Proofs of membership in lists
 -- a.k.a. typed de Bruijn indices 
 -- i.e. our variable names.
 data _∋_ {A : Set} : List A → A → Set where
