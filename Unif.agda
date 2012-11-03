@@ -71,12 +71,20 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
 
 flexRigid : ∀ {Sg G D S} (u : G ∋ S) (i : Inj (ctx S) D) (s : Tm Sg (G - u) D (! type S)) → Spec (fun u i) (sub (thin-s u) s)
 flexRigid {Sg} {G} {S = S} u i s with prune i s 
-... | ((G1 , ρ , decr , m) , ρ-sup) 
+... | ((Pr ρ , decr , m) , ρ-sup) 
  with invertTm i s (toSub ρ) m 
-... | no  NotInv                  = no  λ {(_ , σ , eq) → NotInv (σ ∘s thin-s u) 
-                                                                 (σ S u , ≡-T (trans (T-≡ eq) (sub-∘ s)))}
+... | no  NotInv                  = no  λ {(_ , σ , eq) → 
+     let eq' = begin 
+                 ren i (σ S u)              ≡⟨ T-≡ eq ⟩ 
+                 subT σ (subT (thin-s u) s) ≡⟨ subT-∘ s ⟩ 
+                 subT (σ ∘s thin-s u) s     ∎ 
+         σ≤ρ = ρ-sup (σ ∘s thin-s u) (σ S u) (≡-T eq')
+     in NotInv (proj₁ σ≤ρ) (σ S u , ≡-T (begin ren i (σ S u)                       ≡⟨ eq' ⟩ 
+                                               subT (σ ∘s thin-s u) s              ≡⟨ subT-ext (proj₂ σ≤ρ) s ⟩ 
+                                               subT (proj₁ σ≤ρ ∘s toSub ρ) s       ≡⟨ sym (subT-∘ s) ⟩ 
+                                               subT (proj₁ σ≤ρ) (subT (toSub ρ) s) ∎))}
 ... | yes (t , ren[i,t]≡sub[ρ,s]) = yes 
- (G1 , (DS σ , inj₂ (rigid-decr u (map⊎ proj₁ (\ x -> x) decr))) , 
+ (_ , (DS σ , inj₂ (rigid-decr u (map⊎ proj₁ (\ x -> x) decr))) , 
    ≡-T (begin
      ren i (σ _ u)            ≡⟨ cong (ren i) σ[u]≡t ⟩ 
      ren i t                  ≡⟨ ren[i,t]≡sub[ρ,s] ⟩ 
@@ -84,7 +92,7 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
      sub (σ ∘s thin-s u) s    ≡⟨ sym (sub-∘ s) ⟩ 
      sub σ (sub (thin-s u) s) ∎) , σ-sup )
     where
-      σ : Sub Sg G G1
+      σ : Sub Sg G _
       σ S v with thick u v
       σ S v   | inj₁ (w , eq) = toSub ρ _ w
       σ ._ .u | inj₂ refl     = t
