@@ -19,6 +19,16 @@ open import Lists
 open import Syntax
 open import Equality
 
+-- Given an inductive type T = F T we can build the type of its one
+-- hole contexts as List (F' T) where F' is the derivative of F,
+-- i.e. the elements of F' x are the same as F x with one occurrence
+-- of x removed.  The same holds for indexed types when we lift the
+-- construction pointwise.
+--
+-- In our case T = Term Sg G and we define:
+--    DTm Sg G      as F' T, 
+--    Context Sg G  as List (F' T).
+
 Index = Ctx × (Ty ⊎ List Ty)
 
 data DTm (Sg : Ctx)(G : MCtx) : Index -> Index → Set where
@@ -35,28 +45,7 @@ data IList {I : Set}(T : I → I → Set) (i : I) : (j : I) → Set where
 Context : (Sg : Ctx)(G : MCtx) → Index -> Index → Set
 Context Sg G = IList (\ i j → DTm Sg G i j)
 
-∫oCtx : ∀ {Sg G I1 I2} -> DTm Sg G I1 I2 -> Ctx -> Ctx
-∫oCtx (lam {S = S}) D = S ∷ D
-∫oCtx _ D = D
-
-∫oInj : ∀ {Sg G DI I1 I2} -> (d : DTm Sg G I1 I2) -> Inj DI (proj₁ I1) -> Inj (∫oCtx d DI) (proj₁ I2)
-∫oInj lam i = cons i
-∫oInj (head ts) i = i
-∫oInj (tail t) i = i
-∫oInj (con c) i = i
-∫oInj (var x) i = i
-
-subD : ∀ {Sg G1 G2 TI TO} -> (Sub Sg G1 G2) -> DTm Sg G1 TI TO -> DTm Sg G2 TI TO
-subD s lam = lam
-subD s (head ts) = head (subs s ts)
-subD s (tail t) = tail (sub s t)
-subD s (con c) = con c
-subD s (var x) = var x
-
-subC : ∀ {Sg G1 G2 TI TO} -> (Sub Sg G1 G2) -> Context Sg G1 TI TO -> Context Sg G2 TI TO
-subC s [] = []
-subC s (x ∷ c) = subD s x ∷ (subC s c)
-
+-- Given a Context and an index-compatible filling we can rebuild a Term
 ∫once : ∀ {Sg G DI TI DO TO} → DTm Sg G (DI , TI) (DO , TO) → Term Sg G DO TO → Term Sg G DI TI
 ∫once lam t = lam t
 ∫once (head ts) t = t ∷ ts
@@ -67,6 +56,7 @@ subC s (x ∷ c) = subD s x ∷ (subC s c)
 ∫ : ∀ {Sg G I O} → Context Sg G I O → Term Sg G (proj₁ O) (proj₂ O) → Term Sg G (proj₁ I) (proj₂ I)
 ∫ [] t = t
 ∫ (x ∷ c) t = ∫once x (∫ c t)
+
 
 module OnHeight where
   open import Height
@@ -91,6 +81,34 @@ module OnHeight where
                               suc (heightT (∫ ps t))     ≤⟨ ∫once-height x (∫ ps t) ⟩ 
                               heightT (∫once x (∫ ps t)) ∎
 
+open ≡-Reasoning
+
+
+-- To move a renaming past a λ we need to handle the extra variable,
+-- ∫oInj takes care of the induced action of a DTm on Inj.
+∫oCtx : ∀ {Sg G I1 I2} -> DTm Sg G I1 I2 -> Ctx -> Ctx
+∫oCtx (lam {S = S}) D = S ∷ D
+∫oCtx _ D = D
+
+∫oInj : ∀ {Sg G DI I1 I2} -> (d : DTm Sg G I1 I2) -> Inj DI (proj₁ I1) -> Inj (∫oCtx d DI) (proj₁ I2)
+∫oInj lam i = cons i
+∫oInj (head ts) i = i
+∫oInj (tail t) i = i
+∫oInj (con c) i = i
+∫oInj (var x) i = i
+
+
+subD : ∀ {Sg G1 G2 TI TO} -> (Sub Sg G1 G2) -> DTm Sg G1 TI TO -> DTm Sg G2 TI TO
+subD s lam = lam
+subD s (head ts) = head (subs s ts)
+subD s (tail t) = tail (sub s t)
+subD s (con c) = con c
+subD s (var x) = var x
+
+subC : ∀ {Sg G1 G2 TI TO} -> (Sub Sg G1 G2) -> Context Sg G1 TI TO -> Context Sg G2 TI TO
+subC s [] = []
+subC s (x ∷ c) = subD s x ∷ (subC s c)
+
 ∫once-sub : ∀ {Sg G1 G2 TI TO} -> (s : Sub Sg G1 G2) -> (d : DTm Sg G1 TI TO) -> ∀ t -> subT s (∫once d t) ≡ ∫once (subD s d) (subT s t)
 ∫once-sub s lam t = refl
 ∫once-sub s (head ts) t = refl
@@ -102,7 +120,6 @@ module OnHeight where
 ∫-sub s [] t = refl
 ∫-sub s (x ∷ c) t = trans (∫once-sub s x _) (cong (∫once (subD s x)) (∫-sub s c t))
 
-open ≡-Reasoning
 
 cong-∫once : ∀ {Sg G1 G2 TI TO} -> {s : Sub Sg G1 G2} -> (d : DTm Sg G1 TI TO) -> 
              ∀ {x y} -> subT s x ≡T subT s y -> subT s (∫once d x) ≡T subT s (∫once d y)
