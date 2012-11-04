@@ -11,7 +11,7 @@ open import Syntax
 -- RTm i t is the inductive version of the type Σ (Tm Sg G D T) λ s → ren i s ≡ t
 -- In the language of "Ornamental Algebras, Algebraic Ornaments" RTm i t
 -- would be the latter and we'd get both the type and the
--- remember/forget isomorphism for free by expressing ren i as a fold.
+-- remember/forget conversions for free by expressing ren i as a fold.
 mutual
   data RTm {Sg : Ctx}{G : MCtx}{D : Ctx}{K : Ctx} (i : Inj D K) : {T : Ty} → Tm Sg G K T → Set where
     con : {Ss : Fwd Ty}{B : Base} →
