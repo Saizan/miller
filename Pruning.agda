@@ -17,144 +17,151 @@ open import Lists
 
 open import Syntax
 open import Equality
+open import RenOrn
 open import MetaRens
+open import DSub
+open import Specification
+
 
 data AllMV∈  {Sg : Ctx} {G : MCtx} {D0 D : Ctx} (i : Inj D0 D) : ∀ {T} → Term Sg G D T → Set where
   [] : AllMV∈ i {inj₂ []} []
-  _∷_ : ∀ {S Ss t ts} -> (m : AllMV∈ i {inj₁ S} t) -> (ms : AllMV∈ i {inj₂ Ss} ts) -> AllMV∈ i {inj₂ (S ∷ Ss)} (t ∷ ts)
-  con : ∀ {Ss B c ts} -> (ms : AllMV∈ i {inj₂ Ss} ts) -> AllMV∈ i {inj₁ (! B)} (con c ts)
-  var : ∀ {Ss B x ts} -> (ms : AllMV∈ i {inj₂ Ss} ts) -> AllMV∈ i {inj₁ (! B)} (var x ts)
-  lam : ∀ {S Ss B t} -> (m : AllMV∈ (cons i) {inj₁ (Ss ->> B)} t) -> AllMV∈ i {inj₁ ((S ∷ Ss) ->> B)} (lam t)
-  fun : ∀ {Ss B} {v : G ∋ (B <<- Ss)}{h} -> (∃ \ k -> i ∘i k ≡ h) -> AllMV∈ i {inj₁ (! B)} (fun v h)
+  _∷_ : ∀ {S Ss t ts} → (m : AllMV∈ i {inj₁ S} t) → (ms : AllMV∈ i {inj₂ Ss} ts) → AllMV∈ i {inj₂ (S ∷ Ss)} (t ∷ ts)
+  con : ∀ {Ss B c ts} → (ms : AllMV∈ i {inj₂ Ss} ts) → AllMV∈ i {inj₁ (! B)} (con c ts)
+  var : ∀ {Ss B x ts} → (ms : AllMV∈ i {inj₂ Ss} ts) → AllMV∈ i {inj₁ (! B)} (var x ts)
+  lam : ∀ {S Ss B t} → (m : AllMV∈ (cons i) {inj₁ (Ss ->> B)} t) → AllMV∈ i {inj₁ ((S ∷ Ss) ->> B)} (lam t)
+  fun : ∀ {Ss B} {v : G ∋ (B <<- Ss)}{h} → (∃ \ k → i ∘i k ≡ h) → AllMV∈ i {inj₁ (! B)} (fun v h)
 
--- s / t ∈ i holds iff all the variables appearing as arguments to meta-vars in (sub s t) are present in the image of i 
-_/_∈_ : ∀ {Sg : Ctx} {G1 G2 : MCtx} (s : Sub Sg G1 G2) → ∀ {D1 D2 : Ctx} → ∀ {T} → Term Sg G1 D2 T → Inj D1 D2 → Set
+-- s / t ∈ i holds iff all the variables appearing as arguments to
+-- meta-vars in (sub s t) are present in the image of i
+_/_∈_ : ∀ {Sg G1 G2 D1 D2 T} → Sub Sg G1 G2 → Term Sg G1 D2 T → Inj D1 D2 → Set
 _/_∈_ s t i = AllMV∈ i (subT s t)
 
 
+_/_∈_-∘Closed : ∀ {Sg G1 G2 G3 D1 D2 T} (f : Sub Sg G2 G3) {g : Sub Sg G1 G2} {i : Inj D1 D2} →
+                ∀ {t : Term Sg G1 D2 T} → g / t ∈ i → (f ∘s g) / t ∈ i
+_/_∈_-∘Closed f m = subst (AllMV∈ _) (subT-∘ _) (go f m) where
+  mutual
+    go2 : ∀ {Sg G X Y Z T} {i : Inj Y Z} {h : Inj X Z} → (∃ \ k → i ∘i k ≡ h) → 
+          (t : Tm Sg G X T) → AllMV∈ i (renT h t)
+    go2 le (con c ts) = con (go2s le ts)
+    go2 le (var x ts) = var (go2s le ts)
+    go2 (k , i∘k≡h) (lam t)   = lam (go2 (cons k , trans (sym (cons-∘i _ _)) (cong cons i∘k≡h)) t)
+    go2 (k , i∘k≡h) (fun u j) = fun (k ∘i j , trans assoc-∘i (cong (λ h → h ∘i j) i∘k≡h))
+  
+    go2s : ∀ {Sg G X Y Z T} {i : Inj Y Z}{h : Inj X Z} → (∃ \ k → i ∘i k ≡ h) → 
+           (t : Tms Sg G X T) → AllMV∈ i (renT h t)
+    go2s le [] = []
+    go2s le (t ∷ ts) = go2 le t ∷ go2s le ts
 
-DClosedMRP : ∀ {Sg G1 G2 G3} (f : MetaRen G2 G3){g : Sub Sg G1 G2} {D1 D2 : Ctx} {i : Inj D1 D2} ->
-               ∀ {T} → {t : Term Sg G1 D2 T} → g / t ∈ i → (toSub f ∘s g) / t ∈ i
-DClosedMRP f m = subst (AllMV∈ _) (subT-∘ _) (DClosedMRP' f m) where
-  DClosedMRP' : ∀ {Sg G1 G3} (f : MetaRen G1 G3) {D1 D2 : Ctx} {i : Inj D1 D2} ->
-               ∀ {T} → {t : Term Sg G1 D2 T} → AllMV∈ i t → toSub f / t ∈ i
-  DClosedMRP' f [] = []
-  DClosedMRP' f (m ∷ ms) = DClosedMRP' f m ∷ DClosedMRP' f ms
-  DClosedMRP' f (con ms) = con (DClosedMRP' f ms)
-  DClosedMRP' f (var ms) = var (DClosedMRP' f ms)
-  DClosedMRP' f (lam m) = lam (DClosedMRP' f m)
-  DClosedMRP' f {i = i} (fun {v = v} {h = h} (k , i∘k≡h)) = fun ((k ∘i fj) , 
-     (begin
-      i ∘i (k ∘i fj) ≡⟨ assoc-∘i ⟩
-      (i ∘i k) ∘i fj ≡⟨ cong (λ k₁ → k₁ ∘i fj) i∘k≡h ⟩
-      h ∘i fj        ∎))
-   where
-      fr = f _ v
-      fj = ρ-env fr
+  go : ∀ {Sg G1 G3 D1 D2 T} (f : Sub Sg G1 G3) {i : Inj D1 D2} →
+       {t : Term Sg G1 D2 T} → AllMV∈ i t → f / t ∈ i
+  go f [] = []
+  go f (m ∷ ms) = go f m ∷ go f ms
+  go f (con ms) = con (go f ms)
+  go f (var ms) = var (go f ms)
+  go f (lam m) = lam (go f m)
+  go f {i = i} (fun {v = v} {h = h} (k , i∘k≡h)) = go2 (k , i∘k≡h) (f _ v)
 
-step-MRP : ∀ {Sg G1 G2 G3} {f : Sub Sg G2 G3}(g : MetaRen G1 G2) {D1 D2 : Ctx} {i : Inj D1 D2} ->
-               ∀ {T} → (t : Term Sg G1 D2 T) → f / subT (toSub g) t ∈ i → (f ∘s toSub g) / t ∈ i
-step-MRP g t m = subst (AllMV∈ _) (subT-∘ _) m
+   
+-- A few properties of substitutions that carry over to _/_∈_
+_/_∈_-∘ : ∀ {Sg G1 G2 G3 D1 D2 T} {f : Sub Sg G2 G3} (g : Sub Sg G1 G2) {i : Inj D1 D2} →
+          ∀ (t : Term Sg G1 D2 T) → f / subT g t ∈ i → (f ∘s g) / t ∈ i
+_/_∈_-∘ g t m = subst (AllMV∈ _) (subT-∘ _) m
 
-MRP-ext : ∀ {Sg : Ctx} {G1 G2 : MCtx} → {f g : Sub Sg G1 G2} → f ≡s g -> 
-            ∀ {D1 D2 : Ctx} → {i : Inj D1 D2} →  ∀ {T} → {t : Term Sg G1 D2 T} → f / t ∈ i -> g / t ∈ i
-MRP-ext f≡g m = subst (AllMV∈ _) (subT-ext f≡g _) m 
-
-
-open import DSub
+_/_∈_-ext : ∀ {Sg G G1 D1 D2 T} {i : Inj D1 D2} {f g : Sub Sg G G1} → 
+            f ≡s g → ∀ {t : Term Sg G D2 T} → f / t ∈ i → g / t ∈ i
+_/_∈_-ext f≡g m = subst (AllMV∈ _) (subT-ext f≡g _) m 
 
 record Pruner {Sg G D1 D2 T} (i : Inj D1 D2) (t : Term Sg G D2 T) : Set where
   constructor Pr_,_,_
   field
     {G1} : MCtx
-    pruner : MetaRen G G1
-    decr : Decreasing {Sg} (toSub pruner)
-    prunes : toSub pruner / t ∈ i
+    pruner : Sub Sg G G1
+    decr : Decreasing {Sg} (pruner)
+    prunes : pruner / t ∈ i
 
 open Pruner using (pruner)
 
-_∙_ : ∀ {Sg G D1 D2 T} → {i : Inj D1 D2} → {t : Term Sg G D2 T} ->
-        ∀ {D1 D2 T} → {j : Inj D1 D2} → {s : Term Sg G D2 T} ->
-        (∀ {G1}{σ : Sub Sg G G1} -> σ / t ∈ i -> σ / s ∈ j) -> Pruner i t -> Pruner j s
+_∙_ : ∀ {Sg G D1 D2 T} → {i : Inj D1 D2} {t : Term Sg G D2 T} →
+      ∀      {D1 D2 T} → {j : Inj D1 D2} {s : Term Sg G D2 T} →
+      (∀ {G1}{σ : Sub Sg G G1} → σ / t ∈ i → σ / s ∈ j) → Pruner i t → Pruner j s
 f ∙ (Pr ρ , ρ-decr , m) = Pr ρ , ρ-decr , f m
 
 mutual
   
-  prune' : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} → (t : Tm Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
-            -> Pruner i t
+  prune' : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} (t : Tm Sg G D2 T) 
+           → ∃ (\ n → n ≥ Ctx-length G) → Pruner i t
   prune' (con c ts) l = con ∙ prune's ts l
-  prune' {i = i} (fun u j) l = Pr singleton u p₂ , decr , fun aux where
+  prune' (var x ts) l = var ∙ prune's ts l
+  prune' (lam t)    l = lam ∙ prune'  t  l
+
+  prune' {i = i} (fun u j) l = Pr (toSub (singleton u p₂)) , decr , fun aux where
     open Pullback (pullback i j)
-    aux : ∃ \ k -> i ∘i k ≡ j ∘i ρ-env (singleton u p₂ _ u)
+    aux : ∃ \ k → i ∘i k ≡ j ∘i ρ-env (singleton u p₂ _ u)
     aux rewrite thick-refl u = p₁ , commutes
     decr = singleton-Decreasing p₂ u (pullback-Decr i j)
-  prune' (var x ts) l = var ∙ prune's ts l
-  prune' (lam t) l = lam ∙ prune' t l
 
-  prune's : ∀ {Sg G D1 D2 T} → {i : Inj D1 D2} → (t : Tms Sg G D2 T) → ∃ (\ n -> n ≥ Ctx-length G) 
-           -> Pruner i t
-  prune's {Sg}{G} [] _ = Pr idmr , inj₁ (refl , IsIso-id) , []
+  prune's : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} (t : Tms Sg G D2 T) 
+            → ∃ (\ n → n ≥ Ctx-length G) → Pruner i t
+  prune's []       _ = Pr id-s , inj₁ (refl , IsIso-id) , []
   prune's (t ∷ ts) l = given t , prune' t l prune's ts l
 
-  given_,_prune's  : ∀ {Sg G D1 D2 T Ts } {i : Inj D1 D2} (t : Tm Sg G D2 T) -> Pruner i t → (ts : Tms Sg G D2 Ts) → ∃ (\ n -> n ≥ Ctx-length G) 
-                -> Pruner i (t ∷ ts)
-
+  given_,_prune's  : ∀ {Sg G D1 D2 T Ts} {i : Inj D1 D2} (t : Tm Sg G D2 T) → Pruner i t 
+                     → (ts : Tms Sg G D2 Ts) → ∃ (\ n → n ≥ Ctx-length G) → Pruner i (t ∷ ts)
   given t , (Pr σ , (inj₁ (eq , (δ , iso1) , iso2)) , p1) prune's ts l with prune's ts l 
   ... | Pr ρ , ρ-decr , p 
-      = Pr ρ , ρ-decr , (MRP-ext ρ∘δ'∘σ≡ρ {t = t} (DClosedMRP (ρ ∘mr δ') {t = t} p1) ∷ p)
-    where 
-      δ' = proj₁ (toMRen δ ((toSub σ) , iso2))
-      δ'≡δ = proj₂ (toMRen δ ((toSub σ) , iso2))
-      ρ∘δ'∘σ≡ρ : ∀ S u -> (toSub (ρ ∘mr δ') ∘s toSub σ) S u ≡ (toSub ρ) S u 
-      ρ∘δ'∘σ≡ρ S u = 
-        begin (toSub (ρ ∘mr δ') ∘s toSub σ) S u             ≡⟨ (cong (λ j → fun (body (((ρ ∘mr δ') ∘mr σ) _ u)) j) assoc-∘i) ⟩
-              sub (toSub ρ) (sub (toSub δ') (toSub σ S u))  ≡⟨ cong (sub (toSub ρ)) (sub-ext δ'≡δ (toSub σ _ u)) ⟩ 
-              sub (toSub ρ) (sub δ          (toSub σ S u))  ≡⟨ cong (sub (toSub ρ)) (sym (iso1 S u)) ⟩ 
-              sub (toSub ρ) (id-s S u)                      ≡⟨ ren-id (toSub ρ _ u) ⟩ 
-              toSub ρ S u                                   ∎
+      = Pr ρ , ρ-decr , (_/_∈_-ext ρ∘δ∘σ≡ρ {t = t} (_/_∈_-∘Closed (ρ ∘s δ) {t = t} p1) ∷ p)
+    where
+      ρ∘δ∘σ≡ρ : ∀ S u → ((ρ ∘s δ) ∘s σ) S u ≡ ρ S u 
+      ρ∘δ∘σ≡ρ S u = begin ((ρ ∘s δ) ∘s σ) S u   ≡⟨ sym (sub-∘ (σ S u)) ⟩ 
+                          sub ρ (sub δ (σ S u)) ≡⟨ cong (sub ρ) (sym (iso1 _ _)) ⟩ 
+                          sub ρ (id-s S u)      ≡⟨ ren-id _ ⟩ 
+                          ρ S u                 ∎ 
   given t , (Pr σ , (inj₂ G>G2) , p1) prune's ts (n , n≥length) 
    with under σ prune's ts (n , n≥length) (≤-trans G>G2 n≥length)
-  ... | (Pr ρ2 , ρ2-decr , p2) = Pr
-                                     (ρ2 ∘mr σ) ,
-                                     decreasing ((DS toSub ρ2 , ρ2-decr) ∘ds (DS toSub σ , inj₂ G>G2)) 
-                                   , (DClosedMRP ρ2 {t = t} p1 ∷ step-MRP σ ts p2)
+  ... | (Pr ρ2 , ρ2-decr , p2) = Pr (ρ2 ∘s σ)
+                                 , decreasing ((DS ρ2 , ρ2-decr) ∘ds (DS σ , inj₂ G>G2)) 
+                                 , (_/_∈_-∘Closed ρ2 {t = t} p1 ∷ _/_∈_-∘ σ ts p2)
 
-  under_prune's : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} → ∀ {G2} (σ : MetaRen G G2) -> (ts : Tms Sg G D2 T) → 
-                ∀ (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G2 -> 
-                Pruner i (subs (toSub σ) ts)
-  under σ prune's ts (.(suc n) , _) (s≤s {._} {n} u>smt) = prune's (subs (toSub σ) ts) (n , u>smt)
+  under_prune's : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} {G2} (σ : Sub Sg G G2) (ts : Tms Sg G D2 T) → 
+                  ∀ (u : ∃ (\ n → n ≥ Ctx-length G)) → proj₁ u > Ctx-length G2 → Pruner i (subs σ ts)
+  under σ prune's ts (.(suc n) , _) (s≤s {._} {n} u>smt) = prune's (subs σ ts) (n , u>smt)
 
-
-open import RenOrn
 
 mutual
-  lift-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) -> let open Pullback pull in 
-                  ∀ {Sg G T} (t : Tm Sg G _ T) s -> ren i t ≡T ren j s -> RTm p₂ s
-  lift-pullback pull (con c ts) (con .c ts₁) (con refl eq) = con c (lifts-pullback pull ts ts₁ eq)
+  lift-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) → let open Pullback pull in 
+                  ∀ {Sg G T} (t : Tm Sg G _ T) s → ren i t ≡T ren j s → RTm p₂ s
   lift-pullback pull (con c ts) (fun u j₁) ()
   lift-pullback pull (con c ts) (var x ts₁) ()
   lift-pullback pull (fun u j₁) (con c ts) ()
-  lift-pullback pull (fun u q₁) (fun .u q₂) (fun refl i∘q₁≡j∘q₂) = fun u (universal q₁ q₂ i∘q₁≡j∘q₂) p₂∘universal≡q₂
-    where open Pullback pull
   lift-pullback pull (fun u j₁) (var x ts) ()
   lift-pullback pull (var x ts) (con c ts₁) ()
   lift-pullback pull (var x ts) (fun u j₁) ()
+
+  lift-pullback pull (con c ts) (con .c ts₁) (con refl eq) = con c (lifts-pullback pull ts ts₁ eq)
+  lift-pullback pull (lam t)    (lam s)      (lam eq)      = lam (lift-pullback (cons-pullback _ _ pull) t s eq)
+  lift-pullback pull (fun u q₁) (fun .u q₂)  (fun refl i∘q₁≡j∘q₂) = fun u (universal q₁ q₂ i∘q₁≡j∘q₂) p₂∘universal≡q₂
+    where open Pullback pull
   lift-pullback pull (var x ts) (var x₁ ts₁) (var i$x≡j$x₁ eqts) = var (proj₁ r) (proj₂ (proj₂ r)) (lifts-pullback pull ts ts₁ eqts)
     where r = p$u≡q _ _ pull _ x₁ x i$x≡j$x₁ 
-  lift-pullback pull (lam t) (lam s) (lam eq) = lam (lift-pullback (cons-pullback _ _ pull) t s eq)
 
-  lifts-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) -> let open Pullback pull in 
-                  ∀ {Sg G T} (t : Tms Sg G _ T) s -> rens i t ≡T rens j s -> RTms p₂ s
-  lifts-pullback pull [] [] eq = []
+  lifts-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) → let open Pullback pull in 
+                  ∀ {Sg G T} (t : Tms Sg G _ T) s → rens i t ≡T rens j s → RTms p₂ s
+  lifts-pullback pull []       []         eq           = []
   lifts-pullback pull (t ∷ ts) (t₁ ∷ ts₁) (eqt ∷ eqts) = (lift-pullback pull t t₁ eqt) ∷ (lifts-pullback pull ts ts₁ eqts)
  
-open import Specification
 mutual
-  prune-sup : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) → ∀ l -> 
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> ren i z ≡T sub s t -> s ≤ toSub (pruner (prune' {i = i} t l))
-  prune-sup i (con c ts) l s (con c₁ ts₁) (con _ eq) = prune-sups i ts l s ts₁ eq
+  prune-sup : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tm Sg G D2 T) l → 
+              ∀ {G1} (s : Sub Sg G G1) z → ren i z ≡T sub s t → s ≤ (pruner (prune' {i = i} t l))
+  prune-sup i (con c ts) l s (con c₁ ts₁) (con _ eq)   = prune-sups i ts l s ts₁ eq
+  prune-sup i (var x ts) l s (var x₁ ts₁) (var eqv eq) = prune-sups i ts l s ts₁ eq
+  prune-sup i (lam t)    l s (lam z)      (lam eq)     = prune-sup (cons i) t l s z eq
+
   prune-sup i (con c ts) l s (fun u j) ()
   prune-sup i (con c ts) l s (var x ts₁) ()
+  prune-sup i (var x ts) l s (con c ts₁) ()
+  prune-sup i (var x ts) l s (fun u j) ()
+
   prune-sup {Sg} {G} i (fun {Ss = Ss} {B} u j) l {G2} s z eq = δ , s≡δ∘pruner
     where 
       pull = pullback i j
@@ -169,33 +176,28 @@ mutual
       s≡δ∘pruner S .(thin u S v) | inj₁ (v , refl) = sym (ren-id _)
       s≡δ∘pruner .(B <<- Ss) .u  | inj₂ refl       = sym ren[p₂,x]≡s[u]
    
-  prune-sup i (var x ts) l s (con c ts₁) ()
-  prune-sup i (var x ts) l s (fun u j) ()
-  prune-sup i (var x ts) l s (var x₁ ts₁) (var eqv eq) = prune-sups i ts l s ts₁ eq
-  prune-sup i (lam t) l s (lam z) (lam eq) = prune-sup (cons i) t l s z eq
 
-  prune-sups : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tms Sg G D2 T) → ∀ l ->
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tms Sg G2 D1 T) -> rens i z ≡T subs s t -> s ≤ toSub (pruner (prune's {i = i} t l))
-  prune-sups i [] l s [] eq = s , (λ S u → sym (ren-id _))
-  prune-sups i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) with prune-sup i t l s z eqt 
-  ... | (r , s≡r∘ρ) with prune' {i = i} t l 
-  ...               | Pr ρ , inj₁ _    , p1 = prune-sups i ts l s zs eqts
-  ...               | Pr ρ , inj₂ G>G1 , p1 
+  prune-sups : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tms Sg G D2 T) l →
+               ∀ {G1} (s : Sub Sg G G1) z → rens i z ≡T subs s t → s ≤ (pruner (prune's {i = i} t l))
+  prune-sups i []       l s []       eq           = s , (λ S u → sym (ren-id _))
+  prune-sups i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) 
+   with prune' {i = i} t l | prune-sup i t l s z eqt 
+  ... | Pr ρ , inj₁ _    , p1 | _           = prune-sups i ts l s zs eqts
+  ... | Pr ρ , inj₂ G>G1 , p1 | (δ , s≡δ∘ρ) 
    with l              | ≤-trans G>G1 (proj₂ l)    
   ... | (.(suc n) , _) | s≤s {._} {n} n≥G1 
-      = ≤-∘ s (toSub ρ) (toSub ρ1) (r , s≡r∘ρ) 
-            (prune-sups i (subs (toSub ρ) ts) (n , n≥G1) r zs
+      = ≤-∘ s ρ ρ1 (δ , s≡δ∘ρ) 
+            (prune-sups i (subs ρ ts) (n , n≥G1) δ zs
              (≡-T
               (begin
-                 rens i zs ≡⟨ T-≡ eqts ⟩
-                 subs s ts ≡⟨ subs-ext s≡r∘ρ ts ⟩
-                 subs (r ∘s toSub ρ) ts ≡⟨ sym (subs-∘ ts) ⟩
-                 subs r (subs (toSub ρ) ts) ∎)))
+                 rens i zs          ≡⟨ T-≡ eqts ⟩
+                 subs s ts          ≡⟨ subs-ext s≡δ∘ρ ts ⟩
+                 subs (δ ∘s ρ) ts   ≡⟨ sym (subs-∘ ts) ⟩
+                 subs δ (subs ρ ts) ∎)))
     where
-      ρ1 = pruner (prune's {i = i} (subs (toSub ρ) ts) (n , n≥G1))
+      ρ1 = pruner (prune's {i = i} (subs ρ ts) (n , n≥G1))
 
-prune : ∀ {Sg G D1 D2 T} → (i : Inj D1 D2) → (t : Tm Sg G D2 T) -> 
-              Σ (Pruner i t) \ pr -> 
-              ∀ {G2} -> (s : Sub Sg G G2) -> (z : Tm Sg G2 D1 T) -> ren i z ≡T sub s t -> s ≤ toSub (pruner pr)
-prune i t = prune' t (_ , ≤-refl) , prune-sup i t (_ , ≤-refl) 
+prune : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tm Sg G D2 T) →
+        Σ (Pruner i t) λ pr → ∀ {G1} (s : Sub Sg G G1) z → ren i z ≡T sub s t → s ≤ (pruner pr)
+prune i t = prune' t (_ , ≤-refl) , prune-sup i t (_ , ≤-refl)
 

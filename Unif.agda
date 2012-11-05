@@ -72,7 +72,7 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
 flexRigid : ∀ {Sg G D S} (u : G ∋ S) (i : Inj (ctx S) D) (s : Tm Sg (G - u) D (! type S)) → Spec (fun u i) (sub (thin-s u) s)
 flexRigid {Sg} {G} {S = S} u i s with prune i s 
 ... | ((Pr ρ , decr , m) , ρ-sup) 
- with invertTm i s (toSub ρ) m 
+ with invertTm i s ρ m 
 ... | no  NotInv                  = no  λ {(_ , σ , eq) → 
      let eq' = begin 
                  ren i (σ S u)              ≡⟨ T-≡ eq ⟩ 
@@ -81,50 +81,52 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
          σ≤ρ = ρ-sup (σ ∘s thin-s u) (σ S u) (≡-T eq')
      in NotInv (proj₁ σ≤ρ) (σ S u , ≡-T (begin ren i (σ S u)                       ≡⟨ eq' ⟩ 
                                                subT (σ ∘s thin-s u) s              ≡⟨ subT-ext (proj₂ σ≤ρ) s ⟩ 
-                                               subT (proj₁ σ≤ρ ∘s toSub ρ) s       ≡⟨ sym (subT-∘ s) ⟩ 
-                                               subT (proj₁ σ≤ρ) (subT (toSub ρ) s) ∎))}
+                                               subT (proj₁ σ≤ρ ∘s ρ) s       ≡⟨ sym (subT-∘ s) ⟩ 
+                                               subT (proj₁ σ≤ρ) (subT ρ s) ∎))}
 ... | yes (t , ren[i,t]≡sub[ρ,s]) = yes 
  (_ , (DS σ , inj₂ (rigid-decr u (map⊎ proj₁ (\ x -> x) decr))) , 
    ≡-T (begin
      ren i (σ _ u)            ≡⟨ cong (ren i) σ[u]≡t ⟩ 
      ren i t                  ≡⟨ ren[i,t]≡sub[ρ,s] ⟩ 
-     sub (toSub ρ) s          ≡⟨ sub-ext ρ≡σ∘thin[u] s ⟩ 
+     sub ρ s          ≡⟨ sub-ext ρ≡σ∘thin[u] s ⟩ 
      sub (σ ∘s thin-s u) s    ≡⟨ sym (sub-∘ s) ⟩ 
      sub σ (sub (thin-s u) s) ∎) , σ-sup )
     where
       σ : Sub Sg G _
       σ S v with thick u v
-      σ S v   | inj₁ (w , eq) = toSub ρ _ w
+      σ S v   | inj₁ (w , eq) = ρ _ w
       σ ._ .u | inj₂ refl     = t
 
       σ[u]≡t : σ _ u ≡ t
       σ[u]≡t rewrite thick-refl u = refl
 
-      ρ≡σ∘thin[u] : toSub ρ ≡s (σ ∘s thin-s u)
-      ρ≡σ∘thin[u] S y rewrite thick-thin u y | left-id (ρ-env (ρ S y)) = refl
+      ρ≡σ∘thin[u] : ρ ≡s (σ ∘s thin-s u)
+      ρ≡σ∘thin[u] S y rewrite thick-thin u y = sym (ren-id _)
 
       σ-sup : Sup (Unifies (fun u i) (sub (thin-s u) s)) σ
       σ-sup ρ₁ ρ₁-unifies = δ , ρ₁≡δ∘σ where
         ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] = begin 
-           sub ρ₁ (fun u i)                             ≡⟨ T-≡ ρ₁-unifies ⟩
-           sub ρ₁ (sub (λ S v → mvar (thin u S v)) s)   ≡⟨ sub-∘ s ⟩
-           sub (λ S v → ren id-i (ρ₁ S (thin u S v))) s ≡⟨ sub-ext (λ S x → ren-id _) s ⟩
-           sub (λ S v → ρ₁ S (thin u S v)) s            ∎
+           sub ρ₁ (fun u i)                  ≡⟨ T-≡ ρ₁-unifies ⟩
+           sub ρ₁ (sub (thin-s u) s)         ≡⟨ sub-∘ s ⟩
+           sub (ρ₁ ∘s thin-s u) s            ∎
 
-        ρ₁∘thin[u]≤ρ = ρ-sup (λ S v → ρ₁ S (thin u S v)) (ρ₁ _ u) (≡-T ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s])
+        ρ₁∘thin[u]≤ρ = ρ-sup (ρ₁ ∘s thin-s u) (ρ₁ _ u) (≡-T ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s])
         δ = proj₁ ρ₁∘thin[u]≤ρ
         ρ₁∘thin[u]≡δ∘ρ = proj₂ ρ₁∘thin[u]≤ρ 
 
         ρ₁≡δ∘σ : ρ₁ ≡s (δ ∘s σ)
         ρ₁≡δ∘σ S u₁ with thick u u₁
-        ρ₁≡δ∘σ S ._  | inj₁ (v , refl) = ρ₁∘thin[u]≡δ∘ρ _ v
+        ρ₁≡δ∘σ S ._  | inj₁ (v , refl) = begin ρ₁ S (thin u S v)    ≡⟨ sym (ren-id _) ⟩ 
+                                               (ρ₁ ∘s thin-s u) S v ≡⟨ ρ₁∘thin[u]≡δ∘ρ _ v ⟩ 
+                                               sub δ (ρ S v)        ∎
         ρ₁≡δ∘σ ._ .u | inj₂ refl       = ren-inj i (ρ₁ _ u) (sub δ t) 
-          (begin ren i (ρ₁ _ u)                    ≡⟨ ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] ⟩ 
-                 sub (λ S v → ρ₁ _ (thin u S v)) s ≡⟨ sub-ext ρ₁∘thin[u]≡δ∘ρ s ⟩ 
-                 sub (δ ∘s toSub ρ) s              ≡⟨ sym (sub-∘ s) ⟩ 
-                 sub δ (sub (toSub ρ) s)           ≡⟨ cong (sub δ) (sym ren[i,t]≡sub[ρ,s]) ⟩ 
-                 sub δ (ren i t)                   ≡⟨ sub-nat t ⟩ 
-                 ren i (sub δ t)                   ∎)
+          (begin 
+                 ren i (ρ₁ _ u)         ≡⟨ ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] ⟩ 
+                 sub (ρ₁ ∘s thin-s u) s ≡⟨ sub-ext ρ₁∘thin[u]≡δ∘ρ s ⟩ 
+                 sub (δ ∘s ρ) s         ≡⟨ sym (sub-∘ s) ⟩ 
+                 sub δ (sub ρ s)        ≡⟨ cong (sub δ) (sym ren[i,t]≡sub[ρ,s]) ⟩ 
+                 sub δ (ren i t)        ≡⟨ sub-nat t ⟩ 
+                 ren i (sub δ t)        ∎)
 
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (fun u i) t

@@ -15,6 +15,10 @@ open import Syntax
 open import Height
 open import OneHoleContext
 
+-- No-Cycle proves that Even under different renamings a term can't
+-- appear inside itself: it wouldn't be well-founded. 
+-- We'll use this to show (fun u i) and (∫ (d ∷ ps) (fun u j)) not
+-- unifiable in Unif.flexAny.
 No-Cycle : ∀ {TI Sg G D1 DI DO X} -> let TO = TI in 
          (d : DTm Sg G (DI , TI) X) (ps : Context Sg G X (DO , TO)) 
          (t : Term Sg G D1 TO) (i : Inj D1 DI)(j : Inj D1 DO) -> 
@@ -31,15 +35,12 @@ No-Cycle d ps t i j eq = ≡-or-> (cong heightT eq) r
         ≡-or-> : ∀ {m n} -> m ≡ n -> n > m -> ⊥
         ≡-or-> refl (s≤s ge) = ≡-or-> refl ge
 
-_[_]OccursIn_ : ∀ {Sg G D D' T S} (u : G ∋ S) (j : Inj (ctx S) D') (t : Term Sg G D T) → Set
-u [ j ]OccursIn t = Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (fun u j) ≡ t
+_OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
+_OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (fun u j) ≡ t
   where open import Data.Sum
 
-_OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
-_OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → u [ j ]OccursIn t
-
 _NotOccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
-u NotOccursIn t = (∃ \ s → subT (thin-s u) s ≡ t)
+u NotOccursIn t = ∃ \ s → subT (thin-s u) s ≡ t
 
 Dec_OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
 Dec u OccursIn t = u NotOccursIn t ⊎ u OccursIn t
@@ -52,6 +53,10 @@ _∙_ : ∀ {Sg G S D T D' T'}{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg (G - 
 _∙_ {u = u} d (yes occ)     = yes (map-occ (subD (thin-s u) d) occ)
 _∙_ {u = u} d (no (s , eq)) = no  (∫once d s , trans (∫once-sub _ d s) (cong (∫once (subD (thin-s u) d)) eq))
 
+-- The actual occurs check, deciding whether u appears anywhere in t.
+-- We should note that in case we wanted to relax the pattern
+-- condition we'd have to be more precise here, and distinguish
+-- between different contexts in which u could appear.
 mutual
   check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → Dec u OccursIn t
   check u (con c ts) = con c ∙ checks u ts 
