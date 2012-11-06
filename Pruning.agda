@@ -22,7 +22,6 @@ open import MetaRens
 open import DSub
 open import Specification
 
-
 data AllMV∈  {Sg : Ctx} {G : MCtx} {D0 D : Ctx} (i : Inj D0 D) : ∀ {T} → Term Sg G D T → Set where
   [] : AllMV∈ i {inj₂ []} []
   _∷_ : ∀ {S Ss t ts} → (m : AllMV∈ i {inj₁ S} t) → (ms : AllMV∈ i {inj₂ Ss} ts) → AllMV∈ i {inj₂ (S ∷ Ss)} (t ∷ ts)
@@ -36,7 +35,7 @@ data AllMV∈  {Sg : Ctx} {G : MCtx} {D0 D : Ctx} (i : Inj D0 D) : ∀ {T} → T
 _/_∈_ : ∀ {Sg G1 G2 D1 D2 T} → Sub Sg G1 G2 → Term Sg G1 D2 T → Inj D1 D2 → Set
 _/_∈_ s t i = AllMV∈ i (subT s t)
 
-
+-- (\ s -> s / t ∈ i) is closed under pre-composition, we'll need this in the _∷_ case of prune.
 _/_∈_-∘Closed : ∀ {Sg G1 G2 G3 D1 D2 T} (f : Sub Sg G2 G3) {g : Sub Sg G1 G2} {i : Inj D1 D2} →
                 ∀ {t : Term Sg G1 D2 T} → g / t ∈ i → (f ∘s g) / t ∈ i
 _/_∈_-∘Closed f m = subst (AllMV∈ _) (subT-∘ _) (go f m) where
@@ -72,6 +71,12 @@ _/_∈_-ext : ∀ {Sg G G1 D1 D2 T} {i : Inj D1 D2} {f g : Sub Sg G G1} →
             f ≡s g → ∀ {t : Term Sg G D2 T} → f / t ∈ i → g / t ∈ i
 _/_∈_-ext f≡g m = subst (AllMV∈ _) (subT-ext f≡g _) m 
 
+
+-- In the flexible-rigid case we'll need to find z and ρ such that ren i z ≡ sub ρ t, 
+-- this module is about finding such a ρ, which we call the pruner.
+-- Its role is to handle occurrences in t like (fun u j) where there are variables in j 
+-- which are not in i: ρ will substitute u with a term that ignores them, 
+-- since their presence would make finding z impossible.
 record Pruner {Sg G D1 D2 T} (i : Inj D1 D2) (t : Term Sg G D2 T) : Set where
   constructor Pr_,_,_
   field
@@ -87,16 +92,28 @@ _∙_ : ∀ {Sg G D1 D2 T} → {i : Inj D1 D2} {t : Term Sg G D2 T} →
       (∀ {G1}{σ : Sub Sg G G1} → σ / t ∈ i → σ / s ∈ j) → Pruner i t → Pruner j s
 f ∙ (Pr ρ , ρ-decr , m) = Pr ρ , ρ-decr , f m
 
+-- The computation of a Pruner would be straightforward, with (fun u j)
+-- the only interesting case, but we have some trouble with showing
+-- termination.
+-- In the (t ∷ ts) case, having found the pruner σ of t, we need to
+-- recurse on (subs σ ts), which is not structurally smaller than (t ∷ ts): 
+-- we work around this issue by using the size of the meta-context
+-- as a measure that pruners decrease unless they are isomorphisms.
+-- Agda's termination checker accepts the definition because we
+-- simultaneously recurse on (an upper bound of) this size and the
+-- structure of terms.
 mutual
-  
   prune' : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} (t : Tm Sg G D2 T) 
            → ∃ (\ n → n ≥ Ctx-length G) → Pruner i t
+  -- congruence cases
   prune' (con c ts) l = con ∙ prune's ts l
   prune' (var x ts) l = var ∙ prune's ts l
   prune' (lam t)    l = lam ∙ prune'  t  l
 
   prune' {i = i} (fun u j) l = Pr (toSub (singleton u p₂)) , decr , fun aux where
     open Pullback (pullback i j)
+    -- (toSub (singleton u p₂)) (fun u j) = fun zero (j ∘i p₂), so we
+    -- need aux to show that (j ∘i p₂) only contains variables in i
     aux : ∃ \ k → i ∘i k ≡ j ∘i ρ-env (singleton u p₂ _ u)
     aux rewrite thick-refl u = p₁ , commutes
     decr = singleton-Decreasing p₂ u (pullback-Decr i j)
@@ -108,20 +125,20 @@ mutual
 
   given_,_prune's  : ∀ {Sg G D1 D2 T Ts} {i : Inj D1 D2} (t : Tm Sg G D2 T) → Pruner i t 
                      → (ts : Tms Sg G D2 Ts) → ∃ (\ n → n ≥ Ctx-length G) → Pruner i (t ∷ ts)
-  given t , (Pr σ , (inj₁ (eq , (δ , iso1) , iso2)) , p1) prune's ts l with prune's ts l 
+  given t , (Pr σ , (inj₁ (eq , (δ , iso1) , iso2)) , p0) prune's ts l with prune's ts l 
   ... | Pr ρ , ρ-decr , p 
-      = Pr ρ , ρ-decr , (_/_∈_-ext ρ∘δ∘σ≡ρ {t = t} (_/_∈_-∘Closed (ρ ∘s δ) {t = t} p1) ∷ p)
+      = Pr ρ , ρ-decr , (_/_∈_-ext ρ∘δ∘σ≡ρ {t = t} (_/_∈_-∘Closed (ρ ∘s δ) {t = t} p0) ∷ p)
     where
       ρ∘δ∘σ≡ρ : ∀ S u → ((ρ ∘s δ) ∘s σ) S u ≡ ρ S u 
       ρ∘δ∘σ≡ρ S u = begin ((ρ ∘s δ) ∘s σ) S u   ≡⟨ sym (sub-∘ (σ S u)) ⟩ 
                           sub ρ (sub δ (σ S u)) ≡⟨ cong (sub ρ) (sym (iso1 _ _)) ⟩ 
                           sub ρ (id-s S u)      ≡⟨ ren-id _ ⟩ 
                           ρ S u                 ∎ 
-  given t , (Pr σ , (inj₂ G>G2) , p1) prune's ts (n , n≥length) 
+  given t , (Pr σ , (inj₂ G>G2) , p0) prune's ts (n , n≥length) 
    with under σ prune's ts (n , n≥length) (≤-trans G>G2 n≥length)
-  ... | (Pr ρ2 , ρ2-decr , p2) = Pr (ρ2 ∘s σ)
-                                 , decreasing ((DS ρ2 , ρ2-decr) ∘ds (DS σ , inj₂ G>G2)) 
-                                 , (_/_∈_-∘Closed ρ2 {t = t} p1 ∷ _/_∈_-∘ σ ts p2)
+  ... | (Pr ρ , ρ-decr , p) = Pr (ρ ∘s σ)
+                                 , decreasing ((DS ρ , ρ-decr) ∘ds (DS σ , inj₂ G>G2)) 
+                                 , (_/_∈_-∘Closed ρ {t = t} p0 ∷ _/_∈_-∘ σ ts p)
 
   under_prune's : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} {G2} (σ : Sub Sg G G2) (ts : Tms Sg G D2 T) → 
                   ∀ (u : ∃ (\ n → n ≥ Ctx-length G)) → proj₁ u > Ctx-length G2 → Pruner i (subs σ ts)
@@ -149,7 +166,10 @@ mutual
                   ∀ {Sg G T} (t : Tms Sg G _ T) s → rens i t ≡T rens j s → RTms p₂ s
   lifts-pullback pull []       []         eq           = []
   lifts-pullback pull (t ∷ ts) (t₁ ∷ ts₁) (eqt ∷ eqts) = (lift-pullback pull t t₁ eqt) ∷ (lifts-pullback pull ts ts₁ eqts)
- 
+
+-- prune-sup makes use of the universal property of pullbacks to prove
+-- that the pruner computed above is more general than any possible
+-- solution to the equation runT i z ≡ sub s t from which we started.
 mutual
   prune-sup : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tm Sg G D2 T) l → 
               ∀ {G1} (s : Sub Sg G G1) z → ren i z ≡T sub s t → s ≤ (pruner (prune' {i = i} t l))
