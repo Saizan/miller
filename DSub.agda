@@ -17,9 +17,32 @@ open import Injection.Objects
 open import Syntax
 open import MetaRens
 
+-- We define a measure of meta-contexts to help with proving
+-- termination of the main unification algorithm and pruning.
 Ctx-length : MCtx -> ℕ
 Ctx-length [] = zero
 Ctx-length (type <<- ctx ∷ m) = suc (length ctx + Ctx-length m)
+
+IsIso : ∀ {Sg G1 G2} -> (s : Sub Sg G1 G2) -> Set
+IsIso s = Σ (id-s ≤ s) \le -> id-s ≡s (s ∘s proj₁ le)
+ 
+-- The substitutions we produce are going to either be isomorphims or
+-- produce terms in a smaller context, so it'll be fine to recurse on
+-- their results.
+Decreasing : ∀ {Sg G1 G2} -> (s : Sub Sg G1 G2) -> Set
+Decreasing {Sg} {G1} {G2} s = (Ctx-length G1 ≡ Ctx-length G2 × IsIso s) 
+                            ⊎ (Ctx-length G1 > Ctx-length G2) 
+
+record DSub (Sg : Ctx) (G1 : MCtx) (G2 : MCtx) : Set where
+  constructor DS_,_
+  field
+    ⟦_⟧ : Sub Sg G1 G2
+    decreasing : Decreasing ⟦_⟧
+
+open DSub public
+
+-- Below we prove that DSub forms a category and that other
+-- substitutions of interest are Decreasing.
 
 Ctx-length-lemma : ∀ {G Ss B} -> (u  : G ∋ B <<- Ss) -> Ctx-length G ≡ Ctx-length (G - u <: B <<- Ss)
 Ctx-length-lemma zero = refl
@@ -41,8 +64,6 @@ abstract
     aux S x | fun u j | w = (j / u) , refl
     aux S x | var x₁ ts | ()
 
-IsIso : ∀ {Sg G1 G2} -> (s : Sub Sg G1 G2) -> Set
-IsIso s = Σ (id-s ≤ s) \le -> id-s ≡s (s ∘s proj₁ le)
 
 IsIso-id : ∀ {Sg G} -> IsIso {Sg} {G} {G} id-s
 IsIso-id = λ {Sg} {G} → (id-s , (λ S u → sym (ren-id _))) , (λ S u → sym (ren-id _))
@@ -68,18 +89,6 @@ IsIso-∘ s s' ((δ , p) , p') ((δ' , q) , q') = (δ' ∘s δ ,
         sub (s ∘s s') (sub δ' (δ S u))  ∎)
                                                    
   where open ≡-Reasoning
-
-Decreasing : ∀ {Sg}{G1}{G2} -> (s : Sub Sg G1 G2) -> Set
-Decreasing {Sg} {G1} {G2} s = (Ctx-length G1 ≡ Ctx-length G2 × IsIso s) 
-                            ⊎ (Ctx-length G1 > Ctx-length G2) 
-
-record DSub (Sg : Ctx) (G1 : MCtx) (G2 : MCtx) : Set where
-  constructor DS_,_
-  field
-    ⟦_⟧ : Sub Sg G1 G2
-    decreasing : Decreasing ⟦_⟧
-
-open DSub public
 
 trans-> : ∀ {m n o} -> m > n -> n > o -> m > o
 trans-> (s≤s m≤n) (s≤s z≤n) = s≤s z≤n
