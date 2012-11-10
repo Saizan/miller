@@ -2,6 +2,7 @@ module RenOrn where
 
 open import Data.Product.Extras
 open import Relation.Binary.PropositionalEquality
+open import Data.Sum
 
 open import Injection
 open import Lists
@@ -26,6 +27,10 @@ mutual
     [] : RTms i { !> } []
     _∷_ : {S : Ty}{Ss : Fwd Ty} → ∀ {x xs} →
            RTm i {S} x → RTms i {Ss} xs → RTms i {(S :> Ss)} (x ∷ xs)
+
+_⁻¹_ : ∀ {Sg : Ctx}{G : MCtx}{D : Ctx}{K : Ctx} (i : Inj D K) {T} → Term Sg G K T → Set
+_⁻¹_ i {inj₁ _} t = RTm i t
+_⁻¹_ i {inj₂ _} ts = RTms i ts
 
 mutual
   forget : ∀ {Sg G D D0}{T : Ty} → {i : Inj D D0} → {t : Tm Sg G D0 T} → (x : RTm i t) → Σ (Tm Sg G D T) \ s → ren i s ≡ t

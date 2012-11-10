@@ -29,8 +29,8 @@ open import Specification
 open import MetaRens
 
 mutual
-  lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tm Sg G X S) 
-                   -> ren i t ≡T ren j t -> let open Equalizer equ in RTm e t
+  lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} (equ : Equalizer i j) (t : Tm Sg G X S) →
+                   let open Equalizer equ in ren i t ≡T ren j t → e ⁻¹ t
   lift-equalizer equ (con c ts) (con refl eq) = con c (lifts-equalizer equ ts eq)
   lift-equalizer equ (fun u j₁) (fun refl eq) = fun u (universal j₁ eq) e∘universal≡m
     where open Equalizer equ
@@ -38,10 +38,10 @@ mutual
     where r = e$u≡m equ _ x eqv
   lift-equalizer equ (lam t) (lam eq) = lam (lift-equalizer (cons-equalizer _ _ equ) t eq)
 
-  lifts-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} -> (equ : Equalizer i j) -> (t : Tms Sg G X S) 
-                    -> rens i t ≡T rens j t -> let open Equalizer equ in RTms e t
+  lifts-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} (equ : Equalizer i j) (t : Tms Sg G X S) → 
+                    let open Equalizer equ in rens i t ≡T rens j t → e ⁻¹ t
   lifts-equalizer equ [] eq = []
-  lifts-equalizer equ (t ∷ ts) (eqt ∷ eqts) = (lift-equalizer equ t eqt) ∷ (lifts-equalizer equ ts eqts)
+  lifts-equalizer equ (t ∷ ts) (eqt ∷ eqts) = lift-equalizer equ t eqt ∷ lifts-equalizer equ ts eqts
 
 flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃⟦σ⟧ Max (Unifies {Sg} (Tm.fun u i) (fun u j))
 flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (equalizer-Decr i j)) 
@@ -59,36 +59,41 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
     sup-σ : Sup (Unifies (fun u i) (fun u j)) σ
     sup-σ {G'} ρ ρ-unifies = δ , ρ≡δ∘σ where
 
+      ∃s[ren[e,s]≡ρ[u]] = forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) ρ-unifies)
+  
       δ : Sub Sg (B <<- E ∷ G - u) G'
-      δ ._ zero = proj₁ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) ρ-unifies))
+      δ ._ zero = proj₁ ∃s[ren[e,s]≡ρ[u]]
       δ S₁ (suc v) = ρ _ (thin u _ v)
 
       ρ≡δ∘σ : ρ ≡s (δ ∘s σ)
       ρ≡δ∘σ S v          with thick u v 
       ρ≡δ∘σ S .(thin u S w) | inj₁ (w , refl) = sym (ren-id (ρ S (thin u S w)))
-      ρ≡δ∘σ .(B <<- Ss) .u  | inj₂ refl = sym (proj₂ (RenOrn.forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) ρ-unifies)))
+      ρ≡δ∘σ .(B <<- Ss) .u  | inj₂ refl       = sym (proj₂ ∃s[ren[e,s]≡ρ[u]])
 
 
 flexRigid : ∀ {Sg G D S} (u : G ∋ S) (i : Inj (ctx S) D) (s : Tm Sg (G - u) D (! type S)) → Spec (fun u i) (sub (thin-s u) s)
 flexRigid {Sg} {G} {S = S} u i s with prune i s 
 ... | ((Pr ρ , decr , m) , ρ-sup) 
  with invertTm i s ρ m 
-... | no  NotInv                  = no  λ {(_ , σ , eq) → 
-     let eq' = begin 
-                 ren i (σ S u)              ≡⟨ T-≡ eq ⟩ 
+... | no  NotInv                  = no  λ {(_ , σ , σ-unifies) → 
+     let 
+         eq = begin 
+                 ren i (σ S u)              ≡⟨ T-≡ σ-unifies ⟩ 
                  subT σ (subT (thin-s u) s) ≡⟨ subT-∘ s ⟩ 
                  subT (σ ∘s thin-s u) s     ∎ 
-         σ≤ρ = ρ-sup (σ ∘s thin-s u) (σ S u) (≡-T eq')
-     in NotInv (proj₁ σ≤ρ) (σ S u , ≡-T (begin ren i (σ S u)                       ≡⟨ eq' ⟩ 
-                                               subT (σ ∘s thin-s u) s              ≡⟨ subT-ext (proj₂ σ≤ρ) s ⟩ 
-                                               subT (proj₁ σ≤ρ ∘s ρ) s       ≡⟨ sym (subT-∘ s) ⟩ 
+         σ≤ρ = ρ-sup (σ ∘s thin-s u) (σ S u) (≡-T eq)
+
+     in NotInv (proj₁ σ≤ρ) (σ S u , ≡-T (begin ren i (σ S u)               ≡⟨ eq ⟩ 
+                                               subT (σ ∘s thin-s u) s      ≡⟨ subT-ext (proj₂ σ≤ρ) s ⟩ 
+                                               subT (proj₁ σ≤ρ ∘s ρ) s     ≡⟨ sym (subT-∘ s) ⟩ 
                                                subT (proj₁ σ≤ρ) (subT ρ s) ∎))}
+
 ... | yes (t , ren[i,t]≡sub[ρ,s]) = yes 
  (_ , (DS σ , inj₂ (rigid-decr u (map⊎ proj₁ (\ x -> x) decr))) , 
    ≡-T (begin
      ren i (σ _ u)            ≡⟨ cong (ren i) σ[u]≡t ⟩ 
      ren i t                  ≡⟨ ren[i,t]≡sub[ρ,s] ⟩ 
-     sub ρ s          ≡⟨ sub-ext ρ≡σ∘thin[u] s ⟩ 
+     sub ρ s                  ≡⟨ sub-ext ρ≡σ∘thin[u] s ⟩ 
      sub (σ ∘s thin-s u) s    ≡⟨ sym (sub-∘ s) ⟩ 
      sub σ (sub (thin-s u) s) ∎) , σ-sup )
     where
@@ -119,8 +124,8 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
         ρ₁≡δ∘σ S ._  | inj₁ (v , refl) = begin ρ₁ S (thin u S v)    ≡⟨ sym (ren-id _) ⟩ 
                                                (ρ₁ ∘s thin-s u) S v ≡⟨ ρ₁∘thin[u]≡δ∘ρ _ v ⟩ 
                                                sub δ (ρ S v)        ∎
-        ρ₁≡δ∘σ ._ .u | inj₂ refl       = ren-inj i (ρ₁ _ u) (sub δ t) 
-          (begin 
+        ρ₁≡δ∘σ ._ .u | inj₂ refl       = ren-inj i (ρ₁ _ u) (sub δ t) -- crucial use of injectivity to show
+          (begin                                                      -- that we got the most general solution
                  ren i (ρ₁ _ u)         ≡⟨ ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] ⟩ 
                  sub (ρ₁ ∘s thin-s u) s ≡⟨ sub-ext ρ₁∘thin[u]≡δ∘ρ s ⟩ 
                  sub (δ ∘s ρ) s         ≡⟨ sym (sub-∘ s) ⟩ 
@@ -130,10 +135,10 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
 
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (fun u i) t
-flexAny u i t                                 with check u t 
-flexAny u i .(sub (λ S v → mvar (thin u S v)) s) | inj₁ (s , refl)               = flexRigid u i s
-flexAny u i .(fun u j)                           | inj₂ (G1 , j , [] , refl)     = yes (flexSame u i j)
-flexAny u i .(∫once x (∫ ps (fun u j)))          | inj₂ (G1 , j , x ∷ ps , refl) = no  λ {(D1 , s , eq) → 
+flexAny u i t                        with check u t 
+flexAny u i .(sub (thin-s u) s)         | inj₁ (s , refl)               = flexRigid u i s
+flexAny u i .(fun u j)                  | inj₂ (G1 , j , [] , refl)     = yes (flexSame u i j)
+flexAny u i .(∫once x (∫ ps (fun u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no  λ {(D1 , s , eq) → 
         No-Cycle (subD s x) (subC s ps) (s _ u) i j
           (trans (T-≡ eq) (∫-sub s (x ∷ ps) (fun u j)))} 
 

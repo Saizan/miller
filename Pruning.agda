@@ -147,7 +147,7 @@ mutual
 
 mutual
   lift-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) → let open Pullback pull in 
-                  ∀ {Sg G T} (t : Tm Sg G _ T) s → ren i t ≡T ren j s → RTm p₂ s
+                  ∀ {Sg G T} (t : Tm Sg G _ T) s → ren i t ≡T ren j s → p₂ ⁻¹ s
   lift-pullback pull (con c ts) (fun u j₁) ()
   lift-pullback pull (con c ts) (var x ts₁) ()
   lift-pullback pull (fun u j₁) (con c ts) ()
@@ -163,7 +163,7 @@ mutual
     where r = p$u≡q _ _ pull _ x₁ x i$x≡j$x₁ 
 
   lifts-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) → let open Pullback pull in 
-                  ∀ {Sg G T} (t : Tms Sg G _ T) s → rens i t ≡T rens j s → RTms p₂ s
+                  ∀ {Sg G T} (t : Tms Sg G _ T) s → rens i t ≡T rens j s → p₂ ⁻¹ s
   lifts-pullback pull []       []         eq           = []
   lifts-pullback pull (t ∷ ts) (t₁ ∷ ts₁) (eqt ∷ eqts) = (lift-pullback pull t t₁ eqt) ∷ (lifts-pullback pull ts ts₁ eqts)
 

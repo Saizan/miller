@@ -34,20 +34,26 @@ map-NI (var x) notinv σ (con c ts , ())
 map-NI (var x) notinv σ (fun u j , ())
 map-NI (var ._) notinv σ (var x₁ ts , var refl eq) = notinv σ (ts , eq)
 
+NI-var : ∀ {Sg G D D1 Ss B} {i : Inj D D1} {ts : Tms Sg G D1 Ss} {x : D1 ∋ (Ss ->> B)} 
+         → ¬ ∃ (λ y → i $ y ≡ x) → NotInv {T = inj₁ _} i (var x ts)
+NI-var ¬∃y[iy≡x] σ (con c ts , ())
+NI-var ¬∃y[iy≡x] σ (fun u j , ())
+NI-var ¬∃y[iy≡x] σ (var y _ , var iy≡x _) = ¬∃y[iy≡x] (y , iy≡x)
+
 mutual
-  invertTm' : ∀ {Sg G Ss D T} (i : Inj Ss D) → (t : Tm Sg G D T) → AllMV∈ i t
-    → RTm i t ⊎ NotInv i t
+  invertTm' : ∀ {Sg G Ss D T} (i : Inj Ss D) (t : Tm Sg G D T) →
+              AllMV∈ i t → i ⁻¹ t ⊎ NotInv i t
   invertTm' i (con c ts) (con m) = map⊎ (con c) (map-NI (con c)) (invertTm's i ts m)
   invertTm' i (fun v h) (fun (k , comm)) = yes (fun v k comm)
   invertTm' i (var x ts) (var m) 
-   with invert i x   | invertTm's i ts m 
-  ... | yes (y , eq) | yes p₁ = yes (var y eq p₁)
-  ... | yes p        | no ¬p  = no (map-NI (var x) ¬p)
-  ... | no ¬p        | q      = no (λ σ → λ {(var z ts , var eqz eqts) → ¬p (z , eqz); (con _ _ , ()); (fun _ _ , ())})
+   with invert i x     | invertTm's i ts m 
+  ... | yes (y , iy≡x) | yes i⁻¹ts  = yes (var y iy≡x i⁻¹ts)
+  ... | _              | no  NI[ts] = no (map-NI (var x) NI[ts])
+  ... | no  ¬∃y[iy≡x]  | _          = no (NI-var ¬∃y[iy≡x])
   invertTm' i (lam t) (lam m) = map⊎ lam (map-NI {t = t} lam) (invertTm' (cons i) t m)
 
-  invertTm's : ∀ {Sg G Ss D T} (i : Inj Ss D) → (t : Tms Sg G D T) → AllMV∈ i t 
-                → RTms i t ⊎ NotInv i t
+  invertTm's : ∀ {Sg G Ss D T} (i : Inj Ss D) (t : Tms Sg G D T) → 
+               AllMV∈ i t → i ⁻¹ t ⊎ NotInv i t
   invertTm's i [] m = yes []
   invertTm's i (t ∷ ts) (mt ∷ mts) 
    with invertTm' i t mt | invertTm's i ts mts
