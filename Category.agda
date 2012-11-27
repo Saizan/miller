@@ -70,3 +70,54 @@ record Equalizer {X Y}(f g : X ⇒ Y) : Set where
     isEqualizer : IsEqualizer f g E e
 
   open IsEqualizer isEqualizer public
+
+
+record Product (A B : Obj) : Set where
+  constructor Prod
+  field
+    A×B : Obj
+    π₁ : A×B ⇒ A
+    π₂ : A×B ⇒ B
+    ⟨_,_⟩ : ∀ {C} → (C ⇒ A) → (C ⇒ B) → (C ⇒ A×B)
+
+    commute₁ : ∀ {C} {f : C ⇒ A} {g : C ⇒ B} → π₁ ∘ ⟨ f , g ⟩ ≡ f
+    commute₂ : ∀ {C} {f : C ⇒ A} {g : C ⇒ B} → π₂ ∘ ⟨ f , g ⟩ ≡ g
+    universal : ∀ {C} {f : C ⇒ A} {g : C ⇒ B} {i : C ⇒ A×B}
+               → π₁ ∘ i ≡ f → π₂ ∘ i ≡ g → ⟨ f , g ⟩ ≡ i
+
+open import Relation.Binary
+module Props     (assoc     : ∀ {A B C D} {f : A ⇒ B} {g : B ⇒ C} {h : C ⇒ D} → (h ∘ g) ∘ f ≡ h ∘ (g ∘ f))
+                 (identityˡ : ∀ {A B} {f : A ⇒ B} → id ∘ f ≡ f)
+                 (identityʳ : ∀ {A B} {f : A ⇒ B} → f ∘ id ≡ f)
+
+             (equiv     : ∀ {A B} → IsEquivalence (_≡_ {A} {B}))
+             (∘-resp-≡  : ∀ {A B C} {f h : B ⇒ C} {g i : A ⇒ B} → f ≡ h → g ≡ i → f ∘ g ≡ h ∘ i)
+                      where
+  module Dummy {A}{B} = IsEquivalence (equiv {A} {B})
+  open Dummy
+
+  convert : {X Y Z : Obj} -> (f : X ⇒ Z)(g : Y ⇒ Z) -> (prod : Product X Y) -> let open Product prod in 
+             Equalizer (f ∘ π₁) (g ∘ π₂) -> Pullback f g
+  convert f g prod equ = Pull E , (π₁ ∘ e) , (π₂ ∘ e) , 
+        (record {
+           commutes = trans (sym assoc) (trans commutes assoc);
+           universal = λ q₁ q₂ commutes₁ → universal ⟨ q₁ , q₂ ⟩ (trans assoc (trans (∘-resp-≡ refl commute₁) 
+                                           (trans commutes₁ (trans (sym (∘-resp-≡ refl commute₂)) (sym assoc)))));
+           universal-unique = λ u p₁∘u≡q₁ p₂∘u≡q₂ → universal-unique u (sym (uniπ (trans (sym assoc) p₁∘u≡q₁) (trans (sym assoc) p₂∘u≡q₂)));
+           p₁∘universal≡q₁ = trans assoc (trans (∘-resp-≡ refl e∘universal≡m) commute₁);
+           p₂∘universal≡q₂ = trans assoc (trans (∘-resp-≡ refl e∘universal≡m) commute₂) })
+    where
+      open Product prod renaming (universal to uniπ)
+      open Equalizer equ
+  
+  Equalizer-ext : ∀ {X Z}{f1 f2 : X ⇒ Z} -> f1 ≡ f2 -> {g1 g2 : X ⇒ Z} -> g1 ≡ g2 -> Equalizer f1 g1 -> Equalizer f2 g2
+  Equalizer-ext f1≡f2 g1≡g2 pull 
+   = Equ E , e ,   
+      (record {
+         commutes = trans (∘-resp-≡ (sym f1≡f2) refl) (trans commutes (∘-resp-≡ g1≡g2 refl));
+         universal = λ m commutes₁ → universal m (trans (∘-resp-≡ f1≡f2 refl)
+                                                            (trans commutes₁ (∘-resp-≡ (sym g1≡g2) refl)));
+         universal-unique = universal-unique;
+         e∘universal≡m = e∘universal≡m})
+    where 
+      open Equalizer pull

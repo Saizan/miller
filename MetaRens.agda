@@ -78,7 +78,11 @@ singleton .v j ._ v | inj₂ refl = j / zero
 wk : ∀ {D S x} → VarClosure D S → VarClosure (x ∷ D) S
 wk (i / u) = i / (suc u)
 
+_≡mr_ : ∀ {G D} (f g : MetaRen G D) -> Set
+f ≡mr g = ∀ S x -> f S x ≡ g S x
 
+∘mr-resp-≡  : ∀ {A B C} {f h : MetaRen B C} {g i : MetaRen A B} → f ≡mr h → g ≡mr i → (f ∘mr g) ≡mr (h ∘mr i)
+∘mr-resp-≡ f≡h g≡i S x rewrite g≡i S x = cong (map-Vc _) (f≡h _ _)
 
 import Category
 
@@ -91,9 +95,42 @@ eval (px ∷ f) x (suc u) = eval f x u
 eval [] _ ()
 
 reify : ∀ {p} {A : Set} {P : A → Set p} {xs} →
-           (∀ x → xs ∋ x → P x) → All P xs
-reify {p} {A} {P} {[]}     f = []
-reify {p} {A} {P} {x ∷ xs} f = (f x zero) ∷ (reify (λ x u → f x (suc u))) 
+           (f : ∀ x → xs ∋ x → P x) → Σ (All P xs) \ a -> (∀ x i -> eval a x i ≡ f x i)
+reify {p} {A} {P} {[]}     f = [] , \ _ ()
+reify {p} {A} {P} {x ∷ xs} f = (f x zero ∷ proj₁ rec) , (\ { ._ zero -> refl ; _ (suc i) -> proj₂ rec _ i})
+  where rec = reify (λ x u → f x (suc u)) 
+
+open import NatCat
+open import Data.List
+
+left-map[id] : ∀ {D S} -> {x : VarClosure D S} -> map-Vc id-i x ≡ x
+left-map[id] = cong₂ _/_ (left-id _) refl
+
+coproduct : ∀ {A B} -> MRop.Product A B
+coproduct {A} {B} = MRop.Prod (A ++ B) inl inr ⟨_,_⟩ 
+          (λ {_} {f} {g} S x → trans left-map[id]
+            (cong [ f S , g S ]′ (split∘glue≡id (inj₁ x)))) 
+          (λ {_} {f} {g} S x → trans left-map[id]
+            (cong [ f S , g S ]′ (split∘glue≡id (inj₂ x)))) 
+          universal
+ where
+  inj : ∀ {S} -> A ∋ S ⊎ B ∋ S -> VarClosure (A ++ B) S
+  inj x = idmr _ (glue x)
+
+  inl : ∀ S -> A ∋ S  -> VarClosure (A ++ B) S
+  inl S x = inj (inj₁ x)
+
+  inr : ∀ S -> B ∋ S  -> VarClosure (A ++ B) S
+  inr S x = inj (inj₂ x)
+
+  ⟨_,_⟩ : ∀ {C} → (MetaRen A C) → (MetaRen B C) → (MetaRen (A ++ B) C)
+  ⟨ f , g ⟩ S x = [ f S , g S ]′ (split x)
+  
+  universal : ∀ {C} {f : MetaRen A C} {g : MetaRen B C} {i : MetaRen (A ++ B) C}
+               → (i ∘mr inl) ≡mr f → (i ∘mr inr) ≡mr g  → ∀ S x -> ⟨ f , g ⟩ S x ≡ i S x
+  universal {C} {f} {g} {i} i∘inl≡f i∘inr≡g S x with split# A x | glue∘split≡id {_} {A} x 
+  universal i∘inl≡f i∘inr≡g S .(glue# A (inj₁ x))  | inj₁ x     | refl = sym (trans (sym left-map[id]) (i∘inl≡f S x))
+  universal i∘inl≡f i∘inr≡g S .(glue# A (inj₂ y))  | inj₂ y     | refl = sym (trans (sym left-map[id]) (i∘inr≡g S y))
 
 
 coequalizer-step : ∀ {τ Z X} → (f : All (VarClosure X) Z)(g : All (VarClosure X) Z) 
@@ -139,13 +176,13 @@ coequalizer-step {τ <<- Ss} {Z} {X} f g (Equ E , e , equ) (i / u) (j / v) (ieu 
    commz : map-Vc i (bind e'' (e _ u)) ≡ map-Vc j (bind e'' (e _ v))
    commz = subst₂ (λ eu ev → map-Vc i (bind e'' eu) ≡ map-Vc j (bind e'' ev)) (promote eu≈e[u]) (promote ev≈e[v]) commz'
 
-   comms : ∀ S y → bind e' (eval f S y) ≡ bind e' (eval g S y)
+   comms : (e' ∘mr eval f) ≡mr (e' ∘mr eval g)
    comms S y with e _ (body (eval f S y))  | e _ (body (eval g S y)) | to-vc (commutes S y)
    comms S y    | _ / .w                   | _ / w                   | vc refl eq7 refl 
      = cong₂ _/_ (trans assoc-∘i (trans (cong (λ j₁ → j₁ ∘i ρ-env (e'' _ w)) (≅-to-≡ eq7)) (sym assoc-∘i))) refl
 
    module Universal {Q : List MTy} (m : MetaRen X Q)
-      (m-comm : (S : MTy) (x : (τ <<- Ss) ∷ Z ∋ S) → (m ∘mr eval ((i / u) ∷ f)) S x ≡ (m ∘mr eval ((j / v) ∷ g)) S x) where 
+      (m-comm : (m ∘mr eval ((i / u) ∷ f)) ≡mr (m ∘mr eval ((j / v) ∷ g))) where 
 
     uni = universal m (λ S₁ x₁ → m-comm S₁ (suc x₁))
     e∘uni≡m = e∘universal≡m {_} {m} {(λ S₁ x₁ → m-comm S₁ (suc x₁))}
@@ -173,8 +210,8 @@ coequalizer-step {τ <<- Ss} {Z} {X} f g (Equ E , e , equ) (i / u) (j / v) (ieu 
     universal∘e'≡m (.τ <<- _) x | jex / .eu | one⊎other (one refl)            | pr = trans (cong₂ _/_ (trans (sym assoc-∘i) 
                                                                                      (cong (_∘i_ jex) (Equalizer.e∘universal≡m equ0))) refl) pr
 
-    universal-unique' : (u : MetaRen E' Q) (e∘u≡m : ∀ S x → (u ∘mr e') S x ≡ m S x) → 
-                        ∀ S x → u S x ≡ universal' S x
+    universal-unique' : (u : MetaRen E' Q) (e∘u≡m : (u ∘mr e') ≡mr m) → 
+                        u ≡mr universal'
     universal-unique' u₁ u∘e'≡m ._ zero    
       = map-Vc-inj (ieu ∘i Equalizer.e equ0) (to-vc
            (begin
@@ -193,9 +230,11 @@ coequalizer-step {τ <<- Ss} {Z} {X} f g (Equ E , e , equ) (i / u) (j / v) (ieu 
         u₂ .(τ <<- _) x₁ | one⊎other (one eq) = map-Vc (Equalizer.e equ0) (u₁ _ zero)
         u₂ .(τ <<- _) x₁ | one⊎other (other neq eq) = ⊥-elim (neq refl eq)
         u₂ S₁ x₁ | neither w eq = u₁ S₁ (suc w)
+
         u₁∘suc≡u₂∘thin : u₁ S (suc x) ≡ u₂ S (thin[ eu , eu ] x)
         u₁∘suc≡u₂∘thin rewrite thick[ eu , eu ]-thin x = refl
-        u₂∘e≡m : (S₁ : MTy) (x₁ : X ∋ S₁) → (u₂ ∘mr e) S₁ x₁ ≡ m S₁ x₁
+
+        u₂∘e≡m : (u₂ ∘mr e) ≡mr m
         u₂∘e≡m _ x with        e _ x    | thick[ eu , eu ] (body (e _ x)) | u∘e'≡m _ x
         u₂∘e≡m (._ <<- _) x₁ | jex / ex | one⊎other (one eq)              | qq = trans (cong₂ _/_ assoc-∘i refl) qq
         u₂∘e≡m (._ <<- _) x₁ | jex / ex | one⊎other (other neq eq)        | qq = ⊥-elim (neq refl eq)
@@ -244,7 +283,7 @@ coequalizer-step {τ <<- Ss} {Z} {X} f g (Equ E , e , equ) (i / u) (j / v) (ieu 
                       (sym assoc-∘i))) refl
 
    module Universal {Q : List MTy} (m : MetaRen X Q)
-      (m-comm : (S : MTy) (x : (τ <<- Ss) ∷ Z ∋ S) → (m ∘mr eval ((i / u) ∷ f)) S x ≡ (m ∘mr eval ((j / v) ∷ g)) S x) where
+      (m-comm : (m ∘mr eval ((i / u) ∷ f)) ≡mr (m ∘mr eval ((j / v) ∷ g))) where
 
     uni = universal m (λ S₁ x₁ → m-comm S₁ (suc x₁))
     e∘uni≡m = e∘universal≡m {_} {m} {(λ S₁ x₁ → m-comm S₁ (suc x₁))}
@@ -285,8 +324,8 @@ coequalizer-step {τ <<- Ss} {Z} {X} f g (Equ E , e , equ) (i / u) (j / v) (ieu 
        helper2 : ∀ {D} (eq : _ ≡ D) → jex ∘i subst (λ D → Inj D _) eq (ρ-env (uni _ ev)) ≅ jex ∘i ρ-env (uni _ ev) 
        helper2 refl = refl
 
-    universal-unique' : (u : MetaRen E' Q) (e∘u≡m : ∀ S x → (u ∘mr e') S x ≡ m S x) → 
-                        ∀ S x → u S x ≡ universal' S x
+    universal-unique' : (u : MetaRen E' Q) (e∘u≡m : (u ∘mr e') ≡mr m) → 
+                        u ≡mr universal'
     universal-unique' u₁ u∘e'≡m ._ zero    = map-Vc-inj (ieu ∘i Pullback.p₁ pull0) (to-vc (begin
                 bind u₁ ((ieu ∘i Pullback.p₁ pull0) / zero) ≡⟨ sym (cong (bind u₁) e'[u]≡p₁/zero) ⟩
                 bind u₁ (e' _ u)                            ≡⟨ u∘e'≡m _ u ⟩
@@ -313,8 +352,7 @@ coequalizer-step {τ <<- Ss} {Z} {X} f g (Equ E , e , equ) (i / u) (j / v) (ieu 
         u₂∘e≡m S₁ x₁         | jex / ex | neither w eq                    | qq rewrite right-id jex = qq
 
 
-coequalizer : ∀ {Z X} → (f : All (VarClosure X) Z)(g : All (VarClosure X) Z) 
-                 → MRop.Equalizer (eval f) (eval g)
+coequalizer : ∀ {Z X} → (f : All (VarClosure X) Z)(g : All (VarClosure X) Z) → MRop.Equalizer (eval f) (eval g)
 coequalizer []          []          = Category.Equ _ , idmr , 
      (record {
         commutes = λ S x → refl;
@@ -325,3 +363,16 @@ coequalizer (i / u ∷ f) (j / v ∷ g) = coequalizer-step f g coequ (i / u) (j 
   where
     coequ = coequalizer f g
     open MRop.Equalizer coequ
+
+
+pushout : ∀ {Z Y X} → (f : MetaRen Z X)(g : MetaRen Z Y) → MRop.Pullback f g
+pushout {Z} {Y} {X} f g = Q.convert f g coprod (Q.Equalizer-ext (proj₂ (reify (π₁ ∘mr f))) 
+                                                                (proj₂ (reify (π₂ ∘mr g))) 
+                                                   (coequalizer (proj₁ (reify (π₁ ∘mr f))) 
+                                                                (proj₁ (reify (π₂ ∘mr g)))))
+ where
+  coprod = coproduct {X} {Y}
+  open MRop.Product coprod
+  module Q = MRop.Props (λ S x → cong₂ _/_ (sym assoc-∘i) refl) (λ S x → left-map[id]) (λ S x → cong₂ _/_ (right-id _) refl) 
+             (λ {A} {B} → record { refl = λ S x₁ → refl; sym = λ x S x₁ → sym (x _ _); trans = λ x x₁ S x₂ → trans (x S x₂) (x₁ S x₂) }) 
+             (λ eq₁ eq₂ S x → ∘mr-resp-≡ eq₂ eq₁ S x)
