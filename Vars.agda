@@ -1,7 +1,10 @@
 module Vars where
 
 open import Data.List hiding ([_])
+open import Data.Nat
 open import Relation.Binary.PropositionalEquality hiding ([_])
+import Relation.Binary.HeterogeneousEquality as Het
+open import Relation.Binary.HeterogeneousEquality using (_≅_ ; _≇_ ; refl; ≅-to-≡)
 open ≡-Reasoning
 open import Data.Product
 open import Data.Unit
@@ -28,6 +31,9 @@ _∈_ x xs = xs ∋ x
 ∋-case z s a zero    = z
 ∋-case z s a (suc v) = s a v
 
+_≡∋_ : ∀ {A : Set}{G S} {T : A} -> G ∋ S -> G ∋ T -> Set
+_≡∋_ {A} {G} {S} {T} u v = S ≡ T × u ≅ v
+
 -- Given G = [T1 , .. , S , .. , Tn], (u : G ∋ S) we have this isomorphism:
 --
 --   G ∋ T
@@ -44,12 +50,16 @@ _-_ {_} {T} .(T ∷ G) (zero {G}) = G
 
 infix 35 _-_
 
+length-del : ∀ {A}{S : A}{X} -> (u : X ∋ S) -> length X ≡ suc (length (X - u))
+length-del zero = refl
+length-del (suc u) = cong suc (length-del u)
+
 thin : ∀ {A} {G : List A}{S} → (x : G ∋ S) → ∀ T → (G - x) ∋ T → G ∋ T
 thin zero    _ y    = suc y
 thin (suc x) _ zero = zero
 thin (suc x) _ (suc y) = suc (thin x _ y)
 
-suc-inj1 : ∀ {A : Set}{xs : List A}{x z} {i : xs ∋ x}{j : xs ∋ x} → suc {S = z} i ≡ suc j → i ≡ j
+suc-inj1 : ∀ {A : Set}{xs : List A}{x z} {i : xs ∋ x}{j : xs ∋ x} → _∋_.suc {S = z} i ≡ suc j → i ≡ j
 suc-inj1 refl = refl
 
 x∉thinx : ∀ {A} {G : List A}{S} → (x : G ∋ S) → (y : (G - x) ∋ S) -> x ≡ thin x S y -> ⊥
@@ -57,15 +67,15 @@ x∉thinx zero    y    ()
 x∉thinx (suc x) zero ()
 x∉thinx (suc x) (suc y) eq = x∉thinx x y (suc-inj1 eq)
 
-thick : ∀ {A}{G : List A}{S T} → (x : G ∋ S) → (y : G ∋ T) → (∃ \ z → thin x T z ≡ y) ⊎ ((S , x) ≡ (T , y))
-thick zero    zero    = inj₂ refl
+thick : ∀ {A}{G : List A}{S T} → (x : G ∋ S) → (y : G ∋ T) → (∃ \ z → thin x T z ≡ y) ⊎ x ≡∋ y
+thick zero    zero    = inj₂ (refl , refl)
 thick zero    (suc y) = inj₁ (y , refl)
 thick (suc x) zero    = inj₁ (zero , refl)
 thick (suc x) (suc y) with thick x y
 thick (suc x)  (suc y)   | inj₁ (z , eq) = inj₁ (suc z , cong suc eq)
-thick (suc .y) (suc y)   | inj₂ refl     = inj₂ refl
+thick (suc .y) (suc y)   | inj₂ (refl , refl)     = inj₂ (refl , refl)
 
-thick-refl : ∀ {A}{G : List A}{S} → (x : G ∋ S) → thick x x ≡ inj₂ refl
+thick-refl : ∀ {A}{G : List A}{S} → (x : G ∋ S) → thick x x ≡ inj₂ (refl , refl)
 thick-refl zero = refl
 thick-refl (suc x) rewrite thick-refl x = refl
 
@@ -79,16 +89,33 @@ thin-inj v {i} {j} eq with cong (\ x -> maybe′ (\ x -> Maybe.just (proj₁ x))
 ... | p rewrite thick-thin v i | thick-thin v j with p 
 thin-inj v {i} {.i} eq | p | refl = refl
 
-suc-inj : ∀ {A : Set}{xs : List A}{x y z} {i : xs ∋ x}{j : xs ∋ y} → (x , suc {S = z} i) ≡ (y , suc j) → (x , i) ≡ (y , j)
+suc-inj : ∀ {A : Set}{xs : List A}{x y z} {i : xs ∋ x}{j : xs ∋ y} → (x , _∋_.suc {S = z} i) ≡ (y , _∋_.suc j) → (x , i) ≡ (y , j)
 suc-inj refl = refl
 
 eq-∋ : ∀ {A : Set}{xs : List A} → (i j : ∃ (_∋_ xs)) → Dec (i ≡ j)
-eq-∋ (.y , zero) (y , zero)  = yes refl
-eq-∋ (x , zero)  (y , suc j) = no (λ ())
-eq-∋ (x , suc i) (y , zero)  = no (λ ())
-eq-∋ (x , suc i) (y , suc j) with eq-∋ (x , i) (y , j)
-eq-∋ (.y , suc .j) (y , suc j)  | yes refl = yes refl
-eq-∋ (x , suc i)   (y , suc j)  | no  ¬p   = no (¬p ∘ suc-inj)
+eq-∋ (.y , zero)   (y , zero)  = yes refl
+eq-∋ ( x , zero)   (y , suc j) = no (λ ())
+eq-∋ ( x , suc  i) (y , zero)  = no (λ ())
+eq-∋ ( x , suc  i) (y , suc j) with eq-∋ (x , i) (y , j)
+eq-∋ (.y , suc .j) (y , suc j)    | yes refl = yes refl
+eq-∋ ( x , suc  i) (y , suc j)    | no  ¬p   = no (¬p ∘ suc-inj)
 
 cong-proj₁ : ∀ {A : Set}{xs : List A}{x : A} {i j : xs ∋ x} -> i ≡ j -> _≡_ {A = ∃ (_∋_ xs)} (x , i) (x , j)
 cong-proj₁ refl = refl
+
+_≡∋?_ : ∀ {A : Set} {G : List A} {S} (u : G ∋ S) {T} (v : G ∋ T) -> Dec (u ≡∋ v)
+u ≡∋? v         with thick u v
+...                | inj₂ eq         = yes eq
+_≡∋?_ {S = S} u ._ | inj₁ (w , refl) = no (aux w) where
+  aux : ∀ {T} (w : _ ∋ T) -> Σ (S ≡ T) (λ x → u ≅ thin u T w) → ⊥
+  aux w (refl , eq) = x∉thinx u w (≅-to-≡ eq)
+ 
+
+any? : ∀ {A : Set}{G : List A}{P : ∀ {S} -> G ∋ S -> Set} -> (∀ {S} v -> Dec (P {S} v)) -> Dec (∃ \ S -> ∃ (P {S}))
+any? {_} {[]}    dec = no (\ {(_ , () , _)})
+any? {_} {S ∷ G} dec 
+ with dec zero | any? (\ v -> dec (suc v))
+... | yes p    | _               = yes (_ , zero , p)
+... | no ¬p    | yes (T , v , p) = yes (T , suc v , p)
+... | no ¬p    | no ¬q           = no  λ {(._ , zero , p) → ¬p p; 
+                                          (_ , suc v , p) → ¬q (_ , v , p)}

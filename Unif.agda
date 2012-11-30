@@ -6,6 +6,7 @@ open import Relation.Nullary
 open import Relation.Binary
 open DecTotalOrder Data.Nat.decTotalOrder using () renaming (refl to ≤-refl; trans to ≤-trans)         
 open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.HeterogeneousEquality using (refl)
 open ≡-Reasoning
 open import Data.Empty
 open import Data.Sum renaming (map to map⊎)
@@ -67,8 +68,8 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
 
       ρ≡δ∘σ : ρ ≡s (δ ∘s σ)
       ρ≡δ∘σ S v          with thick u v 
-      ρ≡δ∘σ S .(thin u S w) | inj₁ (w , refl) = sym (ren-id (ρ S (thin u S w)))
-      ρ≡δ∘σ .(B <<- Ss) .u  | inj₂ refl       = sym (proj₂ ∃s[ren[e,s]≡ρ[u]])
+      ρ≡δ∘σ S .(thin u S w) | inj₁ (w , refl)    = sym (ren-id (ρ S (thin u S w)))
+      ρ≡δ∘σ .(B <<- Ss) .u  | inj₂ (refl , refl) = sym (proj₂ ∃s[ren[e,s]≡ρ[u]])
 
 
 flexRigid : ∀ {Sg G D S} (u : G ∋ S) (i : Inj (ctx S) D) (s : Tm Sg (G - u) D (! type S)) → Spec (fun u i) (sub (thin-s u) s)
@@ -99,8 +100,8 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
     where
       σ : Sub Sg G _
       σ S v with thick u v
-      σ S v   | inj₁ (w , eq) = ρ _ w
-      σ ._ .u | inj₂ refl     = t
+      σ S v   | inj₁ (w , eq)      = ρ _ w
+      σ ._ .u | inj₂ (refl , refl) = t
 
       σ[u]≡t : σ _ u ≡ t
       σ[u]≡t rewrite thick-refl u = refl
@@ -121,11 +122,11 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
 
         ρ₁≡δ∘σ : ρ₁ ≡s (δ ∘s σ)
         ρ₁≡δ∘σ S u₁ with thick u u₁
-        ρ₁≡δ∘σ S ._  | inj₁ (v , refl) = begin ρ₁ S (thin u S v)    ≡⟨ sym (ren-id _) ⟩ 
-                                               (ρ₁ ∘s thin-s u) S v ≡⟨ ρ₁∘thin[u]≡δ∘ρ _ v ⟩ 
-                                               sub δ (ρ S v)        ∎
-        ρ₁≡δ∘σ ._ .u | inj₂ refl       = ren-inj i (ρ₁ _ u) (sub δ t) -- crucial use of injectivity to show
-          (begin                                                      -- that we got the most general solution
+        ρ₁≡δ∘σ S ._  | inj₁ (v , refl)    = begin ρ₁ S (thin u S v)    ≡⟨ sym (ren-id _) ⟩ 
+                                                  (ρ₁ ∘s thin-s u) S v ≡⟨ ρ₁∘thin[u]≡δ∘ρ _ v ⟩ 
+                                                  sub δ (ρ S v)        ∎
+        ρ₁≡δ∘σ ._ .u | inj₂ (refl , refl) = ren-inj i (ρ₁ _ u) (sub δ t) -- crucial use of injectivity to show
+          (begin                                                         -- that we got the most general solution
                  ren i (ρ₁ _ u)         ≡⟨ ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] ⟩ 
                  sub (ρ₁ ∘s thin-s u) s ≡⟨ sub-ext ρ₁∘thin[u]≡δ∘ρ s ⟩ 
                  sub (δ ∘s ρ) s         ≡⟨ sym (sub-∘ s) ⟩ 

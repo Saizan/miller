@@ -4,7 +4,7 @@ open import Data.Nat renaming (_≤_ to _≤ℕ_)
 open import Data.List hiding ([_])
 open import Relation.Binary.PropositionalEquality hiding ([_])
 import Relation.Binary.HeterogeneousEquality as Het
-open Het using (_≅_)
+open Het using (_≅_; refl)
 open import Relation.Nullary
 open import Data.Nat.Properties
 open import Algebra
@@ -148,7 +148,7 @@ singleton-Decreasing {Sg} {G} {.Ss} {Ss} {B} .id-i u (inj₁ (refl , Het.refl)) 
   eq1 : id-s ≡s (δ ∘s toSub (singleton u id-i))
   eq1 S u₁ with thick u u₁ 
   eq1 S .(thin u S x) | inj₁ (x , refl) = cong (fun _) (sym (right-id id-i))
-  eq1 .(B <<- Ss) .u | inj₂ refl = cong (fun u) (sym (right-id id-i))
+  eq1 .(B <<- Ss) .u | inj₂ (refl , refl) = cong (fun u) (sym (right-id id-i))
 
   eq2 : id-s ≡s (toSub (singleton u id-i) ∘s δ)
   eq2 ._ (zero {._} {.(_ <<- _)}) rewrite thick-refl u = cong (fun _) (sym (right-id id-i))

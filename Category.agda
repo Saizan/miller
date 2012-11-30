@@ -11,6 +11,9 @@ private
   _≡_ : ∀ {A B} (f g : A ⇒ B) -> Set
   _≡_ = _==_
 
+Monic : ∀ {A B} (f : A ⇒ B) -> Set
+Monic {A} {B} f = ∀ {C} {g1 g2 : C ⇒ A} -> (f ∘ g1) ≡ (f ∘ g2) -> g1 ≡ g2
+
 record IsPullback {X Y Z}(f : X ⇒ Z)(g : Y ⇒ Z)(P : Obj)(p₁ : P ⇒ X)(p₂ : P ⇒ Y) : Set where
   field
     commutes : f ∘ p₁ ≡ g ∘ p₂
@@ -121,3 +124,20 @@ module Props     (assoc     : ∀ {A B C D} {f : A ⇒ B} {g : B ⇒ C} {h : C �
          e∘universal≡m = e∘universal≡m})
     where 
       open Equalizer pull
+
+  under-assoc : ∀ {A B C D} {f : A ⇒ B} {g : B ⇒ C} {h : C ⇒ D} -> 
+                ∀ {C}                  {g1 : B ⇒ C} {h1 : C ⇒ D} -> h ∘ g ≡ h1 ∘ g1 -> h ∘ (g ∘ f) ≡ h1 ∘ (g1 ∘ f)
+  under-assoc eq = trans (sym assoc) (trans (∘-resp-≡ eq refl) assoc)
+
+  mono-pullback-stable : ∀ {X Y Z : Obj} -> (f : X ⇒ Z)(g : Y ⇒ Z) -> (pull : Pullback f g) -> Monic g -> Monic (Pullback.p₁ pull)
+  mono-pullback-stable f g pull g-mono {C} {g1} {g2} p₁∘g1≡p₁∘g2 = 
+       trans
+         (universal-unique {commutes = under-assoc commutes} g1 refl refl)
+         (sym
+          (universal-unique g2 (sym p₁∘g1≡p₁∘g2)
+           (g-mono
+            (trans (under-assoc (sym commutes))
+             (trans (∘-resp-≡ refl (sym p₁∘g1≡p₁∘g2))
+              (under-assoc commutes))))))
+    where
+      open Pullback pull

@@ -4,6 +4,7 @@ open import Data.Product.Extras
 open import Data.Nat renaming (ℕ to Nat)
 open import Relation.Nullary using (¬_)
 open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.HeterogeneousEquality using (refl)
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum renaming (inj₁ to no; inj₂ to yes)
@@ -61,8 +62,8 @@ mutual
   check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → Dec u OccursIn t
   check u (con c ts) = con c ∙ checks u ts 
   check u (fun w j) with thick u w
-  ...                | no  (z , eq) = no  (fun z j , cong₂ fun eq (right-id j))
-  check u (fun .u j) | yes refl     = yes (_ , (j , ([] , refl)))
+  ...                | no  (z , eq)      = no  (fun z j , cong₂ fun eq (right-id j))
+  check u (fun .u j) | yes (refl , refl) = yes (_ , (j , ([] , refl)))
   check u (var x ts) = var x ∙ checks u ts
   check u (lam t) = lam ∙ check u t
   

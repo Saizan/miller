@@ -51,6 +51,9 @@ promote (vc refl refl refl) = refl
 map-Vc-inj : ∀ {τ D S0 S} → (i : Inj S0 S) → {x y : VarClosure D (τ <<- S0)} → map-Vc i x ≈vc map-Vc i y -> x ≡ y
 map-Vc-inj i {ix / x} {jy / .x} (vc refl eq refl) = cong₂ _/_ (∘i-inj i _ _ (≅-to-≡ eq)) refl
 
+left-map[id] : ∀ {D S} -> {x : VarClosure D S} -> map-Vc id-i x ≡ x
+left-map[id] = cong₂ _/_ (left-id _) refl
+
 MetaRen : MCtx → MCtx → Set
 MetaRen G D = ∀ S → G ∋ S → VarClosure D S
 
@@ -71,12 +74,21 @@ bind : ∀ {G D} → MetaRen G D → ∀ {S} → VarClosure G S → VarClosure D
 bind = _⋆_
 
 singleton : ∀ {G S} → (u : G ∋ S) → ∀ {Ψ} → Inj Ψ (ctx S) → MetaRen G ((G - u) <: (type S <<- Ψ))
-singleton u  j T  v with thick u v
-singleton u  j T  v | inj₁ x = id-i / suc (proj₁ x)
-singleton .v j ._ v | inj₂ refl = j / zero 
+singleton  u j  T v with thick u v
+singleton  u j  T v | inj₁ x             = id-i / suc (proj₁ x)
+singleton .v j ._ v | inj₂ (refl , refl) = j / zero 
+
+singleton-refl : ∀ {G S} (u : G ∋ S) {Ψ} (i : Inj Ψ (ctx S)) → singleton u i _ u ≡ i / zero
+singleton-refl u i rewrite thick-refl u = refl
+
+singleton-thin : ∀ {G S} (u : G ∋ S) {Ψ} (i : Inj Ψ (ctx S)) → ∀ {T} (v : (G - u) ∋ T) → singleton u i _ (thin u T v) ≡ id-i / (suc v)
+singleton-thin u i v rewrite thick-thin u v = refl
 
 wk : ∀ {D S x} → VarClosure D S → VarClosure (x ∷ D) S
 wk (i / u) = i / (suc u)
+
+wk-inj : ∀ {G S x} {u v : VarClosure G S} -> wk {G} {S} {x} u ≡ wk v -> u ≡ v
+wk-inj refl = refl
 
 _≡mr_ : ∀ {G D} (f g : MetaRen G D) -> Set
 f ≡mr g = ∀ S x -> f S x ≡ g S x
@@ -84,9 +96,23 @@ f ≡mr g = ∀ S x -> f S x ≡ g S x
 ∘mr-resp-≡  : ∀ {A B C} {f h : MetaRen B C} {g i : MetaRen A B} → f ≡mr h → g ≡mr i → (f ∘mr g) ≡mr (h ∘mr i)
 ∘mr-resp-≡ f≡h g≡i S x rewrite g≡i S x = cong (map-Vc _) (f≡h _ _)
 
+singleton-inv : ∀ {G S}(u : G ∋ S) {Ψ} (i : Inj Ψ (ctx S)) -> let f = singleton u i in 
+                 ∀ S (x : _ ∋ S) -> ∃ \ Ψ -> ∃ \ y -> ∃ \ j -> f (type S <<- Ψ) y ≡ j / x
+singleton-inv u i ._ zero    = _ , u          , i    , singleton-refl u i
+singleton-inv u i  S (suc x) = _ , thin u S x , id-i , singleton-thin u i x
+
 import Category
 
 module MRop = Category MCtx (λ X Y → MetaRen Y X) (λ f g → g ∘mr f) idmr (λ f g → ∀ S x → f S x ≡ g S x) 
+module MRopProps = MRop.Props (λ S x → cong₂ _/_ (sym assoc-∘i) refl) (λ S x → left-map[id]) (λ S x → cong₂ _/_ (right-id _) refl) 
+             (λ {A} {B} → record { refl = λ S x₁ → refl; sym = λ x S x₁ → sym (x _ _); trans = λ x x₁ S x₂ → trans (x S x₂) (x₁ S x₂) }) 
+             (λ eq₁ eq₂ S x → ∘mr-resp-≡ eq₂ eq₁ S x)
+
+singleton-epic : ∀ {G S}(u : G ∋ S) {Ψ} (i : Inj Ψ (ctx S)) -> let f = singleton u i in 
+                 MRop.Monic f
+singleton-epic u i eq S x with singleton-inv u i S x 
+... | _ , y , j , eq' with eq _ y 
+... | eq'' rewrite eq' = map-Vc-inj j (to-vc eq'')
 
 eval : ∀ {p} {A : Set} {P : A → Set p} {xs : List A} →
          All P xs → (∀ (x : A) → xs ∋ x → P x)
@@ -102,9 +128,6 @@ reify {p} {A} {P} {x ∷ xs} f = (f x zero ∷ proj₁ rec) , (\ { ._ zero -> re
 
 open import NatCat
 open import Data.List
-
-left-map[id] : ∀ {D S} -> {x : VarClosure D S} -> map-Vc id-i x ≡ x
-left-map[id] = cong₂ _/_ (left-id _) refl
 
 coproduct : ∀ {A B} -> MRop.Product A B
 coproduct {A} {B} = MRop.Prod (A ++ B) inl inr ⟨_,_⟩ 
@@ -366,13 +389,12 @@ coequalizer (i / u ∷ f) (j / v ∷ g) = coequalizer-step f g coequ (i / u) (j 
 
 
 pushout : ∀ {Z Y X} → (f : MetaRen Z X)(g : MetaRen Z Y) → MRop.Pullback f g
-pushout {Z} {Y} {X} f g = Q.convert f g coprod (Q.Equalizer-ext (proj₂ (reify (π₁ ∘mr f))) 
-                                                                (proj₂ (reify (π₂ ∘mr g))) 
-                                                   (coequalizer (proj₁ (reify (π₁ ∘mr f))) 
-                                                                (proj₁ (reify (π₂ ∘mr g)))))
+pushout {Z} {Y} {X} f g = MRopProps.convert f g coprod 
+                            (MRopProps.Equalizer-ext (proj₂ (reify (π₁ ∘mr f))) 
+                                                     (proj₂ (reify (π₂ ∘mr g))) 
+                                        (coequalizer (proj₁ (reify (π₁ ∘mr f))) 
+                                                     (proj₁ (reify (π₂ ∘mr g)))))
  where
   coprod = coproduct {X} {Y}
   open MRop.Product coprod
-  module Q = MRop.Props (λ S x → cong₂ _/_ (sym assoc-∘i) refl) (λ S x → left-map[id]) (λ S x → cong₂ _/_ (right-id _) refl) 
-             (λ {A} {B} → record { refl = λ S x₁ → refl; sym = λ x S x₁ → sym (x _ _); trans = λ x x₁ S x₂ → trans (x S x₂) (x₁ S x₂) }) 
-             (λ eq₁ eq₂ S x → ∘mr-resp-≡ eq₂ eq₁ S x)
+

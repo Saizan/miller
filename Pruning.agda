@@ -6,6 +6,7 @@ open import Relation.Nullary
 open import Relation.Binary
 open DecTotalOrder Data.Nat.decTotalOrder using () renaming (refl to ≤-refl; trans to ≤-trans)         
 open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.HeterogeneousEquality using (refl)
 open ≡-Reasoning
 open import Data.Empty
 open import Data.Unit hiding (_≤_)
@@ -193,8 +194,8 @@ mutual
       δ S (suc v) = s S (thin u S v)
       s≡δ∘pruner : (S : MTy) (v : G ∋ S) → s S v ≡ sub δ (toSub (singleton u p₂) S v)
       s≡δ∘pruner S v with thick u v 
-      s≡δ∘pruner S .(thin u S v) | inj₁ (v , refl) = sym (ren-id _)
-      s≡δ∘pruner .(B <<- Ss) .u  | inj₂ refl       = sym ren[p₂,x]≡s[u]
+      s≡δ∘pruner S .(thin u S v) | inj₁ (v , refl)    = sym (ren-id _)
+      s≡δ∘pruner .(B <<- Ss) .u  | inj₂ (refl , refl) = sym ren[p₂,x]≡s[u]
    
 
   prune-sups : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tms Sg G D2 T) l →
