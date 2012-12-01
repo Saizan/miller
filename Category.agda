@@ -141,3 +141,6 @@ module Props     (assoc     : ∀ {A B C D} {f : A ⇒ B} {g : B ⇒ C} {h : C �
               (under-assoc commutes))))))
     where
       open Pullback pull
+
+  _∘mono_ : ∀ {A B C} {f : B ⇒ C}{g : A ⇒ B} -> Monic f -> Monic g -> Monic (f ∘ g)
+  f-mono ∘mono g-mono = λ x → g-mono (f-mono (trans (sym assoc) (trans x assoc)))
