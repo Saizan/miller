@@ -28,21 +28,8 @@ open import Inversion
 open import DSub
 open import Specification
 open import MetaRens
+open import Colimits.Sub
 
-mutual
-  lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} (equ : Equalizer i j) (t : Tm Sg G X S) →
-                   let open Equalizer equ in ren i t ≡T ren j t → e ⁻¹ t
-  lift-equalizer equ (con c ts) (con refl eq) = con c (lifts-equalizer equ ts eq)
-  lift-equalizer equ (fun u j₁) (fun refl eq) = fun u (universal j₁ eq) e∘universal≡m
-    where open Equalizer equ
-  lift-equalizer equ (var x ts) (var eqv eqts) = var (proj₁ r) (sym (proj₂ r)) (lifts-equalizer equ ts eqts)
-    where r = e$u≡m equ _ x eqv
-  lift-equalizer equ (lam t) (lam eq) = lam (lift-equalizer (cons-equalizer _ _ equ) t eq)
-
-  lifts-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} (equ : Equalizer i j) (t : Tms Sg G X S) → 
-                    let open Equalizer equ in rens i t ≡T rens j t → e ⁻¹ t
-  lifts-equalizer equ [] eq = []
-  lifts-equalizer equ (t ∷ ts) (eqt ∷ eqts) = lift-equalizer equ t eqt ∷ lifts-equalizer equ ts eqts
 
 flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃⟦σ⟧ Max (Unifies {Sg} (Tm.fun u i) (fun u j))
 flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (equalizer-Decr i j)) 
@@ -90,7 +77,7 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
                                                subT (proj₁ σ≤ρ) (subT ρ s) ∎))}
 
 ... | yes (t , ren[i,t]≡sub[ρ,s]) = yes 
- (_ , (DS σ , inj₂ (rigid-decr u (map⊎ proj₁ (\ x -> x) decr))) , 
+ (_ , (DS σ , inj₂ (rigid-decr u decr)) , 
    ≡-T (begin
      ren i (σ _ u)            ≡⟨ cong (ren i) σ[u]≡t ⟩ 
      ren i t                  ≡⟨ ren[i,t]≡sub[ρ,s] ⟩ 

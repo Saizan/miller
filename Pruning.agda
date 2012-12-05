@@ -22,6 +22,8 @@ open import RenOrn
 open import MetaRens
 open import DSub
 open import Specification
+open import Colimits.Sub
+open import Epi-Decr
 
 data AllMV∈  {Sg : Ctx} {G : MCtx} {D0 D : Ctx} (i : Inj D0 D) : ∀ {T} → Term Sg G D T → Set where
   [] : AllMV∈ i {inj₂ []} []
@@ -72,7 +74,6 @@ _/_∈_-ext : ∀ {Sg G G1 D1 D2 T} {i : Inj D1 D2} {f g : Sub Sg G G1} →
             f ≡s g → ∀ {t : Term Sg G D2 T} → f / t ∈ i → g / t ∈ i
 _/_∈_-ext f≡g m = subst (AllMV∈ _) (subT-ext f≡g _) m 
 
-
 -- In the flexible-rigid case we'll need to find z and ρ such that ren i z ≡ sub ρ t, 
 -- this module is about finding such a ρ, which we call the pruner.
 -- Its role is to handle occurrences in t like (fun u j) where there are variables in j 
@@ -82,11 +83,19 @@ record Pruner {Sg G D1 D2 T} (i : Inj D1 D2) (t : Term Sg G D2 T) : Set where
   constructor Pr_,_,_
   field
     {G1} : MCtx
+    pruner : MetaRen G G1
+    epic : MRop.Monic pruner
+    prunes : toSub pruner / t ∈ i
+
+record PrunerSub {Sg G D1 D2 T} (i : Inj D1 D2) (t : Term Sg G D2 T) : Set where
+  constructor Pr_,_,_
+  field
+    {G1} : MCtx
     pruner : Sub Sg G G1
-    decr : Decreasing {Sg} (pruner)
+    decr : Ctx-length G ≥ Ctx-length G1
     prunes : pruner / t ∈ i
 
-open Pruner using (pruner)
+open Pruner using (pruner; prunes; epic)
 
 _∙_ : ∀ {Sg G D1 D2 T} → {i : Inj D1 D2} {t : Term Sg G D2 T} →
       ∀      {D1 D2 T} → {j : Inj D1 D2} {s : Term Sg G D2 T} →
@@ -105,85 +114,54 @@ f ∙ (Pr ρ , ρ-decr , m) = Pr ρ , ρ-decr , f m
 -- structure of terms.
 mutual
   prune' : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} (t : Tm Sg G D2 T) 
-           → ∃ (\ n → n ≥ Ctx-length G) → Pruner i t
+            → Pruner i t
   -- congruence cases
-  prune' (con c ts) l = con ∙ prune's ts l
-  prune' (var x ts) l = var ∙ prune's ts l
-  prune' (lam t)    l = lam ∙ prune'  t  l
+  prune' (con c ts) = con ∙ prune's ts
+  prune' (var x ts) = var ∙ prune's ts
+  prune' (lam t)    = lam ∙ prune'  t 
 
-  prune' {i = i} (fun u j) l = Pr (toSub (singleton u p₂)) , decr , fun aux where
+  prune' {i = i} (fun u j) = Pr singleton u p₂ , singleton-epic u p₂ , fun aux where
     open Pullback (pullback i j)
     -- (toSub (singleton u p₂)) (fun u j) = fun zero (j ∘i p₂), so we
     -- need aux to show that (j ∘i p₂) only contains variables in i
     aux : ∃ \ k → i ∘i k ≡ j ∘i ρ-env (singleton u p₂ _ u)
     aux rewrite thick-refl u = p₁ , commutes
-    decr = singleton-Decreasing p₂ u (pullback-Decr i j)
 
   prune's : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} (t : Tms Sg G D2 T) 
-            → ∃ (\ n → n ≥ Ctx-length G) → Pruner i t
-  prune's []       _ = Pr id-s , inj₁ (refl , IsIso-id) , []
-  prune's (t ∷ ts) l = given t , prune' t l prune's ts l
+            → Pruner i t
+  prune's []       = Pr idmr , id-epic , []
+  prune's {i = i} (t ∷ ts) = Pr p₁ ∘mr pruner pr-t , p₁∘pruner-epic , (prunes[t] ∷ prunes[ts])
+   where
+     pr-t = prune' {i = i} t
+     pr-ts = prune's {i = i} ts
+     push = (pushout (pruner pr-t) (pruner pr-ts))
+     open Mixed.Pushout push
+     prunes[t]  = _/_∈_-∘Closed (toSub p₁) {toSub (pruner pr-t)} {i} {t} (prunes pr-t) 
+     prunes[ts] = _/_∈_-ext {f = toSub (p₂ ∘mr pruner pr-ts)} (λ S u → sym (commutes S u))
+                            (_/_∈_-∘Closed (toSub p₂) {_} {i} {ts} (prunes pr-ts))
+     open MRopProps using (_∘mono_)
+     open SubopProps using (mono-pullback-stable)
 
-  given_,_prune's  : ∀ {Sg G D1 D2 T Ts} {i : Inj D1 D2} (t : Tm Sg G D2 T) → Pruner i t 
-                     → (ts : Tms Sg G D2 Ts) → ∃ (\ n → n ≥ Ctx-length G) → Pruner i (t ∷ ts)
-  given t , (Pr σ , (inj₁ (eq , (δ , iso1) , iso2)) , p0) prune's ts l with prune's ts l 
-  ... | Pr ρ , ρ-decr , p 
-      = Pr ρ , ρ-decr , (_/_∈_-ext ρ∘δ∘σ≡ρ {t = t} (_/_∈_-∘Closed (ρ ∘s δ) {t = t} p0) ∷ p)
-    where
-      ρ∘δ∘σ≡ρ : ∀ S u → ((ρ ∘s δ) ∘s σ) S u ≡ ρ S u 
-      ρ∘δ∘σ≡ρ S u = begin ((ρ ∘s δ) ∘s σ) S u   ≡⟨ sym (sub-∘ (σ S u)) ⟩ 
-                          sub ρ (sub δ (σ S u)) ≡⟨ cong (sub ρ) (sym (iso1 _ _)) ⟩ 
-                          sub ρ (id-s S u)      ≡⟨ ren-id _ ⟩ 
-                          ρ S u                 ∎ 
-  given t , (Pr σ , (inj₂ G>G2) , p0) prune's ts (n , n≥length) 
-   with under σ prune's ts (n , n≥length) (≤-trans G>G2 n≥length)
-  ... | (Pr ρ , ρ-decr , p) = Pr (ρ ∘s σ)
-                                 , decreasing ((DS ρ , ρ-decr) ∘ds (DS σ , inj₂ G>G2)) 
-                                 , (_/_∈_-∘Closed ρ {t = t} p0 ∷ _/_∈_-∘ σ ts p)
-
-  under_prune's : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} {G2} (σ : Sub Sg G G2) (ts : Tms Sg G D2 T) → 
-                  ∀ (u : ∃ (\ n → n ≥ Ctx-length G)) → proj₁ u > Ctx-length G2 → Pruner i (subs σ ts)
-  under σ prune's ts (.(suc n) , _) (s≤s {._} {n} u>smt) = prune's (subs σ ts) (n , u>smt)
-
-
-mutual
-  lift-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) → let open Pullback pull in 
-                  ∀ {Sg G T} (t : Tm Sg G _ T) s → ren i t ≡T ren j s → p₂ ⁻¹ s
-  lift-pullback pull (con c ts) (fun u j₁) ()
-  lift-pullback pull (con c ts) (var x ts₁) ()
-  lift-pullback pull (fun u j₁) (con c ts) ()
-  lift-pullback pull (fun u j₁) (var x ts) ()
-  lift-pullback pull (var x ts) (con c ts₁) ()
-  lift-pullback pull (var x ts) (fun u j₁) ()
-
-  lift-pullback pull (con c ts) (con .c ts₁) (con refl eq) = con c (lifts-pullback pull ts ts₁ eq)
-  lift-pullback pull (lam t)    (lam s)      (lam eq)      = lam (lift-pullback (cons-pullback _ _ pull) t s eq)
-  lift-pullback pull (fun u q₁) (fun .u q₂)  (fun refl i∘q₁≡j∘q₂) = fun u (universal q₁ q₂ i∘q₁≡j∘q₂) p₂∘universal≡q₂
-    where open Pullback pull
-  lift-pullback pull (var x ts) (var x₁ ts₁) (var i$x≡j$x₁ eqts) = var (proj₁ r) (proj₂ (proj₂ r)) (lifts-pullback pull ts ts₁ eqts)
-    where r = p$u≡q _ _ pull _ x₁ x i$x≡j$x₁ 
-
-  lifts-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) → let open Pullback pull in 
-                  ∀ {Sg G T} (t : Tms Sg G _ T) s → rens i t ≡T rens j s → p₂ ⁻¹ s
-  lifts-pullback pull []       []         eq           = []
-  lifts-pullback pull (t ∷ ts) (t₁ ∷ ts₁) (eqt ∷ eqts) = (lift-pullback pull t t₁ eqt) ∷ (lifts-pullback pull ts ts₁ eqts)
+     p₁∘pruner-epic = epic pr-t ∘mono 
+                      epic-from-sub p₁ (mono-pullback-stable _ _ (Mixed.Pushout.to-sub push)
+                                        (epic-to-sub (pruner pr-ts) (epic pr-ts)))
 
 -- prune-sup makes use of the universal property of pullbacks to prove
 -- that the pruner computed above is more general than any possible
 -- solution to the equation runT i z ≡ sub s t from which we started.
 mutual
-  prune-sup : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tm Sg G D2 T) l → 
-              ∀ {G1} (s : Sub Sg G G1) z → ren i z ≡T sub s t → s ≤ (pruner (prune' {i = i} t l))
-  prune-sup i (con c ts) l s (con c₁ ts₁) (con _ eq)   = prune-sups i ts l s ts₁ eq
-  prune-sup i (var x ts) l s (var x₁ ts₁) (var eqv eq) = prune-sups i ts l s ts₁ eq
-  prune-sup i (lam t)    l s (lam z)      (lam eq)     = prune-sup (cons i) t l s z eq
+  prune-sup : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tm Sg G D2 T)  → 
+              ∀ {G1} (s : Sub Sg G G1) z → ren i z ≡T sub s t → s ≤ toSub (pruner (prune' {i = i} t))
+  prune-sup i (con c ts) s (con c₁ ts₁) (con _ eq)   = prune-sups i ts s ts₁ eq
+  prune-sup i (var x ts) s (var x₁ ts₁) (var eqv eq) = prune-sups i ts s ts₁ eq
+  prune-sup i (lam t)    s (lam z)      (lam eq)     = prune-sup (cons i) t s z eq
 
-  prune-sup i (con c ts) l s (fun u j) ()
-  prune-sup i (con c ts) l s (var x ts₁) ()
-  prune-sup i (var x ts) l s (con c ts₁) ()
-  prune-sup i (var x ts) l s (fun u j) ()
+  prune-sup i (con c ts) s (fun u j) ()
+  prune-sup i (con c ts) s (var x ts₁) ()
+  prune-sup i (var x ts) s (con c ts₁) ()
+  prune-sup i (var x ts) s (fun u j) ()
 
-  prune-sup {Sg} {G} i (fun {Ss = Ss} {B} u j) l {G2} s z eq = δ , s≡δ∘pruner
+  prune-sup {Sg} {G} i (fun {Ss = Ss} {B} u j) {G2} s z eq = δ , s≡δ∘pruner
     where 
       pull = pullback i j
       open Pullback pull
@@ -198,27 +176,32 @@ mutual
       s≡δ∘pruner .(B <<- Ss) .u  | inj₂ (refl , refl) = sym ren[p₂,x]≡s[u]
    
 
-  prune-sups : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tms Sg G D2 T) l →
-               ∀ {G1} (s : Sub Sg G G1) z → rens i z ≡T subs s t → s ≤ (pruner (prune's {i = i} t l))
-  prune-sups i []       l s []       eq           = s , (λ S u → sym (ren-id _))
-  prune-sups i (t ∷ ts) l s (z ∷ zs) (eqt ∷ eqts) 
-   with prune' {i = i} t l | prune-sup i t l s z eqt 
-  ... | Pr ρ , inj₁ _    , p1 | _           = prune-sups i ts l s zs eqts
-  ... | Pr ρ , inj₂ G>G1 , p1 | (δ , s≡δ∘ρ) 
-   with l              | ≤-trans G>G1 (proj₂ l)    
-  ... | (.(suc n) , _) | s≤s {._} {n} n≥G1 
-      = ≤-∘ s ρ ρ1 (δ , s≡δ∘ρ) 
-            (prune-sups i (subs ρ ts) (n , n≥G1) δ zs
-             (≡-T
-              (begin
-                 rens i zs          ≡⟨ T-≡ eqts ⟩
-                 subs s ts          ≡⟨ subs-ext s≡δ∘ρ ts ⟩
-                 subs (δ ∘s ρ) ts   ≡⟨ sym (subs-∘ ts) ⟩
-                 subs δ (subs ρ ts) ∎)))
-    where
-      ρ1 = pruner (prune's {i = i} (subs ρ ts) (n , n≥G1))
+  prune-sups : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tms Sg G D2 T) →
+               ∀ {G1} (s : Sub Sg G G1) z → rens i z ≡T subs s t → s ≤ toSub (pruner (prune's {i = i} t))
+  prune-sups i []       s []       eq           = s , (λ S u → sym (ren-id _))
+  prune-sups {Sg} {G} i (t ∷ ts) s (z ∷ zs) (eqt ∷ eqts) = uni , λ S u → 
+   begin 
+    s S u                                          ≡⟨ proj₂ s≤pr-t S u ⟩ 
+    (proj₁ s≤pr-t ∘s toSub (pruner pr-t)) S u      ≡⟨ sub-ext (λ S₁ u₁ → sym (uni∘p₁≡q₁ S₁ u₁)) (toSub (pruner pr-t) S u) ⟩ 
+    ((uni ∘s toSub p₁) ∘s toSub (pruner pr-t)) S u ≡⟨ sym (sub-∘ {f = uni} {g = toSub p₁} (toSub (pruner pr-t) S u)) ⟩
+    (uni ∘s (toSub p₁ ∘s toSub (pruner pr-t))) S u ∎
+    
+   where
+     pr-t = prune' {i = i} t 
+     pr-ts = prune's {i = i} ts 
+     push = pushout (pruner pr-t) (pruner pr-ts)
+     open Mixed.Pushout {Sg} push
+     s≤pr-t : s ≤ toSub (pruner (prune' {i = i} t))
+     s≤pr-t = prune-sup i t s z eqt
+     s≤pr-ts : s ≤ toSub (pruner (prune's {i = i} ts))
+     s≤pr-ts = prune-sups i ts s zs eqts
+     eq = (λ S u → trans (sym (proj₂ s≤pr-t S u)) (proj₂ s≤pr-ts S u))
+     uni = universal (proj₁ s≤pr-t) (proj₁ s≤pr-ts) eq
+     uni∘p₁≡q₁ = p₁∘universal≡q₁ {q₁ = proj₁ s≤pr-t} {q₂ = proj₁ s≤pr-ts} {eq}
 
 prune : ∀ {Sg G D1 D2 T} (i : Inj D1 D2) (t : Tm Sg G D2 T) →
-        Σ (Pruner i t) λ pr → ∀ {G1} (s : Sub Sg G G1) z → ren i z ≡T sub s t → s ≤ (pruner pr)
-prune i t = prune' t (_ , ≤-refl) , prune-sup i t (_ , ≤-refl)
+        Σ (PrunerSub i t) λ pr → ∀ {G1} (s : Sub Sg G G1) z → ren i z ≡T sub s t → s ≤ PrunerSub.pruner pr
+prune i t = (Pr toSub (pruner pr) , epi-decr (pruner pr , epic pr) , prunes pr) , prune-sup i t
+  where
+    pr = prune' {i = i} t
 

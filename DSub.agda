@@ -161,15 +161,10 @@ singleton-Decreasing {Sg} {G} {E} {Ss} {B} e u (inj₂ Ss>E)
        Ctx-length (G - u <: B <<- Ss)            ≡⟨ sym (Ctx-length-lemma u) ⟩ 
        Ctx-length G                              ∎)
 
-rigid-decr : ∀ {G G1}{x}(u : G ∋ x) -> Ctx-length (G - u) ≡ Ctx-length G1 ⊎ Ctx-length (G - u) > Ctx-length G1
+rigid-decr : ∀ {G G1}{x}(u : G ∋ x) -> Ctx-length (G - u) ≥ Ctx-length G1
                                     -> Ctx-length G > Ctx-length G1  
-rigid-decr {G} {G1} {type <<- ctx} u (inj₁ G-u~G1) = 
-     begin suc (Ctx-length G1)                ≡⟨ cong suc (sym G-u~G1) ⟩ 
+rigid-decr {G} {G1} {type <<- ctx} u G-u≤G1 = 
+     begin suc (Ctx-length G1)                ≤⟨ s≤s G-u≤G1 ⟩ 
            suc (Ctx-length (G - u))           ≤⟨ s≤s (n≤m+n (length ctx) (Ctx-length (G - u))) ⟩ 
-           Ctx-length (G - u <: type <<- ctx) ≡⟨ sym (Ctx-length-lemma u) ⟩ 
-           Ctx-length G                       ∎
-rigid-decr {G} {G1} {type <<- ctx} u (inj₂ G-u>G1) = 
-     begin suc (Ctx-length G1)                ≤⟨ G-u>G1 ⟩
-           Ctx-length (G - u)                 ≤⟨ n≤m+n (suc (length ctx)) (Ctx-length (G - u)) ⟩ 
            Ctx-length (G - u <: type <<- ctx) ≡⟨ sym (Ctx-length-lemma u) ⟩ 
            Ctx-length G                       ∎
