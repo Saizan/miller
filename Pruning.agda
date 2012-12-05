@@ -102,16 +102,6 @@ _∙_ : ∀ {Sg G D1 D2 T} → {i : Inj D1 D2} {t : Term Sg G D2 T} →
       (∀ {G1}{σ : Sub Sg G G1} → σ / t ∈ i → σ / s ∈ j) → Pruner i t → Pruner j s
 f ∙ (Pr ρ , ρ-decr , m) = Pr ρ , ρ-decr , f m
 
--- The computation of a Pruner would be straightforward, with (fun u j)
--- the only interesting case, but we have some trouble with showing
--- termination.
--- In the (t ∷ ts) case, having found the pruner σ of t, we need to
--- recurse on (subs σ ts), which is not structurally smaller than (t ∷ ts): 
--- we work around this issue by using the size of the meta-context
--- as a measure that pruners decrease unless they are isomorphisms.
--- Agda's termination checker accepts the definition because we
--- simultaneously recurse on (an upper bound of) this size and the
--- structure of terms.
 mutual
   prune' : ∀ {Sg G D1 D2 T} {i : Inj D1 D2} (t : Tm Sg G D2 T) 
             → Pruner i t
