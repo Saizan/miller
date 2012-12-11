@@ -71,10 +71,11 @@ quo : ∀ {A : Set} {xs ys} → (f : ∀ (x : A) → x ∈ xs → x ∈ ys){inj 
 quo f {inj} = proj₁ (quo' f {inj})
 
 quo-ext : ∀ {A : Set} {xs ys} → {f : ∀ (x : A) → x ∈ xs → x ∈ ys}{injf : ∀ x → {i j : x ∈ xs} → f x i ≡ f x j → i ≡ j} →
-        {g : ∀ (x : A) → x ∈ xs → x ∈ ys}{injg : ∀ x → {i j : x ∈ xs} → g x i ≡ g x j → i ≡ j} →
-        (∀ x v → f x v ≡ g x v) → quo f {injf} ≡ quo g {injg}
-quo-ext {A} {[]} eq =  refl
-quo-ext {A} {x ∷ xs} eq = cong-∷[] (eq _ zero) (quo-ext (λ x₁ v → eq x₁ (suc v)))
+            {g : ∀ (x : A) → x ∈ xs → x ∈ ys}{injg : ∀ x → {i j : x ∈ xs} → g x i ≡ g x j → i ≡ j} →
+            (∀ x v → f x v ≡ g x v) → quo f {injf} ≡ quo g {injg}
+quo-ext {A} {[]}     eq = refl
+quo-ext {A} {x ∷ xs} {injf = injf} {injg = injg} eq = cong-∷[] (eq _ zero) (quo-ext {injf = λ x₁ x₂ → suc-inj1 (injf x₁ x₂)} 
+                                                                                    {injg = λ x₁ x₂ → suc-inj1 (injg x₁ x₂)} (λ x₁ v → eq x₁ (suc v)))
 
 _$_ : ∀ {A : Set} {xs ys : List A} → Inj xs ys → ∀ {x} → x ∈ xs → x ∈ ys
 (i ∷ is [ pf ]) $ zero = i
@@ -115,7 +116,7 @@ iso1- : ∀ {A : Set} {xs ys : List A} → (f : Inj xs ys) → quo (\ x v → f 
 iso1- f = iso1 f _
 
 ext-$ : ∀ {A : Set} {xs ys : List A} → (f g : Inj xs ys) → (∀ x (v : xs ∋ x) -> f $ v ≡ g $ v) -> f ≡ g
-ext-$ f g eq = trans (sym (iso1- f)) (trans (quo-ext eq) (iso1- g))
+ext-$ f g eq = trans (sym (iso1- f)) (trans (quo-ext {injf = λ x → injective f _ _} {injg = λ x → injective g _ _} eq) (iso1- g))
 
 ∉Im$-∉ : ∀ {A : Set} {xs ys : List A} (f : ∀ x (v : x ∈ xs) → x ∈ ys){inj} 
      → ∀ {x} (i : x ∈ ys) → (∀ (b : x ∈ xs) → i ≡ f x b → ⊥) → i ∉ (quo f {inj}) 

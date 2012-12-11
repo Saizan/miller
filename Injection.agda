@@ -106,12 +106,8 @@ abstract
           begin suc (proj₁ (quo' (λ v₁ v₂ → j $ (i $ v₂))) $ v) ≡⟨ cong suc (iso2 _ _ v) ⟩ 
                 suc (j $ (i $ v))                               ≡⟨ sym (iso2 _ _ (i $ v)) ⟩ 
                 quo (λ x₁ x₂ → suc (j $ x₂)) $ (i $ v)          ∎) ⟩ 
-    quo (λ x v → cons j $ suc (i $ v))                       ≡⟨ sym (lemma (cons j) (λ _ x → suc (i $ x))) ⟩ 
+    quo (λ x v → cons j $ suc (i $ v))                       ≡⟨ sym (quo-ext (λ x₁ v → cong (_$_ (cons j)) (iso2 (λ _ x → suc (i $ x)) _ v))) ⟩ 
     quo (λ x v → cons j $ (quo (λ z x₁ → suc (i $ x₁)) $ v)) ∎)
-   where
-       lemma : ∀ {A : Set}{xs ys ts : List A} (i : Inj xs ts)(z : _){inj1 inj2 inj3} → 
-            quo (\ x v → i $ (quo {_} {ys} z {inj1} $ v)) {inj3} ≡ quo (\ x v → i $ (z _ v)) {inj2} 
-       lemma i z = quo-ext (λ x₁ v → cong (_$_ i) (iso2 z _ v))
 
 
 ∘-ext : ∀ {A : Set}{xs ys zs ws : List A} {f : Inj ys zs}{g : Inj xs ys}{f1 : Inj ws zs}{g1 : Inj xs ws} -> f ∘i g ≡ f1 ∘i g1
@@ -127,22 +123,40 @@ Equ-universal-quote : ∀ {A : Set} {xs ys : List A} → (i j : Inj xs ys) → �
                (∀ a (y : xs ∋ a) -> i $ y ≡ j $ y -> ∃ \ z -> y ≡ e $ z) ->               
                 {as : List A} (h : Inj as xs) → i ∘i h ≡ j ∘i h → Σ (Inj as E) (λ z → e ∘i z ≡ h )
 Equ-universal-quote {A} {xs} {ys} i j {E} e c {as} h eq = 
-    (quo (λ x v → proj₁ (f x v)) {λ x {u} {v} eq1 → injective h u v (trans (proj₂ (f x u)) (trans (cong (_$_ e) eq1) (sym (proj₂ (f x v)))))}) 
-  , ext-$ (e ∘i quo (λ x v → proj₁ (f x v))) h (λ x v → trans (apply-∘ _ _) (trans (cong (_$_ e) (iso2 _ _ v)) (sym (proj₂ (f x v))))) 
+  quo u {λ x {v} {w} eq1 → injective h v w (begin h $ v     ≡⟨ proj₂ (f x v) ⟩
+                                                  e $ u x v ≡⟨ cong (_$_ e) eq1 ⟩
+                                                  e $ u x w ≡⟨ sym (proj₂ (f x w)) ⟩
+                                                  h $ w     ∎)}
+  , ext-$ (e ∘i quo u) h (λ x v → begin
+          (e ∘i quo u) $ v ≡⟨ apply-∘ _ _ ⟩ 
+          e $ (quo u $ v)  ≡⟨ cong (_$_ e) (iso2 _ _ v) ⟩
+          e $ u x v        ≡⟨ sym (proj₂ (f x v)) ⟩
+          h $ v            ∎)
   where 
    f : ∀ a (y : as ∋ a) -> ∃ \ z -> h $ y ≡ e $ z
    f a y = c a (h $ y) (∘-ext eq a y)
+   u = (λ x v → proj₁ (f x v))
 
 Pull-universal-quote : ∀ {A : Set} {X Y Z : List A} → (i : Inj X Z)(j : Inj Y Z) -> ∀ {P} -> (p₁ : Inj P X) (p₂ : Inj P Y)
                  -> (∀ (a : A) (y : Y ∋ a)(x : X ∋ a) -> i $ x ≡ j $ y -> (∃ \ z -> p₁ $ z ≡ x × p₂ $ z ≡ y))
                  -> ∀ {Q} -> (q₁ : Inj Q X) (q₂ : Inj Q Y) -> i ∘i q₁ ≡ j ∘i q₂ -> ∃ \ u -> q₁ ≡ p₁ ∘i u × q₂ ≡ p₂ ∘i u  
 Pull-universal-quote i j p₁ p₂ uni {Q} q₁ q₂ commutes = 
-     quo (λ x x₁ → proj₁ (f x x₁)) {λ x {u} {v} eq → injective q₁ u v (trans (sym (proj₁ (proj₂ (f x u)))) 
-          (trans (cong (_$_ p₁) eq) (proj₁ (proj₂ (f x v)))))}
-     , ext-$ q₁ (p₁ ∘i quo (λ x x₁ → proj₁ (f x x₁))) (λ x v → 
-              trans (trans (sym (proj₁ (proj₂ (f x v)))) (cong (_$_ p₁) (sym (iso2 _ _ v)))) (sym (apply-∘ _ _)))
-     , ext-$ q₂ (p₂ ∘i quo (λ x x₁ → proj₁ (f x x₁))) (λ x v →
-              trans (trans (sym (proj₂ (proj₂ (f x v)))) (cong (_$_ p₂) (sym (iso2 _ _ v)))) (sym (apply-∘ _ _)))
+     quo u {λ x {v} {w} eq → injective q₁ v w (begin q₁ $ v      ≡⟨ sym (proj₁ (proj₂ (f x v))) ⟩
+                                                     p₁ $ u x v  ≡⟨ cong (_$_ p₁) eq ⟩
+                                                     p₁ $ u x w  ≡⟨ proj₁ (proj₂ (f x w)) ⟩
+                                                     q₁ $ w      ∎)}
+     , ext-$ q₁ (p₁ ∘i quo u) (λ x v → begin 
+             q₁ $ v            ≡⟨ sym (proj₁ (proj₂ (f x v))) ⟩  
+             p₁ $ u x v        ≡⟨ cong (_$_ p₁) (sym (iso2 _ _ v)) ⟩
+             p₁ $ (quo u $ v)  ≡⟨ sym (apply-∘ _ _) ⟩
+             (p₁ ∘i quo u) $ v ∎)
+     , ext-$ q₂ (p₂ ∘i quo u) (λ x v → begin
+             q₂ $ v            ≡⟨ sym (proj₂ (proj₂ (f x v))) ⟩ 
+             p₂ $ u x v        ≡⟨ cong (_$_ p₂) (sym (iso2 _ _ v)) ⟩
+             p₂ $ (quo u $ v)  ≡⟨ sym (apply-∘ _ _) ⟩ 
+             (p₂ ∘i quo u) $ v ∎)
   where
     f : ∀ a (v : Q ∋ a) -> (∃ \ z -> p₁ $ z ≡ q₁ $ v × p₂ $ z ≡ q₂ $ v)
     f a v = uni a (q₂ $ v) (q₁ $ v) (∘-ext commutes a v)
+    u : ∀ a (v : Q ∋ a) -> _
+    u a v = proj₁ (f a v)
