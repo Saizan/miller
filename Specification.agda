@@ -12,7 +12,7 @@ open import Data.Sum
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 
 open import Injection
-open import Injection.Objects
+open import Limits.Injection
 open import Lists
 
 open import Syntax

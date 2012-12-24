@@ -13,7 +13,7 @@ open import Data.Unit hiding (_≤_)
 open import Data.Sum
 
 open import Injection
-open import Injection.Objects
+open import Limits.Injection
 open import Lists
 
 open import Syntax

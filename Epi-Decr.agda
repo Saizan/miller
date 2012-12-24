@@ -15,7 +15,7 @@ open import Data.List hiding ([_])
 open import Data.List.All
 
 open import Injection
-open import Injection.Objects
+open import Limits.Injection
 open import Lists
 open import Vars
 open import Vars2 

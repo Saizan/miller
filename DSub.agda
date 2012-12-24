@@ -13,7 +13,7 @@ open import Data.Sum
 open import Data.Product
 
 open import Injection
-open import Injection.Objects
+open import Limits.Injection
 open import Syntax
 open import MetaRens
 
