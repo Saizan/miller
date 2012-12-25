@@ -16,12 +16,12 @@ open import Data.List hiding ([_])
 
 open import Injection
 open import Limits.Injection
-open import Lists
+open import Data.List.Extras
 open import Vars2 
 
 open import Syntax
 open import Equality
-open import NatCat
+open import Vars.SumIso
 open import MetaRens
 
 

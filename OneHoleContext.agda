@@ -14,7 +14,7 @@ import Level
 open RawMonad (monad {Level.zero})
 
 open import Injection
-open import Lists
+open import Data.List.Extras
 
 open import Syntax
 open import Equality

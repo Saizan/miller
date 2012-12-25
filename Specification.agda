@@ -13,13 +13,13 @@ open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 
 open import Injection
 open import Limits.Injection
-open import Lists
+open import Data.List.Extras
 
 open import Syntax
 open import Equality
 open import OneHoleContext
 
-open import DSub
+open import Decr-Sub
 
 Property : ∀ Sg G -> Set₁
 Property Sg G = (∀ {G2} -> Sub Sg G G2 -> Set)
@@ -114,7 +114,7 @@ Spec[xs,ys]⇒Spec[σxs,σys] {xs = xs} {ys = ys} σ G~G1 ((δ , id≡δ∘σ) ,
     sup-[σ₁∘δ] ρ [ρ]Unifies[σxs,σys] = δ' , λ S u →
             begin
               ρ S u                       ≡⟨ sym (ren-id (ρ S u)) ⟩
-              sub ρ (fun u id-i)          ≡⟨ cong (sub ρ) (trans refl (id≡σ∘δ S u)) ⟩
+              sub ρ (id-s S u)            ≡⟨ cong (sub ρ) (id≡σ∘δ S u) ⟩
               sub ρ (sub σ (δ S u))       ≡⟨ sub-∘ {f = ρ} {σ} (δ S u) ⟩
               subT (ρ ∘s σ) (δ S u)       ≡⟨ subT-ext (proj₂ ρ∘σ≤σ₁) (δ S u) ⟩
               subT (δ' ∘s ⟦ σ₁ ⟧) (δ S u) ≡⟨ sym (subT-∘ (δ S u)) ⟩

@@ -1,4 +1,4 @@
-module DSub where
+module Decr-Sub where
 
 open import Data.Nat renaming (_≤_ to _≤ℕ_)
 open import Data.List hiding ([_])
@@ -58,10 +58,10 @@ Ctx-length-lemma {._ ∷ G} {Ss} (suc {S = _ <<- ctx} u) =
 abstract
   toMRen : ∀ {Sg G G1} (s : Sub Sg G G1) -> (id-s ≤ s) -> Σ (MetaRen G G1) \ ρ -> toSub ρ ≡s s
   toMRen {Sg} {G} {G1} s (δ , id≡δ∘s) = (λ S x → proj₁ (aux S x)) , (λ S x → proj₂ (aux S x)) where
-    aux : ∀ S x -> ∃ \ (c : VarClosure G1 S) -> Tm.fun (body c) (ρ-env c) ≡ s S x
+    aux : ∀ S x -> ∃ \ (c : VarClosure G1 S) -> Tm.mvar (body c) (ρ-env c) ≡ s S x
     aux S x with s S x | id≡δ∘s S x
     aux S x | con c ts | ()
-    aux S x | fun u j | w = (j / u) , refl
+    aux S x | mvar u j | w = (j / u) , refl
     aux S x | var x₁ ts | ()
 
 
@@ -72,7 +72,7 @@ IsIso-∘ : ∀ {Sg G1 G2 G3} -> (s : Sub Sg G2 G3) -> (s' : Sub Sg G1 G2) -> Is
 IsIso-∘ s s' ((δ , p) , p') ((δ' , q) , q') = (δ' ∘s δ ,
  (λ S u →
       begin
-      fun u id-i                      ≡⟨ q S u ⟩
+      mvar u id-i                     ≡⟨ q S u ⟩
       sub δ' (s' S u)                 ≡⟨ cong (sub δ') (sym (sub-id (s' S u))) ⟩
       sub δ' (sub id-s (s' S u))      ≡⟨ cong (sub δ') (sub-ext p (s' S u)) ⟩
       sub δ' (sub (δ ∘s s) (s' S u))  ≡⟨ cong (sub δ') (sym (sub-∘ (s' S u))) ⟩
@@ -81,7 +81,7 @@ IsIso-∘ s s' ((δ , p) , p') ((δ' , q) , q') = (δ' ∘s δ ,
 
  (λ S u →
       begin
-        fun u id-i                      ≡⟨ p' S u ⟩
+        mvar u id-i                     ≡⟨ p' S u ⟩
         sub s (δ S u)                   ≡⟨ cong (sub s) (sym (sub-id (δ S u))) ⟩
         sub s (sub id-s (δ S u))        ≡⟨ cong (sub s) (sub-ext q' (δ S u)) ⟩
         sub s (sub (s' ∘s δ') (δ S u))  ≡⟨ cong (sub s) (sym (sub-∘ {f = s'} {g = δ'} (δ S u))) ⟩
@@ -143,16 +143,16 @@ pullback-Decr f (i ∷ g [ pf ]) | no ¬p | pull | inj₂ y₁ = inj₂ (≤-ste
 singleton-Decreasing : ∀ {Sg G E Ss B} (e : Inj E Ss) (u : G ∋ B <<- Ss) -> Decr-i e -> Decreasing {Sg} (toSub (singleton u e))
 singleton-Decreasing {Sg} {G} {.Ss} {Ss} {B} .id-i u (inj₁ (refl , Het.refl)) = inj₁ (Ctx-length-lemma u , (δ , eq1) , (λ S u₁ → eq2 S u₁)) where
   δ : (S : MTy) → B <<- Ss ∷ G - u ∋ S → Tm Sg G (ctx S) ([] ->> type S)
-  δ .(B <<- Ss) zero = fun u id-i
-  δ S (suc u₁) = fun (thin u S u₁) id-i
+  δ .(B <<- Ss) zero = mvar u id-i
+  δ S (suc u₁) = mvar (thin u S u₁) id-i
   eq1 : id-s ≡s (δ ∘s toSub (singleton u id-i))
   eq1 S u₁ with thick u u₁ 
-  eq1 S .(thin u S x) | inj₁ (x , refl) = cong (fun _) (sym (right-id id-i))
-  eq1 .(B <<- Ss) .u | inj₂ (refl , refl) = cong (fun u) (sym (right-id id-i))
+  eq1 S .(thin u S x) | inj₁ (x , refl) = cong (mvar _) (sym (right-id id-i))
+  eq1 .(B <<- Ss) .u | inj₂ (refl , refl) = cong (mvar u) (sym (right-id id-i))
 
   eq2 : id-s ≡s (toSub (singleton u id-i) ∘s δ)
-  eq2 ._ (zero {._} {.(_ <<- _)}) rewrite thick-refl u = cong (fun _) (sym (right-id id-i))
-  eq2 S (suc {._} {._} {.(_ <<- _)} v) rewrite thick-thin u v = cong (fun _) (sym (right-id id-i))
+  eq2 ._ (zero {._} {.(_ <<- _)}) rewrite thick-refl u = cong (mvar _) (sym (right-id id-i))
+  eq2 S (suc {._} {._} {.(_ <<- _)} v) rewrite thick-thin u v = cong (mvar _) (sym (right-id id-i))
   
 singleton-Decreasing {Sg} {G} {E} {Ss} {B} e u (inj₂ Ss>E) 
   = inj₂

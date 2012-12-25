@@ -16,14 +16,14 @@ open import Data.List.All
 
 open import Injection
 open import Limits.Injection
-open import Lists
+open import Data.List.Extras
 open import Vars
 open import Vars2 
 
 open import Syntax
 open import Equality
 open import MetaRens
-open import DSub
+open import Decr-Sub
 
 Epi : _ -> _ -> Set
 Epi G G1 = ∃ \ (f : MetaRen G G1) -> MRop.Monic f
@@ -50,7 +50,7 @@ Inj-incr {A} {x ∷ xs} {Y} (u ∷ i [ pf ]) rewrite length-del u = s≤s (Inj-i
 
 punchout : ∀ {x G G1} -> (f : Epi (x ∷ G) G1) -> Epi G G1 ⊎ Epi G (G1 - body (proj₁ f _ zero))
 punchout {x} {G} {G1} (f , f-epic) 
- with any? (λ v → body (f _ (suc v)) ≡∋? body (f _ zero))
+ with any? (λ v → body (f _ (suc v)) ≅∋? body (f _ zero))
 ... | yes (_ , v , eqty , eqbody) = inj₁ ((λ S x → f S (suc x)) , fsuc-epic)
  where            
   fsuc-epic : MRop.Monic (λ S x → f S (suc x))
@@ -87,7 +87,7 @@ punchout {x} {G} {G1} (f , f-epic)
     shift-refl : ∀ g -> shift g _ u ≡ id-i / zero
     shift-refl g rewrite thick-refl u = refl
 
-    shift-refl2 : ∀ {S}{v : _ ∋ S} g g1 -> u ≡∋ v -> shift g _ v ≡ shift g1 _ v
+    shift-refl2 : ∀ {S}{v : _ ∋ S} g g1 -> u ≅∋ v -> shift g _ v ≡ shift g1 _ v
     shift-refl2 {.(type x) <<- .(Ψ (f x zero))} g g1 (refl , refl) = trans (shift-refl g) (sym (shift-refl g1))
 
     zero-eq = cong (map-Vc _) (begin shift g1 _ u ≡⟨ shift-refl g1 ⟩ 

@@ -16,7 +16,7 @@ open import Data.List.All
 
 open import Injection
 open import Limits.Injection
-open import Lists
+open import Data.List.Extras
 open import Vars2 
 
 open import Syntax
@@ -58,7 +58,7 @@ MetaRen : MCtx → MCtx → Set
 MetaRen G D = ∀ S → G ∋ S → VarClosure D S
 
 toSub : ∀ {Sg G D} → MetaRen G D → Sub Sg G D
-toSub r = λ S x → fun (body (r S x)) (ρ-env (r S x))
+toSub r = λ S x → mvar (body (r S x)) (ρ-env (r S x))
 
 idmr : ∀ {G} → MetaRen G G
 idmr = \ S x → id-i / x
@@ -133,10 +133,10 @@ _hasBody_ : ∀ {G}{T}(cl : VarClosure G T) {S}(x : G ∋ S) -> Set
 _hasBody_ {G} {T} cl {S} x = ∃ \ (j : Inj (ctx S) (ctx T)) -> type T ≡ type S × cl ≅ (j / x)
 
 dec-HasBody : ∀ {G}{T}(cl : VarClosure G T) {S}(x : G ∋ S) -> Dec (cl hasBody x) 
-dec-HasBody (j / y) x with y ≡∋? x 
+dec-HasBody (j / y) x with y ≅∋? x 
 dec-HasBody {G} {.type₁ <<- ctx₁} (j / .x) {type₁ <<- ctx} x | yes (refl , refl) = yes (j , refl , refl)
 dec-HasBody {G} {type <<- ctx₁} (j / y) {type₁ <<- ctx} x | no ¬p = no (aux ¬p)
-  where aux : ∀ {type}{y : _ ∋ (type <<- _)} -> (¬ (y ≡∋ x)) -> Σ (Inj ctx ctx₁) (λ j₁ → Σ (type ≡ type₁) (λ x₁ → j / y ≅ j₁ / x)) → ⊥ 
+  where aux : ∀ {type}{y : _ ∋ (type <<- _)} -> (¬ (y ≅∋ x)) -> Σ (Inj ctx ctx₁) (λ j₁ → Σ (type ≡ type₁) (λ x₁ → j / y ≅ j₁ / x)) → ⊥ 
         aux ¬p₁ (proj₁ , refl , eq) = ¬p₁ ((cong (_<<-_ _) (_≈vc_.Ψeq (to-vc (≅-to-≡ eq)))) , (_≈vc_.beq (to-vc (≅-to-≡ eq))))
 
 Image : ∀ {G G1} (f : MetaRen G G1) {S} (x : G1 ∋ S) -> Set

@@ -10,7 +10,7 @@ open ≡-Reasoning
 open import Data.Empty
 open import Data.Unit hiding (_≤_)
 open import Data.Sum
-open import Lists
+open import Data.List.Extras
 open import Syntax
 open import Vars
 

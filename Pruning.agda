@@ -14,13 +14,13 @@ open import Data.Sum
 
 open import Injection
 open import Limits.Injection
-open import Lists
+open import Data.List.Extras
 
 open import Syntax
 open import Equality
 open import RenOrn
 open import MetaRens
-open import DSub
+open import Decr-Sub
 open import Specification
 open import Colimits.Sub
 open import Epi-Decr
@@ -31,7 +31,7 @@ data AllMV∈  {Sg : Ctx} {G : MCtx} {D0 D : Ctx} (i : Inj D0 D) : ∀ {T} → T
   con : ∀ {Ss B c ts} → (ms : AllMV∈ i {inj₂ Ss} ts) → AllMV∈ i {inj₁ (! B)} (con c ts)
   var : ∀ {Ss B x ts} → (ms : AllMV∈ i {inj₂ Ss} ts) → AllMV∈ i {inj₁ (! B)} (var x ts)
   lam : ∀ {S Ss B t} → (m : AllMV∈ (cons i) {inj₁ (Ss ->> B)} t) → AllMV∈ i {inj₁ ((S ∷ Ss) ->> B)} (lam t)
-  fun : ∀ {Ss B} {v : G ∋ (B <<- Ss)}{h} → (∃ \ k → i ∘i k ≡ h) → AllMV∈ i {inj₁ (! B)} (fun v h)
+  mvar : ∀ {Ss B} {v : G ∋ (B <<- Ss)}{h} → (∃ \ k → i ∘i k ≡ h) → AllMV∈ i {inj₁ (! B)} (mvar v h)
 
 -- s / t ∈ i holds iff all the variables appearing as arguments to
 -- meta-vars in (sub s t) are present in the image of i
@@ -47,8 +47,8 @@ _/_∈_-∘Closed f m = subst (AllMV∈ _) (subT-∘ _) (go f m) where
           (t : Tm Sg G X T) → AllMV∈ i (renT h t)
     go2 le (con c ts) = con (go2s le ts)
     go2 le (var x ts) = var (go2s le ts)
-    go2 (k , i∘k≡h) (lam t)   = lam (go2 (cons k , trans (sym (cons-∘i _ _)) (cong cons i∘k≡h)) t)
-    go2 (k , i∘k≡h) (fun u j) = fun (k ∘i j , trans assoc-∘i (cong (λ h → h ∘i j) i∘k≡h))
+    go2 (k , i∘k≡h) (lam t)    = lam (go2 (cons k , trans (sym (cons-∘i _ _)) (cong cons i∘k≡h)) t)
+    go2 (k , i∘k≡h) (mvar u j) = mvar (k ∘i j , trans assoc-∘i (cong (λ h → h ∘i j) i∘k≡h))
   
     go2s : ∀ {Sg G X Y Z T} {i : Inj Y Z}{h : Inj X Z} → (∃ \ k → i ∘i k ≡ h) → 
            (t : Tms Sg G X T) → AllMV∈ i (renT h t)
@@ -62,7 +62,7 @@ _/_∈_-∘Closed f m = subst (AllMV∈ _) (subT-∘ _) (go f m) where
   go f (con ms) = con (go f ms)
   go f (var ms) = var (go f ms)
   go f (lam m) = lam (go f m)
-  go f {i = i} (fun {v = v} {h = h} (k , i∘k≡h)) = go2 (k , i∘k≡h) (f _ v)
+  go f {i = i} (mvar {v = v} {h = h} (k , i∘k≡h)) = go2 (k , i∘k≡h) (f _ v)
 
    
 -- A few properties of substitutions that carry over to _/_∈_
@@ -76,7 +76,7 @@ _/_∈_-ext f≡g m = subst (AllMV∈ _) (subT-ext f≡g _) m
 
 -- In the flexible-rigid case we'll need to find z and ρ such that ren i z ≡ sub ρ t, 
 -- this module is about finding such a ρ, which we call the pruner.
--- Its role is to handle occurrences in t like (fun u j) where there are variables in j 
+-- Its role is to handle occurrences in t like (mvar u j) where there are variables in j 
 -- which are not in i: ρ will substitute u with a term that ignores them, 
 -- since their presence would make finding z impossible.
 record Pruner {Sg G D1 D2 T} (i : Inj D1 D2) (t : Term Sg G D2 T) : Set where
@@ -110,9 +110,9 @@ mutual
   prune' (var x ts) = var ∙ prune's ts
   prune' (lam t)    = lam ∙ prune'  t 
 
-  prune' {i = i} (fun u j) = Pr singleton u p₂ , singleton-epic u p₂ , fun aux where
+  prune' {i = i} (mvar u j) = Pr singleton u p₂ , singleton-epic u p₂ , mvar aux where
     open Pullback (pullback i j)
-    -- (toSub (singleton u p₂)) (fun u j) = fun zero (j ∘i p₂), so we
+    -- (toSub (singleton u p₂)) (mvar u j) = mvar zero (j ∘i p₂), so we
     -- need aux to show that (j ∘i p₂) only contains variables in i
     aux : ∃ \ k → i ∘i k ≡ j ∘i ρ-env (singleton u p₂ _ u)
     aux rewrite thick-refl u = p₁ , commutes
@@ -146,12 +146,12 @@ mutual
   prune-sup i (var x ts) s (var x₁ ts₁) (var eqv eq) = prune-sups i ts s ts₁ eq
   prune-sup i (lam t)    s (lam z)      (lam eq)     = prune-sup (cons i) t s z eq
 
-  prune-sup i (con c ts) s (fun u j) ()
+  prune-sup i (con c ts) s (mvar u j) ()
   prune-sup i (con c ts) s (var x ts₁) ()
   prune-sup i (var x ts) s (con c ts₁) ()
-  prune-sup i (var x ts) s (fun u j) ()
+  prune-sup i (var x ts) s (mvar u j) ()
 
-  prune-sup {Sg} {G} i (fun {Ss = Ss} {B} u j) {G2} s z eq = δ , s≡δ∘pruner
+  prune-sup {Sg} {G} i (mvar {Ss = Ss} {B} u j) {G2} s z eq = δ , s≡δ∘pruner
     where 
       pull = pullback i j
       open Pullback pull

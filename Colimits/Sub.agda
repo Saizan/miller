@@ -14,11 +14,11 @@ open import Data.Unit hiding (_≤_)
 open import Data.Sum
 open import Data.List.All
 open import Data.List hiding ([_])
-open import NatCat
+open import Vars.SumIso
 
 open import Injection
 open import Limits.Injection
-open import Lists
+open import Data.List.Extras
 open import Vars2 
 
 open import Syntax
@@ -71,7 +71,7 @@ module Mixed {Sg : Ctx} where
 
 
 eta : ∀ {Sg G S} -> VarClosure G S -> Tm Sg G (ctx S) (! type S)
-eta cl = fun (body cl) (ρ-env cl)
+eta cl = mvar (body cl) (ρ-env cl)
 
 eta-inj : ∀ {Sg G S} -> (c1 c2 : VarClosure G S) -> eta {Sg} c1 ≡ eta c2 -> c1 ≡ c2
 eta-inj (i / v) (.i / .v) refl = refl
@@ -92,7 +92,7 @@ mutual
   lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} (equ : Equalizer i j) (t : Tm Sg G X S) →
                    let open Equalizer equ in ren i t ≡T ren j t → e ⁻¹ t
   lift-equalizer equ (con c ts) (con refl eq) = con c (lifts-equalizer equ ts eq)
-  lift-equalizer equ (fun u j₁) (fun refl eq) = fun u (universal j₁ eq) e∘universal≡m
+  lift-equalizer equ (mvar u j₁) (mvar refl eq) = mvar u (universal j₁ eq) e∘universal≡m
     where open Equalizer equ
   lift-equalizer equ (var x ts) (var eqv eqts) = var (proj₁ r) (sym (proj₂ r)) (lifts-equalizer equ ts eqts)
     where r = e$u≡m equ _ x eqv
@@ -106,16 +106,16 @@ mutual
 mutual
   lift-pullback : ∀ {X Y Z} {i : Inj X Z}{j : Inj Y Z} (pull : Pullback i j) → let open Pullback pull in 
                   ∀ {Sg G T} (t : Tm Sg G _ T) s → ren i t ≡T ren j s → p₂ ⁻¹ s
-  lift-pullback pull (con c ts) (fun u j₁) ()
+  lift-pullback pull (con c ts) (mvar u j₁) ()
   lift-pullback pull (con c ts) (var x ts₁) ()
-  lift-pullback pull (fun u j₁) (con c ts) ()
-  lift-pullback pull (fun u j₁) (var x ts) ()
+  lift-pullback pull (mvar u j₁) (con c ts) ()
+  lift-pullback pull (mvar u j₁) (var x ts) ()
   lift-pullback pull (var x ts) (con c ts₁) ()
-  lift-pullback pull (var x ts) (fun u j₁) ()
+  lift-pullback pull (var x ts) (mvar u j₁) ()
 
   lift-pullback pull (con c ts) (con .c ts₁) (con refl eq) = con c (lifts-pullback pull ts ts₁ eq)
   lift-pullback pull (lam t)    (lam s)      (lam eq)      = lam (lift-pullback (cons-pullback _ _ pull) t s eq)
-  lift-pullback pull (fun u q₁) (fun .u q₂)  (fun refl i∘q₁≡j∘q₂) = fun u (universal q₁ q₂ i∘q₁≡j∘q₂) p₂∘universal≡q₂
+  lift-pullback pull (mvar u q₁) (mvar .u q₂)  (mvar refl i∘q₁≡j∘q₂) = mvar u (universal q₁ q₂ i∘q₁≡j∘q₂) p₂∘universal≡q₂
     where open Pullback pull
   lift-pullback pull (var x ts) (var x₁ ts₁) (var i$x≡j$x₁ eqts) = var (proj₁ r) (proj₂ (proj₂ r)) (lifts-pullback pull ts ts₁ eqts)
     where r = p$u≡q _ _ pull _ x₁ x i$x≡j$x₁ 

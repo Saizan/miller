@@ -14,7 +14,7 @@ open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 
 open import Injection
 open import Limits.Injection
-open import Lists
+open import Data.List.Extras
 open import Data.List
 
 open import Syntax
@@ -25,15 +25,15 @@ open import OccursCheck
 open import Pruning
 open import Inversion
 
-open import DSub
+open import Decr-Sub
 open import Specification
 open import MetaRens
 open import Colimits.Sub
 
 
-flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃⟦σ⟧ Max (Unifies {Sg} (Tm.fun u i) (fun u j))
+flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃⟦σ⟧ Max (Unifies {Sg} (Tm.mvar u i) (mvar u j))
 flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (equalizer-Decr i j)) 
-                                           , [σ]Unifies[fun[u,i],fun[u,j]] 
+                                           , [σ]Unifies[mvar[u,i],mvar[u,j]] 
                                            , sup-σ
   where
     i,j⇒e = equalizer i j
@@ -41,10 +41,10 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
 
     σ = toSub (singleton u e)
 
-    [σ]Unifies[fun[u,i],fun[u,j]] : ren i (σ _ u) ≡T ren j (σ _ u)
-    [σ]Unifies[fun[u,i],fun[u,j]] rewrite thick-refl u = ≡-T (cong (fun zero) commutes)
+    [σ]Unifies[mvar[u,i],mvar[u,j]] : ren i (σ _ u) ≡T ren j (σ _ u)
+    [σ]Unifies[mvar[u,i],mvar[u,j]] rewrite thick-refl u = ≡-T (cong (mvar zero) commutes)
 
-    sup-σ : Sup (Unifies (fun u i) (fun u j)) σ
+    sup-σ : Sup (Unifies (mvar u i) (mvar u j)) σ
     sup-σ {G'} ρ ρ-unifies = δ , ρ≡δ∘σ where
 
       ∃s[ren[e,s]≡ρ[u]] = forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) ρ-unifies)
@@ -59,7 +59,7 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
       ρ≡δ∘σ .(B <<- Ss) .u  | inj₂ (refl , refl) = sym (proj₂ ∃s[ren[e,s]≡ρ[u]])
 
 
-flexRigid : ∀ {Sg G D S} (u : G ∋ S) (i : Inj (ctx S) D) (s : Tm Sg (G - u) D (! type S)) → Spec (fun u i) (sub (thin-s u) s)
+flexRigid : ∀ {Sg G D S} (u : G ∋ S) (i : Inj (ctx S) D) (s : Tm Sg (G - u) D (! type S)) → Spec (mvar u i) (sub (thin-s u) s)
 flexRigid {Sg} {G} {S = S} u i s with prune i s 
 ... | ((Pr ρ , decr , m) , ρ-sup) 
  with invertTm i s ρ m 
@@ -96,10 +96,10 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
       ρ≡σ∘thin[u] : ρ ≡s (σ ∘s thin-s u)
       ρ≡σ∘thin[u] S y rewrite thick-thin u y = sym (ren-id _)
 
-      σ-sup : Sup (Unifies (fun u i) (sub (thin-s u) s)) σ
+      σ-sup : Sup (Unifies (mvar u i) (sub (thin-s u) s)) σ
       σ-sup ρ₁ ρ₁-unifies = δ , ρ₁≡δ∘σ where
         ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] = begin 
-           sub ρ₁ (fun u i)                  ≡⟨ T-≡ ρ₁-unifies ⟩
+           sub ρ₁ (mvar u i)                  ≡⟨ T-≡ ρ₁-unifies ⟩
            sub ρ₁ (sub (thin-s u) s)         ≡⟨ sub-∘ s ⟩
            sub (ρ₁ ∘s thin-s u) s            ∎
 
@@ -122,13 +122,13 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
                  ren i (sub δ t)        ∎)
 
 
-flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (fun u i) t
+flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (mvar u i) t
 flexAny u i t                        with check u t 
-flexAny u i .(sub (thin-s u) s)         | inj₁ (s , refl)               = flexRigid u i s
-flexAny u i .(fun u j)                  | inj₂ (G1 , j , [] , refl)     = yes (flexSame u i j)
-flexAny u i .(∫once x (∫ ps (fun u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no  λ {(D1 , s , eq) → 
+flexAny u i .(sub (thin-s u) s)          | inj₁ (s , refl)               = flexRigid u i s
+flexAny u i .(mvar u j)                  | inj₂ (G1 , j , [] , refl)     = yes (flexSame u i j)
+flexAny u i .(∫once x (∫ ps (mvar u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no  λ {(D1 , s , eq) → 
         No-Cycle (subD s x) (subC s ps) (s _ u) i j
-          (trans (T-≡ eq) (∫-sub s (x ∷ ps) (fun u j)))} 
+          (trans (T-≡ eq) (∫-sub s (x ∷ ps) (mvar u j)))} 
 
 
 unify-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → ∃σ Unifies x y → ∃σ Unifies y x
@@ -151,8 +151,8 @@ mutual
   unify (var _ _)  (con _ _)   l = no λ {(_ , _ , ())}
 
   -- flexible cases
-  unify (fun u i) t         l = flexAny u i t
-  unify t         (fun u i) l = spec-comm (fun u i) t (flexAny u i t)
+  unify (mvar u i) t          l = flexAny u i t
+  unify t          (mvar u i) l = spec-comm (mvar u i) t (flexAny u i t)
  
   unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
   unifyTms []       []       _ = yes (∃σMax[Unifies[x,x]] [])

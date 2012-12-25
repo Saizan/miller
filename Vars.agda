@@ -31,8 +31,8 @@ _∈_ x xs = xs ∋ x
 ∋-case z s a zero    = z
 ∋-case z s a (suc v) = s a v
 
-_≡∋_ : ∀ {A : Set}{G S} {T : A} -> G ∋ S -> G ∋ T -> Set
-_≡∋_ {A} {G} {S} {T} u v = S ≡ T × u ≅ v
+_≅∋_ : ∀ {A : Set}{G S} {T : A} -> G ∋ S -> G ∋ T -> Set
+_≅∋_ {A} {G} {S} {T} u v = S ≡ T × u ≅ v
 
 -- Given G = [T1 , .. , S , .. , Tn], (u : G ∋ S) we have this isomorphism:
 --
@@ -67,7 +67,7 @@ x∉thinx zero    y    ()
 x∉thinx (suc x) zero ()
 x∉thinx (suc x) (suc y) eq = x∉thinx x y (suc-inj1 eq)
 
-thick : ∀ {A}{G : List A}{S T} → (x : G ∋ S) → (y : G ∋ T) → (∃ \ z → thin x T z ≡ y) ⊎ x ≡∋ y
+thick : ∀ {A}{G : List A}{S T} → (x : G ∋ S) → (y : G ∋ T) → (∃ \ z → thin x T z ≡ y) ⊎ x ≅∋ y
 thick zero    zero    = inj₂ (refl , refl)
 thick zero    (suc y) = inj₁ (y , refl)
 thick (suc x) zero    = inj₁ (zero , refl)
@@ -89,7 +89,10 @@ thin-inj v {i} {j} eq with cong (\ x -> maybe′ (\ x -> Maybe.just (proj₁ x))
 ... | p rewrite thick-thin v i | thick-thin v j with p 
 thin-inj v {i} {.i} eq | p | refl = refl
 
-suc-inj : ∀ {A : Set}{xs : List A}{x y z} {i : xs ∋ x}{j : xs ∋ y} → (x , _∋_.suc {S = z} i) ≡ (y , _∋_.suc j) → (x , i) ≡ (y , j)
+_≡∋_ : ∀ {A : Set}{xs : List A}{x y : A} (i : xs ∋ x) (j : xs ∋ y) -> Set
+i ≡∋ j = _≡_ {A = ∃ (_∋_ _)} (_ , i) (_ , j)
+
+suc-inj : ∀ {A : Set}{xs : List A}{x y z} {i : xs ∋ x}{j : xs ∋ y} → suc {S = z} i ≡∋ suc j → i ≡∋ j
 suc-inj refl = refl
 
 eq-∋ : ∀ {A : Set}{xs : List A} → (i j : ∃ (_∋_ xs)) → Dec (i ≡ j)
@@ -100,13 +103,13 @@ eq-∋ ( x , suc  i) (y , suc j) with eq-∋ (x , i) (y , j)
 eq-∋ (.y , suc .j) (y , suc j)    | yes refl = yes refl
 eq-∋ ( x , suc  i) (y , suc j)    | no  ¬p   = no (¬p ∘ suc-inj)
 
-cong-proj₁ : ∀ {A : Set}{xs : List A}{x : A} {i j : xs ∋ x} -> i ≡ j -> _≡_ {A = ∃ (_∋_ xs)} (x , i) (x , j)
+cong-proj₁ : ∀ {A : Set}{xs : List A}{x : A} {i j : xs ∋ x} -> i ≡ j -> i ≡∋ j
 cong-proj₁ refl = refl
 
-_≡∋?_ : ∀ {A : Set} {G : List A} {S} (u : G ∋ S) {T} (v : G ∋ T) -> Dec (u ≡∋ v)
-u ≡∋? v         with thick u v
+_≅∋?_ : ∀ {A : Set} {G : List A} {S} (u : G ∋ S) {T} (v : G ∋ T) -> Dec (u ≅∋ v)
+u ≅∋? v         with thick u v
 ...                | inj₂ eq         = yes eq
-_≡∋?_ {S = S} u ._ | inj₁ (w , refl) = no (aux w) where
+_≅∋?_ {S = S} u ._ | inj₁ (w , refl) = no (aux w) where
   aux : ∀ {T} (w : _ ∋ T) -> Σ (S ≡ T) (λ x → u ≅ thin u T w) → ⊥
   aux w (refl , eq) = x∉thinx u w (≅-to-≡ eq)
  

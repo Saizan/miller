@@ -10,7 +10,7 @@ open import Data.Unit
 open import Data.Sum renaming (inj₁ to no; inj₂ to yes)
 
 open import Injection
-open import Lists
+open import Data.List.Extras
 
 open import Syntax
 open import Height
@@ -18,7 +18,7 @@ open import OneHoleContext
 
 -- No-Cycle proves that Even under different renamings a term can't
 -- appear inside itself: it wouldn't be well-founded. 
--- We'll use this to show (fun u i) and (∫ (d ∷ ps) (fun u j)) not
+-- We'll use this to show (mvar u i) and (∫ (d ∷ ps) (mvar u j)) not
 -- unifiable in Unif.flexAny.
 No-Cycle : ∀ {TI Sg G D1 DI DO X} -> let TO = TI in 
          (d : DTm Sg G (DI , TI) X) (ps : Context Sg G X (DO , TO)) 
@@ -37,7 +37,7 @@ No-Cycle d ps t i j eq = ≡-or-> (cong heightT eq) r
         ≡-or-> refl (s≤s ge) = ≡-or-> refl ge
 
 _OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
-_OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (fun u j) ≡ t
+_OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (mvar u j) ≡ t
   where open import Data.Sum
 
 _NotOccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
@@ -61,9 +61,9 @@ _∙_ {u = u} d (no (s , eq)) = no  (∫once d s , trans (∫once-sub _ d s) (co
 mutual
   check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → Dec u OccursIn t
   check u (con c ts) = con c ∙ checks u ts 
-  check u (fun w j) with thick u w
-  ...                | no  (z , eq)      = no  (fun z j , cong₂ fun eq (right-id j))
-  check u (fun .u j) | yes (refl , refl) = yes (_ , (j , ([] , refl)))
+  check u (mvar w j) with thick u w
+  ...                 | no  (z , eq)      = no  (mvar z j , cong₂ mvar eq (right-id j))
+  check u (mvar .u j) | yes (refl , refl) = yes (_ , (j , ([] , refl)))
   check u (var x ts) = var x ∙ checks u ts
   check u (lam t) = lam ∙ check u t
   

@@ -11,7 +11,7 @@ open import Data.Sum renaming (map to map⊎)
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 
 open import Injection
-open import Lists
+open import Data.List.Extras
 
 open import Syntax
 open import OneHoleContext
@@ -28,23 +28,23 @@ map-NI lam notinv σ (lam s , lam eq) = notinv σ (s , eq)
 map-NI (head ts) notinv σ (t₁ ∷ s , eq ∷ eq₁) = notinv σ (t₁ , eq)
 map-NI (tail t₁) notinv σ (t₂ ∷ s , eq ∷ eq₁) = notinv σ (s , eq₁)
 map-NI (con c) notinv σ (con .c ts , con refl eq) = notinv σ (ts , eq)
-map-NI (con c) notinv σ (fun u j , ())
+map-NI (con c) notinv σ (mvar u j , ())
 map-NI (con c) notinv σ (var x ts , ())
 map-NI (var x) notinv σ (con c ts , ())
-map-NI (var x) notinv σ (fun u j , ())
+map-NI (var x) notinv σ (mvar u j , ())
 map-NI (var ._) notinv σ (var x₁ ts , var refl eq) = notinv σ (ts , eq)
 
 NI-var : ∀ {Sg G D D1 Ss B} {i : Inj D D1} {ts : Tms Sg G D1 Ss} {x : D1 ∋ (Ss ->> B)} 
          → ¬ ∃ (λ y → i $ y ≡ x) → NotInv {T = inj₁ _} i (var x ts)
 NI-var ¬∃y[iy≡x] σ (con c ts , ())
-NI-var ¬∃y[iy≡x] σ (fun u j , ())
+NI-var ¬∃y[iy≡x] σ (mvar u j , ())
 NI-var ¬∃y[iy≡x] σ (var y _ , var iy≡x _) = ¬∃y[iy≡x] (y , iy≡x)
 
 mutual
   invertTm' : ∀ {Sg G Ss D T} (i : Inj Ss D) (t : Tm Sg G D T) →
               AllMV∈ i t → i ⁻¹ t ⊎ NotInv i t
   invertTm' i (con c ts) (con m) = map⊎ (con c) (map-NI (con c)) (invertTm's i ts m)
-  invertTm' i (fun v h) (fun (k , comm)) = yes (fun v k comm)
+  invertTm' i (mvar v h) (mvar (k , comm)) = yes (mvar v k comm)
   invertTm' i (var x ts) (var m) 
    with invert i x     | invertTm's i ts m 
   ... | yes (y , iy≡x) | yes i⁻¹ts  = yes (var y iy≡x i⁻¹ts)

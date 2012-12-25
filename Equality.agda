@@ -13,30 +13,30 @@ import Level
 open RawMonad (monad {Level.zero})
 
 open import Injection
-open import Lists
+open import Data.List.Extras
 open import Syntax
 
 data _≡T_ {Sg} {G} {D} : {T : Ty ⊎ List Ty} -> (x y : Term Sg G D T) -> Set where 
   con : ∀ {Ss B}{cx : _ ∋ (Ss ->> B)}{xs}{cy ys} -> cx ≡ cy -> xs ≡T ys -> con cx xs ≡T con cy ys
   var : ∀ {Ss B}{x : _ ∋ (Ss ->> B)}{xs}{y ys} -> x ≡ y -> xs ≡T ys -> var x xs ≡T var y ys
   lam : ∀ {S Ss B}{tx ty : Tm Sg G (S ∷ D) (Ss ->> B)} -> tx ≡T ty -> lam tx ≡T lam ty
-  fun : ∀ {Ss B} {ux uy : G ∋ (B <<- Ss)}{i j} -> ux ≡ uy -> i ≡ j -> fun ux i ≡T fun uy j
+  mvar : ∀ {Ss B} {ux uy : G ∋ (B <<- Ss)}{i j} -> ux ≡ uy -> i ≡ j -> mvar ux i ≡T mvar uy j
   [] : Tms.[] ≡T []
   _∷_ : ∀ {S Ss}{tx ty : Tm Sg G D S}{tsx tsy : Tms Sg G D Ss} -> tx ≡T ty -> tsx ≡T tsy -> (Tms._∷_ tx tsx) ≡T (ty ∷ tsy)
 
 
-con-inj₁ : ∀ {Sg G D B Ss1 Ss2} {x : _ ∋ (Ss1 ->> B)}{y : _ ∋ (Ss2 ->> B)} {xs : Tms Sg G D _}{ys} -> Tm.con x xs ≡T con y ys 
-         -> _≡_ {A = ∃ \ T -> Sg ∋ T} (_ , x) (_ , y)
+con-inj₁ : ∀ {Sg G D B Ss1 Ss2} {x : _ ∋ (Ss1 ->> B)}{y : _ ∋ (Ss2 ->> B)} {xs : Tms Sg G D _}{ys} -> con x xs ≡T con y ys 
+         -> x ≡∋ y
 con-inj₁ (con refl eq) = refl 
 
-var-inj₁ : ∀ {Sg G D B Ss1 Ss2} {x : _ ∋ (Ss1 ->> B)}{y : _ ∋ (Ss2 ->> B)} {xs : Tms Sg G D _}{ys} -> Tm.var x xs ≡T var y ys 
-         -> _≡_ {A = ∃ \ T -> D ∋ T} (_ , x) (_ , y)
+var-inj₁ : ∀ {Sg G D B Ss1 Ss2} {x : _ ∋ (Ss1 ->> B)}{y : _ ∋ (Ss2 ->> B)} {xs : Tms Sg G D _}{ys} -> var x xs ≡T var y ys 
+         -> x ≡∋ y
 var-inj₁ (var refl eq) = refl 
 
 mutual
   refl-Tm : ∀ {Sg G D T} -> (x : Tm Sg G D T) -> x ≡T x
   refl-Tm (con c ts) = con refl (refl-Tms ts)
-  refl-Tm (fun u j) = fun refl refl
+  refl-Tm (mvar u j) = mvar refl refl
   refl-Tm (var x ts) = var refl (refl-Tms ts)
   refl-Tm (lam x) = lam (refl-Tm x)
 
@@ -55,7 +55,7 @@ T-≡ : ∀ {Sg G D T} -> {x y : Term Sg G D T} -> x ≡T y -> x ≡ y
 T-≡ (con refl eq) = ≡-cong (con _) (T-≡ eq)
 T-≡ (var refl eq) = ≡-cong (var _) (T-≡ eq)
 T-≡ (lam eq) = ≡-cong lam (T-≡ eq)
-T-≡ (fun refl refl) = refl
+T-≡ (mvar refl refl) = refl
 T-≡ [] = refl
 T-≡ (eq ∷ eq₁) = cong₂ _∷_ (T-≡ eq) (T-≡ eq₁)
 

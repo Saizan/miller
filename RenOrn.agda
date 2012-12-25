@@ -5,7 +5,7 @@ open import Relation.Binary.PropositionalEquality
 open import Data.Sum
 
 open import Injection
-open import Lists
+open import Data.List.Extras
 
 open import Syntax
 
@@ -17,8 +17,8 @@ mutual
   data RTm {Sg : Ctx}{G : MCtx}{D : Ctx}{K : Ctx} (i : Inj D K) : {T : Ty} → Tm Sg G K T → Set where
     con : {Ss : Fwd Ty}{B : Base} →
           (c : Sg ∋ (Ss ->> B)) → ∀ {tms} → (RTms i {Ss} tms) → RTm i {(! B)} (con c tms)
-    fun : {Ss : Bwd Ty}{B : Base} →
-              (u : G ∋ (B <<- Ss)) → (j : Inj Ss D) → ∀ {k} → (i ∘i j) ≡ k → RTm i {(! B)} (fun u k)
+    mvar : {Ss : Bwd Ty}{B : Base} →
+              (u : G ∋ (B <<- Ss)) → (j : Inj Ss D) → ∀ {k} → (i ∘i j) ≡ k → RTm i {(! B)} (mvar u k)
     var : forall {Ss B} → (v : D ∋ (Ss ->> B)) → ∀ {x} → (i $ v) ≡ x → ∀ {tms} → RTms i {Ss} tms → RTm i {(! B)} (var x tms)
     lam : {S : Ty}{Ss : Fwd Ty}{B : Base} → ∀ {b} →
           RTm (cons i) {(Ss ->> B)} b → RTm i {(S :> Ss ->> B)} (lam b)
@@ -35,7 +35,7 @@ _⁻¹_ i {inj₂ _} ts = RTms i ts
 mutual
   forget : ∀ {Sg G D D0}{T : Ty} → {i : Inj D D0} → {t : Tm Sg G D0 T} → (x : RTm i t) → Σ (Tm Sg G D T) \ s → ren i s ≡ t
   forget (con c x) = mapΣ (con c) (cong (con c)) (forgets x)
-  forget (fun u j eq) = fun u j , cong (fun u) eq
+  forget (mvar u j eq) = mvar u j , cong (mvar u) eq
   forget {i = i} (var v refl x₂) = mapΣ (var v) (cong (var (i $ v))) (forgets x₂)
   forget (lam x) = mapΣ lam (cong lam) (forget x) 
 
@@ -46,7 +46,7 @@ mutual
 mutual
   remember : ∀ {Sg G D D0}{T : Ty} → (i : Inj D D0) → (s : Tm Sg G D T) → Σ (RTm i (ren i s)) \ rt -> proj₁ (forget rt) ≡ s
   remember i (con c ts) = mapΣ (con c) (cong (con c)) (remembers i ts)
-  remember i (fun u j) = fun u j refl , refl
+  remember i (mvar u j) = mvar u j refl , refl
   remember i (var x ts) = mapΣ (var x refl) (cong (var x)) (remembers i ts)
   remember i (lam s) = mapΣ lam (cong lam) (remember (cons i) s)
 
@@ -62,8 +62,8 @@ mutual
 mutual
   unique : ∀ {Sg G D D0}{T : Ty} → {i : Inj D D0} → {t : Tm Sg G D0 T} → (x y : RTm i t) → x ≡ y
   unique (con c x) (con .c x₁) = cong (con c) (uniques x x₁)
-  unique {i = i} (fun u j eq1)(fun .u j₁ eq2) with  ∘i-inj i j j₁ (trans eq1 (sym eq2)) | eq1 | eq2
-  unique {i = i} (fun u .j₁ eq1) (fun .u j₁ eq2) | refl | refl | refl = refl
+  unique {i = i} (mvar u j eq1) (mvar .u j₁ eq2) with ∘i-inj i j j₁ (trans eq1 (sym eq2)) | eq1 | eq2
+  unique {i = i} (mvar u j eq1) (mvar .u .j eq2)    | refl | refl | refl = refl
   unique {i = i} (var v x₁ x₂) (var v₁ x₃ x₄) with injective i v v₁ (trans x₁ (sym x₃)) 
   unique (var .v₁ refl x₂) (var v₁ e x₄) | refl with e 
   ... | refl = cong (var v₁ refl) (uniques x₂ x₄)
