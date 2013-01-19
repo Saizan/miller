@@ -9,6 +9,7 @@ open import Data.Empty
 open import Data.Unit
 open import Data.Sum renaming (map to map⊎)
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
+open import Data.Bool
 
 open import Injection
 open import Data.List.Extras
@@ -21,7 +22,7 @@ open import MetaRens
 open import Equality
 
 NotInv : ∀ {Sg G D D' T} (i : Inj D D') (t : Term Sg G D' T) → Set
-NotInv {Sg} {G} i t = ∀ {G1} (σ : Sub Sg G G1) -> ¬ ∃ \ s -> renT i s ≡T subT σ t 
+NotInv {Sg} {G} i t = ∀ {G1} (σ : Sub< false > Sg G G1) -> ¬ ∃ \ s -> renT i s ≡T subT σ t 
 
 map-NI : ∀ {Sg G DI D T D' T' }{i : Inj D' DI}{t : Term Sg G D T} (d : DTm Sg G (DI , T') (D , T) ) → NotInv (∫oInj d i) t → NotInv i (∫once d t)
 map-NI lam notinv σ (lam s , lam eq) = notinv σ (s , eq)
@@ -44,7 +45,7 @@ mutual
   invertTm' : ∀ {Sg G Ss D T} (i : Inj Ss D) (t : Tm Sg G D T) →
               AllMV∈ i t → i ⁻¹ t ⊎ NotInv i t
   invertTm' i (con c ts) (con m) = map⊎ (con c) (map-NI (con c)) (invertTm's i ts m)
-  invertTm' i (mvar v h) (mvar (k , comm)) = yes (mvar v k comm)
+  invertTm' i (mvar v h) (mvar (k , comm)) = yes (mvar v (k , comm))
   invertTm' i (var x ts) (var m) 
    with invert i x     | invertTm's i ts m 
   ... | yes (y , iy≡x) | yes i⁻¹ts  = yes (var y iy≡x i⁻¹ts)

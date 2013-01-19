@@ -1,6 +1,7 @@
 module Height where
 
 open import Data.Sum
+open import Data.Bool
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality
 
@@ -12,21 +13,21 @@ open import Syntax
 Height = ℕ
 
 mutual
-  height : ∀ {Sg G D T} -> Tm Sg G D T -> Height
+  height : ∀ {Sg G D T b} -> Tm< b > Sg G D T -> Height
   height (con c ts) = (suc (heights ts))
   height (mvar u j) = 0
   height (var x ts) = suc (heights ts)
   height (lam t) = suc (height t)
 
-  heights : ∀ {Sg G D T} -> Tms Sg G D T -> Height
+  heights : ∀ {Sg G D T b} -> Tms< b > Sg G D T -> Height
   heights [] = 0
   heights (t ∷ ts) = suc ((height t) ⊔ (heights ts))
 
-heightT : ∀ {Sg G D T} -> Term Sg G D T -> Height
+heightT : ∀ {Sg G D T b} -> Term< b > Sg G D T -> Height
 heightT {T = inj₁ _} = height
 heightT {T = inj₂ _} = heights
 
-renT-height : ∀ {T Sg G D D1} -> (i : Inj D D1) -> (t : Term Sg G D T) -> heightT t ≡ heightT (renT i t)
+renT-height : ∀ {T Sg G D D1 b} -> (i : Inj D D1) -> (t : Term< b > Sg G D T) -> heightT t ≡ heightT (renT i t)
 renT-height {inj₁ ._} i (con c ts) = cong suc (renT-height i ts)
 renT-height {inj₁ ._} i (mvar u j) = refl
 renT-height {inj₁ ._} i (var x ts) = cong suc (renT-height i ts)

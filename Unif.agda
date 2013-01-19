@@ -6,11 +6,13 @@ open import Relation.Nullary
 open import Relation.Binary
 open DecTotalOrder Data.Nat.decTotalOrder using () renaming (refl to ≤-refl; trans to ≤-trans)         
 open import Relation.Binary.PropositionalEquality
-open import Relation.Binary.HeterogeneousEquality using (refl)
+import Relation.Binary.HeterogeneousEquality as Het
+open Het using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
 open ≡-Reasoning
 open import Data.Empty
 open import Data.Sum renaming (map to map⊎)
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
+open import Data.Bool
 
 open import Injection
 open import Limits.Injection
@@ -28,7 +30,7 @@ open import Inversion
 open import Decr-Sub
 open import Specification
 open import MetaRens
-open import Colimits.Sub
+open import Colimits.ESub
 
 
 flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃⟦σ⟧ Max (Unifies {Sg} (Tm.mvar u i) (mvar u j))
@@ -49,7 +51,7 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
 
       ∃s[ren[e,s]≡ρ[u]] = forget (lift-equalizer i,j⇒e (ρ (B <<- Ss) u) ρ-unifies)
   
-      δ : Sub Sg (B <<- E ∷ G - u) G'
+      δ : Sub< false > Sg (B <<- E ∷ G - u) G'
       δ ._ zero = proj₁ ∃s[ren[e,s]≡ρ[u]]
       δ S₁ (suc v) = ρ _ (thin u _ v)
 
@@ -67,13 +69,13 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
      let 
          eq = begin 
                  ren i (σ S u)              ≡⟨ T-≡ σ-unifies ⟩ 
-                 subT σ (subT (thin-s u) s) ≡⟨ subT-∘ s ⟩ 
+                 subT σ (subT (thin-s u) s) ≡⟨ ≅-to-≡ (Sub∘.subT-∘ {b1 = false} {true} {true} s) ⟩ 
                  subT (σ ∘s thin-s u) s     ∎ 
          σ≤ρ = ρ-sup (σ ∘s thin-s u) (σ S u) (≡-T eq)
 
      in NotInv (proj₁ σ≤ρ) (σ S u , ≡-T (begin ren i (σ S u)               ≡⟨ eq ⟩ 
                                                subT (σ ∘s thin-s u) s      ≡⟨ subT-ext (proj₂ σ≤ρ) s ⟩ 
-                                               subT (proj₁ σ≤ρ ∘s ρ) s     ≡⟨ sym (subT-∘ s) ⟩ 
+                                               subT (proj₁ σ≤ρ ∘s ρ) s     ≡⟨ sym (≅-to-≡ (Sub∘.subT-∘ {b1 = false} {true} {true} s)) ⟩ 
                                                subT (proj₁ σ≤ρ) (subT ρ s) ∎))}
 
 ... | yes (t , ren[i,t]≡sub[ρ,s]) = yes 
@@ -99,9 +101,9 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
       σ-sup : Sup (Unifies (mvar u i) (sub (thin-s u) s)) σ
       σ-sup ρ₁ ρ₁-unifies = δ , ρ₁≡δ∘σ where
         ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] = begin 
-           sub ρ₁ (mvar u i)                  ≡⟨ T-≡ ρ₁-unifies ⟩
-           sub ρ₁ (sub (thin-s u) s)         ≡⟨ sub-∘ s ⟩
-           sub (ρ₁ ∘s thin-s u) s            ∎
+           sub ρ₁ (mvar u i)         ≡⟨ T-≡ ρ₁-unifies ⟩
+           sub ρ₁ (sub (thin-s u) s) ≡⟨ ≅-to-≡ (Sub∘.sub-∘ {true} {false} {true} s) ⟩
+           sub (ρ₁ ∘s thin-s u) s    ∎
 
         ρ₁∘thin[u]≤ρ = ρ-sup (ρ₁ ∘s thin-s u) (ρ₁ _ u) (≡-T ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s])
         δ = proj₁ ρ₁∘thin[u]≤ρ
@@ -109,14 +111,15 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
 
         ρ₁≡δ∘σ : ρ₁ ≡s (δ ∘s σ)
         ρ₁≡δ∘σ S u₁ with thick u u₁
-        ρ₁≡δ∘σ S ._  | inj₁ (v , refl)    = begin ρ₁ S (thin u S v)    ≡⟨ sym (ren-id _) ⟩ 
-                                                  (ρ₁ ∘s thin-s u) S v ≡⟨ ρ₁∘thin[u]≡δ∘ρ _ v ⟩ 
-                                                  sub δ (ρ S v)        ∎
+        ρ₁≡δ∘σ S ._  | inj₁ (v , refl)    = begin
+                                              ρ₁ S (thin u S v)     ≡⟨ sym (ren-id (ρ₁ S (thin u S v))) ⟩
+                                              sub ρ₁ (thin-s u S v) ≡⟨ ρ₁∘thin[u]≡δ∘ρ S v ⟩ 
+                                              sub δ (ρ S v) ∎
         ρ₁≡δ∘σ ._ .u | inj₂ (refl , refl) = ren-inj i (ρ₁ _ u) (sub δ t) -- crucial use of injectivity to show
           (begin                                                         -- that we got the most general solution
                  ren i (ρ₁ _ u)         ≡⟨ ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] ⟩ 
                  sub (ρ₁ ∘s thin-s u) s ≡⟨ sub-ext ρ₁∘thin[u]≡δ∘ρ s ⟩ 
-                 sub (δ ∘s ρ) s         ≡⟨ sym (sub-∘ s) ⟩ 
+                 sub (δ ∘s ρ) s         ≡⟨ sym (≅-to-≡ (Sub∘.sub-∘ {true} {false} {true} s)) ⟩ 
                  sub δ (sub ρ s)        ≡⟨ cong (sub δ) (sym ren[i,t]≡sub[ρ,s]) ⟩ 
                  sub δ (ren i t)        ≡⟨ sub-nat t ⟩ 
                  ren i (sub δ t)        ∎)
@@ -127,8 +130,8 @@ flexAny u i t                        with check u t
 flexAny u i .(sub (thin-s u) s)          | inj₁ (s , refl)               = flexRigid u i s
 flexAny u i .(mvar u j)                  | inj₂ (G1 , j , [] , refl)     = yes (flexSame u i j)
 flexAny u i .(∫once x (∫ ps (mvar u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no  λ {(D1 , s , eq) → 
-        No-Cycle (subD s x) (subC s ps) (s _ u) i j
-          (trans (T-≡ eq) (∫-sub s (x ∷ ps) (mvar u j)))} 
+      No-Cycle (subD s x) (subC s ps) (s _ u) i j
+        (trans (T-≡ eq) (∫-sub s (x ∷ ps) (mvar u j)))} 
 
 
 unify-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → ∃σ Unifies x y → ∃σ Unifies y x

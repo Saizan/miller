@@ -20,9 +20,9 @@ open import OneHoleContext
 -- appear inside itself: it wouldn't be well-founded. 
 -- We'll use this to show (mvar u i) and (∫ (d ∷ ps) (mvar u j)) not
 -- unifiable in Unif.flexAny.
-No-Cycle : ∀ {TI Sg G D1 DI DO X} -> let TO = TI in 
-         (d : DTm Sg G (DI , TI) X) (ps : Context Sg G X (DO , TO)) 
-         (t : Term Sg G D1 TO) (i : Inj D1 DI)(j : Inj D1 DO) -> 
+No-Cycle : ∀ {b TI Sg G D1 DI DO X} -> let TO = TI in 
+         (d : DTm< b > Sg G (DI , TI) X) (ps : Context< b > Sg G X (DO , TO)) 
+         (t : Term< b > Sg G D1 TO) (i : Inj D1 DI)(j : Inj D1 DO) -> 
          ¬ renT i t ≡ ∫ (d ∷ ps) (renT j t)
 No-Cycle d ps t i j eq = ≡-or-> (cong heightT eq) r
   where open ≤-Reasoning 
@@ -41,7 +41,7 @@ _OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → Σ (Context _ _ _ (_ , inj�
   where open import Data.Sum
 
 _NotOccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
-u NotOccursIn t = ∃ \ s → subT (thin-s u) s ≡ t
+u NotOccursIn t = ∃ \ (s : Term _ _ _ _) → subT (thin-s u) s ≡ t
 
 Dec_OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
 Dec u OccursIn t = u NotOccursIn t ⊎ u OccursIn t

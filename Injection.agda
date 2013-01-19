@@ -7,7 +7,6 @@ open import Data.Product
 open import Data.Unit
 open import Data.Maybe
 open import Relation.Nullary
-open import Function hiding (_$_)
 open import Data.Empty
 open import Relation.Nullary.Decidable
 open import Data.Sum
@@ -87,6 +86,12 @@ abstract
 
 weak : ∀ {A : Set}{x : A}{xs ys} → Inj xs ys → Inj xs (x ∷ ys)
 weak f = Inj-thin zero f
+
+apply-weakid : ∀ {A : Set}{xs : List A}{x y}(i : xs ∋ x) -> weak {x = y} id-i $ i ≡ suc i
+apply-weakid i = begin
+   quo (λ x v → thin zero x (id-i $ v)) $ i ≡⟨ iso2 _ _ i ⟩
+   suc (id-i $ i)                           ≡⟨ cong suc (id-i$ i) ⟩
+   suc i                                    ∎
 
 _∷[]_ : ∀ {A : Set}{x : A}{xs ys} → (v : ys ∋ x) -> Inj xs (ys - v) → Inj (x ∷ xs) ys
 v ∷[] f = v ∷ Inj-thin v f [ v∉Inj-thinv v f ]

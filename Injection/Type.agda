@@ -7,7 +7,6 @@ open import Data.Product
 open import Data.Unit
 open import Data.Maybe
 open import Relation.Nullary
-open import Function hiding (_$_)
 open import Data.Empty
 open import Relation.Nullary.Decidable
 open import Data.Sum

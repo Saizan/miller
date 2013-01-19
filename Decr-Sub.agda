@@ -24,7 +24,7 @@ Ctx-length [] = zero
 Ctx-length (type <<- ctx ∷ m) = suc (length ctx + Ctx-length m)
 
 IsIso : ∀ {Sg G1 G2} -> (s : Sub Sg G1 G2) -> Set
-IsIso s = Σ (id-s ≤ s) \le -> id-s ≡s (s ∘s proj₁ le)
+IsIso s = Σ (∃ \ r -> id-s ≡s (r ∘s s)) \le -> id-s ≡s (s ∘s proj₁ le)
  
 -- The substitutions we produce are going to either be isomorphims or
 -- produce terms in a smaller context, so it'll be fine to recurse on
@@ -54,7 +54,7 @@ Ctx-length-lemma {._ ∷ G} {Ss} (suc {S = _ <<- ctx} u) =
     suc (length Ss) + suc (length ctx) + Ctx-length (G - u)   ≡⟨ +-assoc (suc (length Ss)) (suc (length ctx)) _ ⟩ 
     suc (length Ss) + (suc (length ctx) + Ctx-length (G - u)) ∎
   where open ≡-Reasoning
-
+{-
 abstract
   toMRen : ∀ {Sg G G1} (s : Sub Sg G G1) -> (id-s ≤ s) -> Σ (MetaRen G G1) \ ρ -> toSub ρ ≡s s
   toMRen {Sg} {G} {G1} s (δ , id≡δ∘s) = (λ S x → proj₁ (aux S x)) , (λ S x → proj₂ (aux S x)) where
@@ -63,7 +63,7 @@ abstract
     aux S x | con c ts | ()
     aux S x | mvar u j | w = (j / u) , refl
     aux S x | var x₁ ts | ()
-
+-}
 
 IsIso-id : ∀ {Sg G} -> IsIso {Sg} {G} {G} id-s
 IsIso-id = λ {Sg} {G} → (id-s , (λ S u → sym (ren-id _))) , (λ S u → sym (ren-id _))

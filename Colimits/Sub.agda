@@ -92,7 +92,7 @@ mutual
   lift-equalizer : ∀ {Sg G X Y S} {i j : Inj X Y} (equ : Equalizer i j) (t : Tm Sg G X S) →
                    let open Equalizer equ in ren i t ≡T ren j t → e ⁻¹ t
   lift-equalizer equ (con c ts) (con refl eq) = con c (lifts-equalizer equ ts eq)
-  lift-equalizer equ (mvar u j₁) (mvar refl eq) = mvar u (universal j₁ eq) e∘universal≡m
+  lift-equalizer equ (mvar u j₁) (mvar refl eq) = mvar u (universal j₁ eq , e∘universal≡m)
     where open Equalizer equ
   lift-equalizer equ (var x ts) (var eqv eqts) = var (proj₁ r) (sym (proj₂ r)) (lifts-equalizer equ ts eqts)
     where r = e$u≡m equ _ x eqv
@@ -115,7 +115,7 @@ mutual
 
   lift-pullback pull (con c ts) (con .c ts₁) (con refl eq) = con c (lifts-pullback pull ts ts₁ eq)
   lift-pullback pull (lam t)    (lam s)      (lam eq)      = lam (lift-pullback (cons-pullback _ _ pull) t s eq)
-  lift-pullback pull (mvar u q₁) (mvar .u q₂)  (mvar refl i∘q₁≡j∘q₂) = mvar u (universal q₁ q₂ i∘q₁≡j∘q₂) p₂∘universal≡q₂
+  lift-pullback pull (mvar u q₁) (mvar .u q₂)  (mvar refl i∘q₁≡j∘q₂) = mvar u (universal q₁ q₂ i∘q₁≡j∘q₂ , p₂∘universal≡q₂)
     where open Pullback pull
   lift-pullback pull (var x ts) (var x₁ ts₁) (var i$x≡j$x₁ eqts) = var (proj₁ r) (proj₂ (proj₂ r)) (lifts-pullback pull ts ts₁ eqts)
     where r = p$u≡q _ _ pull _ x₁ x i$x≡j$x₁ 

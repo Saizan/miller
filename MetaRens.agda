@@ -165,10 +165,10 @@ epic-inv {G} {G1} f f-epic S x | no ¬p = ⊥-elim absurd where
 
 module Subop {Sg} = Category MCtx (λ X Y → Sub Sg Y X) (λ f g → g ∘s f) id-s _≡s_
 module SubopProps {Sg : Ctx} where
-  module X = Subop {Sg}
-  module D = X.Props (\ {A} {B} {C} {D} {f} {g} {h} -> λ S u → sub-∘ (h S u)) 
+  module X = Subop {Sg} 
+  module D = X.Props (\ {A} {B} {C} {D} {f} {g} {h} -> λ S u → (sub-∘ (h S u)))
                      (λ {A} {B} {f} S u → ren-id (f S u)) 
-                     (λ {A} {B} {f} S u → sub-id (f S u)) 
+                     (λ {A} {B} {f} S u → subT-id (f S u)) 
                      (λ {A} {B} →
                           record {
                           refl = λ S x₁ → refl;
@@ -177,4 +177,5 @@ module SubopProps {Sg : Ctx} where
                      (λ {A} {B} {C} {f} {h} {g} {i} eq1 eq2 S u →
                           trans (cong (sub g) (eq1 S u)) (sub-ext eq2 (h S u)))
   open D public
+
 
