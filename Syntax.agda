@@ -181,13 +181,13 @@ subT-∘ t = ≅-to-≡ (Sub∘.subT-∘ {b1 = true} {true} {true} t)
 
 left-idf : ∀ {Sg G G1} -> (f : Sub< false > Sg G G1) -> (f ∘s id-f) ≡s f
 left-idf f S u = trans (eval-ext (f S u) (λ {S} x → 
-  transd S (≡-d (cong (λ ts → get (evals ts idEnv) x) (reifys-nats idEnv-nats))) (evals-o idEnv (idEnv-∘ idEnv) x)))
+  transd S (≡-d (cong (λ ts → get (evals ts idEnv) x) (reifys-nats idEnv-nats))) (RelA-unfold idEnv (idEnv-∘ idEnv) x)))
          (Subid.nf-id (f S u))
 mutual
   right-idf : ∀ {Sg G D T} -> (t : Tm< false > Sg G D T) -> sub id-f t ≡ t
   right-idf (con c ts) = cong (con c) (rights-idf ts)
   right-idf (mvar u ts) rewrite rights-idf ts = cong (mvar u) 
-    (begin reifys (evals (reifys idEnv) (evals ts (build injv))) ≡⟨ reifys-ext (evals-o _ (idEnv-∘ (evals ts (build injv)))) ⟩
+    (begin reifys (evals (reifys idEnv) (evals ts (build injv))) ≡⟨ reifys-ext (RelA-unfold _ (idEnv-∘ (evals ts (build injv)))) ⟩
            nfs ts idEnv                                          ≡⟨ Subid.nfs-id ts ⟩
            ts                                                    ∎)
   right-idf (var x ts) = cong (var x) (rights-idf ts)
@@ -293,7 +293,7 @@ mutual
     apply-injv Ss B v j = begin
       eval (reify (Ss ->> B) (injv (right# Ss $ (j $ v)))) idEnv $$
         mapEnv (left# Ss) idEnv ≡⟨ $$-ext
-                                     (eval-o (Ss ->> B) idEnv
+                                     (Rel-unfold (Ss ->> B) idEnv
                                       (injv-∘ (Ss ->> B) idEnv _ _
                                        (≡-d (get-build (injv {Sg} {G}) (right# Ss $ (j $ v))))))
                                      {xs = mapEnv (left# Ss) idEnv} {ys = mapEnv (left# Ss) idEnv} reflA ⟩
