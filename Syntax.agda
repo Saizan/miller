@@ -4,7 +4,7 @@ open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
 open import Relation.Nullary
 import Relation.Nullary.Decidable as Dec
 open import Relation.Binary.PropositionalEquality
-open ≡-Reasoning
+open import EqReasoning
 import Relation.Binary.HeterogeneousEquality as Het
 open Het using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
 open import Data.Empty
@@ -71,12 +71,13 @@ module Subid where
    nf-id (lam t) = 
      cong lam (begin 
        nf t (injv zero ∷ mapEnv (weak id-i) (build injv)) 
-         ≡⟨ nf-ext t (cons-ext (injv-ext zero) λ {S} x → 
-                       transd S (≡-d (cong (λ g → get g x) (mapAll-build _ injv (mapDom (weak id-i)))))
-                      (transd S (≡-d (get-build (λ x₁ → mapDom (weak id-i) (injv x₁)) x)) 
-                      (transd S (injv-nat (weak id-i) x)
-                      (transd S (≡-d (cong injv (apply-weakid x)))
-                                (≡-d (sym (get-build (λ x₁ → injv (suc x₁)) x))))))) ⟩
+         ≡⟨ nf-ext t (cons-ext (injv-ext zero) λ {S} x → begin[ dom ]
+             get (mapEnv (weak id-i) idEnv) x                    ≡⟨ cong (λ g → get g x) (mapAll-build _ injv (mapDom (weak id-i))) ⟩
+             get (build (λ x₁ → mapDom (weak id-i) (injv x₁))) x ≡⟨ get-build (λ x₁ → mapDom (weak id-i) (injv x₁)) x ⟩
+             mapDom (weak id-i) (injv x)                         ≈⟨ injv-nat (weak id-i) x ⟩
+             injv (weak id-i $ x)                                ≡⟨ cong injv (apply-weakid x) ⟩
+             injv (suc x)                                        ≡⟨ sym (get-build (λ x₁ → injv (suc x₁)) x) ⟩
+             get (build (λ x₁ → injv (suc x₁))) x                ∎) ⟩
        nf t idEnv ≡⟨ nf-id t ⟩
        t          ∎)
 
@@ -180,9 +181,14 @@ subT-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g : Sub Sg _ _} (t : Term Sg
 subT-∘ t = ≅-to-≡ (Sub∘.subT-∘ {b1 = true} {true} {true} t)
 
 left-idf : ∀ {Sg G G1} -> (f : Sub< false > Sg G G1) -> (f ∘s id-f) ≡s f
-left-idf f S u = trans (eval-ext (f S u) (λ {S} x → 
-  transd S (≡-d (cong (λ ts → get (evals ts idEnv) x) (reifys-nats idEnv-nats))) (RelA-unfold idEnv (idEnv-∘ idEnv) x)))
-         (Subid.nf-id (f S u))
+left-idf f S u = begin
+  eval (f S u) (evals (subs f (reifys idEnv)) idEnv) ≡⟨ eval-ext (f S u) (λ {S} x → begin[ dom ]
+           get (evals (subs f (reifys idEnv)) idEnv) x ≡⟨ cong (λ ts → get (evals ts idEnv) x) (reifys-nats idEnv-nats) ⟩ 
+           get (evals (reifys idEnv) idEnv) x          ≈⟨ RelA-unfold idEnv (idEnv-∘ idEnv) x ⟩
+           get idEnv x                                 ∎) ⟩
+  nf (f S u) idEnv                                   ≡⟨ Subid.nf-id (f S u) ⟩
+  f S u                                              ∎
+
 mutual
   right-idf : ∀ {Sg G D T} -> (t : Tm< false > Sg G D T) -> sub id-f t ≡ t
   right-idf (con c ts) = cong (con c) (rights-idf ts)
@@ -282,7 +288,6 @@ mutual
        var (right# Ss $ (j₁ $ v)) (reifys (mapEnv (left# Ss) idEnv)) ∎)))})
    where
     open import Injection.Sum
-    open ≡-Reasoning
     pointwise : ∀ {Sg G D T} -> {f g : ∀ {S} (x : T ∋ S) -> Dom Sg G D S} 
            -> ∀ {S} x -> reifys (build f) ≡T reifys (build g) -> reify S (f x) ≡ reify S (g x)
     pointwise zero    (t ∷ ts) = T-≡ t
@@ -309,13 +314,13 @@ mutual
        reifys (build (λ x₂ → injv (right# Ss $ (j₁ $ x₂)))) ∎))
      where
       build∘injv-nat : ∀ j -> build (λ x → injv (right# Ss $ (j $ x))) ≡A mapEnv (right# Ss ∘i j) (build injv)
-      build∘injv-nat j {S} x = transd S (≡-d (get-build (λ x₂ → injv (right# Ss $ (j $ x₂))) x))
-                    (transd S (≡-d (cong injv (sym (apply-∘ (right# Ss) j))))
-                     (transd S (symd S (injv-nat (right# Ss ∘i j) x))
-                      (symd S
-                       (≡-d
-                        (trans (get-nat-≡ {f = mapDom (right# Ss ∘i j)} idEnv x)
-                         (cong (mapDom _) (get-build injv x)))))))
+      build∘injv-nat j {S} x = begin[ dom ] 
+       get (build (λ v₁ → injv (right# Ss $ (j $ v₁)))) x ≡⟨ get-build (λ x₂ → injv (right# Ss $ (j $ x₂))) x ⟩
+       injv (right# Ss $ (j $ x)) ≡⟨ cong injv (sym (apply-∘ (right# Ss) j)) ⟩
+       injv ((right# Ss ∘i j) $ x) ≈⟨ symd S (injv-nat (right# Ss ∘i j) x) ⟩
+       mapDom (right# Ss ∘i j) (injv x) ≡⟨ sym (cong (mapDom _) (get-build injv x)) ⟩
+       mapDom (right# Ss ∘i j) (get idEnv x) ≡⟨ sym (get-nat-≡ {f = mapDom (right# Ss ∘i j)} idEnv x) ⟩
+       get (mapEnv (right# Ss ∘i j) idEnv) x ∎
       reifys∘build∘injv-nat : ∀ j -> reifys (build (λ x → injv (right# Ss $ (j $ x)))) ≡ rens (right# Ss) (rens j (reifys (build injv)))
       reifys∘build∘injv-nat j = begin 
         reifys (build (λ x → injv (right# Ss $ (j $ x)))) ≡⟨ reifys-ext (build∘injv-nat j) ⟩
