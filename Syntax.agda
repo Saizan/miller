@@ -46,19 +46,19 @@ module Subid where
 
  mutual
 
-   expand-id : ∀ {Sg G D T B} f {f-nat} (ts : All (Dom Sg G D) T) -> expand {T = B} T f f-nat $$ ts ≡ f _ id-i ts
+   expand-id : ∀ {Sg G D T B} f {f-nat} (ts : All (Dom Sg G D) T) -> expand {T = B} T (f , f-nat) $$ ts ≡ f _ id-i ts
    expand-id f [] = refl
    expand-id f {f-nat} (t ∷ ts) = 
-     begin expand _ (λ D2 j xs → f D2 (j ∘i id-i) (mapDom j t ∷ xs)) _ $$ ts ≡⟨ expand-id _ ts ⟩
-           f _ (id-i ∘i id-i) (mapDom id-i t ∷ ts)                           ≡⟨ cong₂ (f _) (left-id id-i) refl ⟩
-           f _ id-i (mapDom id-i t ∷ ts)                                     ≡⟨ reflN f f-nat _ id-i (cons-ext (mapDom-id t) reflA) ⟩
-           f _ id-i (t ∷ ts)                                                 ∎
+     begin expand _ (applyN (f , f-nat) id-i t) $$ ts ≡⟨ expand-id _ ts ⟩
+           f _ (id-i ∘i id-i) (mapDom id-i t ∷ ts)    ≡⟨ cong₂ (f _) (left-id id-i) refl ⟩
+           f _ id-i (mapDom id-i t ∷ ts)              ≡⟨ reflN (f , f-nat) _ id-i (cons-ext (mapDom-id t) reflA) ⟩
+           f _ id-i (t ∷ ts)                          ∎
    
    injv-id : ∀ {Sg G D T B} (v : _ ∋ (_ ->> B)) (ts : All (Dom Sg G D) T) -> injv v $$ ts ≡ var v (reifys ts)
    injv-id v ts = begin
-     expand _ (λ D1 i xs → var (i $ v) (reifys xs)) _ $$ ts ≡⟨ expand-id (λ D1 i xs → var (i $ v) (reifys xs)) ts ⟩ 
-     var (id-i $ v) (reifys ts)                             ≡⟨ cong₂ var (id-i$ v) refl ⟩
-     var v          (reifys ts)                             ∎
+     expand _ ((λ D1 i xs → var (i $ v) (reifys xs)) , _) $$ ts ≡⟨ expand-id (λ D1 i xs → var (i $ v) (reifys xs)) ts ⟩ 
+     var (id-i $ v) (reifys ts)                                 ≡⟨ cong₂ var (id-i$ v) refl ⟩
+     var v          (reifys ts)                                 ∎
 
    nf-id : ∀ {Sg G D T} (t : Tm< false > Sg G D T) -> nf t idEnv ≡ t
    nf-id (con c ts) = cong (con c) (nfs-id ts)

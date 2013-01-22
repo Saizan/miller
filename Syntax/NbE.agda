@@ -106,42 +106,68 @@ module Syntax.NbE where
  mapEnv-∘ j i (x ∷ xs) zero    = mapDom-∘ j i x
  mapEnv-∘ j i (x ∷ xs) (suc v) = mapEnv-∘ j i xs v
 
- reflN : ∀ {Sg G D T Ts} (f : ∀ D1 → Inj D D1 → All (Dom Sg G D1) (Ts) → Tm< false > Sg G D1 (! T)) 
-           → (f-nat : ∀ D i {xs ys} (eq : xs ≡A ys) K k → f K (k ∘i i) (mapEnv k xs) ≡ ren k (f D i ys)) → 
-           ∀ D i {xs ys} (eq : xs ≡A ys) → f D i xs ≡ f D i ys
- reflN f f-nat D i {xs} {ys} eq = begin 
-   f D i xs                         ≡⟨ sym (ren-id _) ⟩
-   ren id-i (f D i xs)              ≡⟨ sym (f-nat D i reflA D id-i) ⟩ 
-   f D (id-i ∘i i) (mapEnv id-i xs) ≡⟨ f-nat D i eq D id-i ⟩
-   ren id-i (f D i ys)              ≡⟨ ren-id _ ⟩
-   f D i ys                         ∎
 
  cons-ext : ∀ {Sg G D T Ts} → {x y : Dom Sg G D T} → T ∋ x ≡d y 
             → {xs ys : All (Dom Sg G D) Ts} → xs ≡A ys → (x ∷ xs) ≡A (y ∷ ys)
  cons-ext x xs zero    = x
  cons-ext x xs (suc v) = xs v
 
+ DomN : (Sg : Ctx)(G : MCtx)(D : Ctx) → List Ty → Base -> Set
+ DomN Sg G D Ss B = Σ (∀ D1 → (i : Inj D D1) → (xs : All (Dom Sg G D1) Ss) → Tm< false > Sg G D1 (! B))
+                   \ f -> ∀ D i {xs ys} (eq : xs ≡A ys) K k → f K (k ∘i i) (mapEnv k xs) ≡ ren k (f D i ys)
+ _∋_≡N_ : ∀ {Sg G D T} Ts (f g : DomN Sg G D Ts T) → Set
+ _∋_≡N_ {Sg} {G} {D} {T} Ts f g = (∀ D1 (i : Inj D D1) {xs ys} -> xs ≡A ys -> proj₁ f D1 i xs ≡ proj₁ g D1 i ys)
+
+ reflN : ∀ {Sg G D T Ts} (f : DomN Sg G D Ts T) -> Ts ∋ f ≡N f
+ reflN (f , f-nat) D i {xs} {ys} eq = begin 
+   f D i xs                         ≡⟨ sym (ren-id _) ⟩
+   ren id-i (f D i xs)              ≡⟨ sym (f-nat D i reflA D id-i) ⟩ 
+   f D (id-i ∘i i) (mapEnv id-i xs) ≡⟨ f-nat D i eq D id-i ⟩
+   ren id-i (f D i ys)              ≡⟨ ren-id _ ⟩
+   f D i ys                         ∎
+
+ mapDomN : ∀ {Sg G D Ts T K} (i : Inj D K) -> DomN Sg G D Ts T -> DomN Sg G K Ts T  
+ mapDomN i (f , f-nat) = (λ D1 j xs → f D1 (j ∘i i) xs) 
+   , (λ D i₁ {xs} {ys} eq K k → begin[ dom ] 
+        f K ((k ∘i i₁) ∘i i) (mapEnv k xs) ≈⟨ cong₂ (f K) (sym assoc-∘i) refl ⟩ 
+        f K (k ∘i (i₁ ∘i i)) (mapEnv k xs) ≈⟨ f-nat _ (i₁ ∘i i) eq K k ⟩ 
+        ren k (f D (i₁ ∘i i) ys) ∎)
+
+ applyN : ∀ {Sg G D S Ss T K} -> DomN Sg G D (S ∷ Ss) T -> Inj D K -> Dom Sg G K S -> DomN Sg G K Ss T
+ applyN (f , f-nat) i s = (λ D2 j xs → f D2 (j ∘i i) (mapDom j s ∷ xs)) , 
+  (λ D₁ i₁ {xs} {ys} eq K k → begin[ dom ]
+   f K ((k ∘i i₁) ∘i i) (mapDom (k ∘i i₁) s ∷ mapEnv k xs) ≈⟨ reflN (f , f-nat) K ((k ∘i i₁) ∘i i)
+                                                               (cons-ext (symd _ (mapDom-∘ k i₁ s)) (mapEnv-ext k reflA)) ⟩
+   f K ((k ∘i i₁) ∘i i) (mapEnv k (mapDom i₁ s ∷ xs))      ≈⟨ cong₂ (f K) (sym assoc-∘i) refl ⟩
+   f K (k ∘i (i₁ ∘i i)) (mapEnv k (mapDom i₁ s ∷ xs))      ≈⟨ f-nat _ (i₁ ∘i i) {mapDom i₁ s ∷ xs} {mapDom i₁ s ∷ ys}
+                                                               (cons-ext (mapDom-ext i₁ (refld _)) eq) _ k ⟩ 
+   ren k (f D₁ (i₁ ∘i i) (mapDom i₁ s ∷ ys)) ∎)
+
+ applyN-nat : ∀ {Sg G D S Ss T D1} (f : DomN Sg G D (S ∷ Ss) T) (i : Inj D D1) -> 
+              ∀ {s1 s2 : Dom Sg G D1 S} (_ : S ∋ s1 ≡d s2) -> 
+              ∀ {K} (k : Inj D1 K) -> Ss ∋ applyN f (k ∘i i) (mapDom k s1) ≡N mapDomN k (applyN f i s2)
+ applyN-nat (f , f-nat) i {s1} {s2} s {K} k D i₁ {xs} {ys} xs≡ys = begin 
+   f D (i₁ ∘i (k ∘i i)) (mapDom i₁ (mapDom k s1) ∷ xs) ≈⟨ cong₂ (f D) assoc-∘i refl ⟩ 
+   f D ((i₁ ∘i k) ∘i i) (mapDom i₁ (mapDom k s1) ∷ xs) ≈⟨ (reflN (f , f-nat) D ((i₁ ∘i k) ∘i i) 
+                                                           (cons-ext (transd _ (mapDom-∘ i₁ k s1) (mapDom-ext (i₁ ∘i k) s)) xs≡ys)) ⟩ 
+   f D ((i₁ ∘i k) ∘i i) (mapDom (i₁ ∘i k) s2 ∷ ys)     ∎
+
+
  mutual
 
-  expand : ∀ {Sg G D T} Ts → (f : ∀ D1 → Inj D D1 → All (Dom Sg G D1) Ts → Tm< false > Sg G D1 (! T)) 
-           → (∀ D i {xs ys} (eq : xs ≡A ys) K k → f K (k ∘i i) (mapEnv k xs) ≡ ren k (f D i ys)) 
-           → Dom Sg G D (Ts ->> T)
-  expand []       f f-nat = f _ id-i []
-  expand (S ∷ Ts) f f-nat = (λ D1 i s →
-    expand Ts (λ D2 j xs → f D2 (j ∘i i) (mapDom j s ∷ xs))
-     (λ D₁ i₁ {xs} {ys} eq K k → begin
-       f K ((k ∘i i₁) ∘i i) (mapDom (k ∘i i₁) s ∷ mapEnv k xs) ≡⟨ reflN f f-nat K ((k ∘i i₁) ∘i i)
-                                                                   (cons-ext (symd _ (mapDom-∘ k i₁ s)) (mapEnv-ext k reflA)) ⟩
-       f K ((k ∘i i₁) ∘i i) (mapEnv k (mapDom i₁ s ∷ xs))      ≡⟨ cong₂ (f K) (sym assoc-∘i) refl ⟩
-       f K (k ∘i (i₁ ∘i i)) (mapEnv k (mapDom i₁ s ∷ xs))      ≡⟨ f-nat _ (i₁ ∘i i) {mapDom i₁ s ∷ xs} {mapDom i₁ s ∷ ys}
-                                                                   (cons-ext (mapDom-ext i₁ (refld _)) eq) _ k ⟩
-       ren k (f D₁ (i₁ ∘i i) (mapDom i₁ s ∷ ys))               ∎))
-    , expand-nat Ts f f-nat
+  expand : ∀ {Sg G D T} Ts → DomN Sg G D Ts T → Dom Sg G D (Ts ->> T)
+  expand []       (f , f-nat) = f _ id-i []
+  expand (S ∷ Ts) (f , f-nat) = (λ D1 i s → expand Ts (applyN (f , f-nat) i s)) , 
+    (λ D1 i {s1} {s2} s K k → begin[ dom ] 
+      expand Ts (applyN (f , f-nat) (k ∘i i) (mapDom k s1)) ≈⟨ expand-ext Ts (applyN-nat (f , f-nat) i s k) ⟩
+      expand Ts (mapDomN k (applyN (f , f-nat) i s2))       ≈⟨ expand-nat Ts (applyN (f , f-nat) i s2) (applyN (f , f-nat) i s2) 
+                                                                                 (reflN (applyN (f , f-nat) i s2)) K k ⟩ 
+      mapDom k (expand Ts (applyN (f , f-nat) i s2)) ∎)
 
   injv : ∀ {Sg G D T} → D ∋ T → Dom Sg G D T
-  injv {T = Ss ->> B} v = expand Ss (λ D1 i xs → var (i $ v) (reifys xs)) 
+  injv {T = Ss ->> B} v = expand Ss ((λ D1 i xs → var (i $ v) (reifys xs)) ,
                                     (λ D₁ i eq K k → cong₂ var (apply-∘ k i) 
-                                                               (reifys-nat eq k))
+                                                               (reifys-nat eq k)))
 
   reify : ∀ {Sg G D}(T : Ty) → Dom Sg G D T → Tm< false > Sg G D T
   reify ([]       ->> B) x = x
@@ -151,46 +177,21 @@ module Syntax.NbE where
   reifys []       = []
   reifys (t ∷ ts) = reify _ t ∷ reifys ts
 
-  expand-nat : ∀ {Sg G D T S} Ts (f : ∀ D1 → Inj D D1 → All (Dom Sg G D1) (S ∷ Ts) → Tm< false > Sg G D1 (! T)) 
-           → (f-nat : ∀ D i {xs ys} (eq : xs ≡A ys) K k → f K (k ∘i i) (mapEnv k xs) ≡ ren k (f D i ys)) → 
-            ∀ (D1 : List Ty) (i : Inj D D1) {s1 s2 : Dom Sg G D1 S} → S ∋ s1 ≡d s2 →
-                           (K : List Ty) (k : Inj D1 K) → 
-             (Ts ->> T) ∋ expand Ts _ _ ≡d mapDom k (expand Ts _ _)
-  expand-nat [] f f-nat D1 i {s1} {s2} s K k = begin 
-     f K (id-i ∘i (k ∘i i)) (mapDom id-i (mapDom k s1) ∷ []) ≡⟨ reflN f f-nat K _
-                                                                  (cons-ext
-                                                                   (transd _ (mapDom-id _)
-                                                                    (mapDom-ext k (symd _ (transd _ (mapDom-id s2) (symd _ s)))))
-                                                                   reflA) ⟩
-     f K (id-i ∘i (k ∘i i)) (mapEnv k (mapDom id-i s2 ∷ [])) ≡⟨ (cong₂ (f K)
-                                                                 (trans (left-id (k ∘i i)) (cong (_∘i_ k) (sym (left-id _)))) refl) ⟩
-     f K (k ∘i (id-i ∘i i)) (mapEnv k (mapDom id-i s2 ∷ [])) ≡⟨ f-nat D1 (id-i ∘i i) reflA K k ⟩
-     ren k (f D1 (id-i ∘i i) (mapDom id-i s2 ∷ [])) ∎
-  expand-nat (T ∷ Ts) f f-nat D1 i {s1} s K k = λ D i₁ {s3} s₁ → expand-ext Ts (λ D₁ i₂ {xs} x₁ → begin 
-    f D₁ ((i₂ ∘i i₁) ∘i (k ∘i i))
-      (mapDom (i₂ ∘i i₁) (mapDom k s1) ∷ mapDom i₂ s3 ∷ xs) ≡⟨ symd _ (reflN f f-nat D₁ _
-                                                                 (cons-ext (mapDom-id _)
-                                                                  (cons-ext (mapDom-id _) mapEnv-id))) ⟩
-    f D₁ ((i₂ ∘i i₁) ∘i (k ∘i i))
-      (mapEnv id-i (mapDom (i₂ ∘i i₁) (mapDom k s1) ∷ mapDom i₂ s3 ∷ xs)) ≡⟨ cong₂ (f D₁)
-                                                                              (sym (trans (left-id _)
-                                                                               (trans (cong (λ r → r ∘i i) assoc-∘i) (sym assoc-∘i))))
-                                                                              refl ⟩
-    f D₁ (id-i ∘i ((i₂ ∘i (i₁ ∘i k)) ∘i i))
-      (mapEnv id-i (mapDom (i₂ ∘i i₁) (mapDom k s1) ∷ mapDom i₂ s3 ∷ xs)) ≡⟨ f-nat _ ((i₂ ∘i (i₁ ∘i k)) ∘i i)
-                                                                               {mapDom (i₂ ∘i i₁) (mapDom k s1) ∷ mapDom i₂ s3 ∷ xs}
-                                                                               (cons-ext
-                                                                                (transd _ (mapDom-∘ (i₂ ∘i i₁) k s1)
-                                                                                 (transd _ (mapDom-ext ((i₂ ∘i i₁) ∘i k) s)
-                                                                                  (≡-d (cong₂ mapDom (sym assoc-∘i) refl))))
-                                                                                (cons-ext (mapDom-ext i₂ s₁) x₁))
-                                                                               _ id-i ⟩
-    ren id-i (f D₁ ((i₂ ∘i (i₁ ∘i k)) ∘i i) _) ≡⟨ ren-id _ ⟩
-    f D₁ ((i₂ ∘i (i₁ ∘i k)) ∘i i) _ ∎) 
+  expand-nat : ∀ {Sg G D T} Ts (f g : DomN Sg G D Ts T) → (∀ D1 (i : Inj D D1) {xs ys} -> xs ≡A ys -> proj₁ f D1 i xs ≡ proj₁ g D1 i ys) ->
+                ∀ (K : List Ty) (k : Inj D K) → (Ts ->> T) ∋ expand Ts (mapDomN k f) ≡d mapDom k (expand Ts g)
+  expand-nat []       (f , f-nat) (g , g-nat) eq K k = begin 
+    f K (id-i ∘i k) []  ≡⟨ eq K (id-i ∘i k) reflA ⟩ 
+    g K (id-i ∘i k) []  ≡⟨ cong₂ (g K) (trans (left-id k) (sym (right-id k))) refl ⟩ 
+    g K (k ∘i id-i) []  ≡⟨ g-nat _ id-i reflA _ k ⟩ 
+    ren k (g _ id-i []) ∎
+  expand-nat (T ∷ Ts) (f , _) (g , _) eq K k = λ D i {s1} {s2} s → expand-ext Ts 
+    (λ D₁ i₁ {xs} {ys} xs≡ys → begin[ dom ] 
+      f D₁ ((i₁ ∘i i) ∘i k) (mapDom i₁ s1 ∷ xs) ≈⟨ eq D₁ ((i₁ ∘i i) ∘i k) (cons-ext (mapDom-ext i₁ s) xs≡ys) ⟩ 
+      g D₁ ((i₁ ∘i i) ∘i k) (mapDom i₁ s2 ∷ ys) ≈⟨ cong₂ (g D₁) (sym assoc-∘i) refl ⟩ 
+      g D₁ (i₁ ∘i (i ∘i k)) (mapDom i₁ s2 ∷ ys) ∎)
 
-  expand-ext : ∀ {Sg G D T} Ts {f g : ∀ D1 → Inj D D1 → All (Dom Sg G D1) Ts → Tm< false > Sg G D1 (! T)} {f-nat} {g-nat}
-               → (∀ D i {xs ys} → xs ≡A ys  → f D i xs ≡ g D i ys)
-               → (Ts ->> T) ∋ expand Ts f f-nat ≡d expand Ts g g-nat
+  expand-ext : ∀ {Sg G D T} Ts {f g : DomN Sg G D Ts T}
+               → (Ts ∋ f ≡N g) → (Ts ->> T) ∋ expand Ts f ≡d expand Ts g
   expand-ext []       eq = eq _ id-i {[]} {[]} (λ ()) 
   expand-ext (S ∷ Ts) eq = λ D1 i s → expand-ext Ts (λ D i₁ x → eq D (i₁ ∘i i) (cons-ext (mapDom-ext i₁ s) x))
 
@@ -413,3 +414,4 @@ module Syntax.NbE where
    mapDom i (injv x)                       ≈⟨ injv-nat i x ⟩ 
    injv (i $ x)                            ≡⟨ sym (get-build injv (i $ x)) ⟩
    get idEnv (i $ x)                       ∎
+

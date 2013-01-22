@@ -93,12 +93,12 @@ module Syntax.NbEC where
    
  mutual
 
-   expand-∘ : ∀ {Sg G D0 D} Ss {B} (f : All (Dom Sg G D) D0) (d : Dom Sg G D (Ss ->> B)) {e e-nat} → 
-             (∀ D i K (j : Inj _ K) {xs1 xs2} f' (ex : mapEnv j f ≤[ i ] f') → RelA f' xs1 xs2 → Rel (! B) f' (e D i xs1) (mapDom j d $$ xs2))
-             → Rel (Ss ->> B) f (expand Ss e e-nat) d
+   expand-∘ : ∀ {Sg G D0 D} Ss {B} (f : All (Dom Sg G D) D0) (d : Dom Sg G D (Ss ->> B)) {e} → 
+             (∀ D i K (j : Inj _ K) {xs1 xs2} f' (ex : mapEnv j f ≤[ i ] f') → RelA f' xs1 xs2 → Rel (! B) f' (proj₁ e D i xs1) (mapDom j d $$ xs2))
+             → Rel (Ss ->> B) f (expand Ss e) d
    expand-∘ []       f d eq = trans (eq _ id-i _ id-i {[]} {[]} f (λ x → 
                               transd _ (mapEnv-id x) (≡-d (cong (get f) (sym (id-i$ x))))) (λ ())) (ren-id _)
-   expand-∘ (S ∷ Ss) f (d , d-nat) {e} eq = (λ D i K j {x1} {x2} f' ex x₁ → 
+   expand-∘ (S ∷ Ss) f (d , d-nat) {e , _} eq = (λ D i K j {x1} {x2} f' ex x₁ → 
     expand-∘ Ss f' (d K j x2) (λ D₁ i₁ K₁ j₁ {xs1} {xs2} f'' ex₁ x₂ → begin[ dom ]
      eval (e D₁ (i₁ ∘i i) (mapDom i₁ x1 ∷ xs1)) f'' ≈⟨ eq _ (i₁ ∘i i) _ (j₁ ∘i j) {mapDom i₁ x1 ∷ xs1} {mapDom j₁ x2 ∷ xs2}
                                                         f'' (≤[]-∘ f i j f' ex i₁ j₁ f'' ex₁)

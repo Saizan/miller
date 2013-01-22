@@ -140,9 +140,9 @@ mutual
   evalAs-nats g []             = tt
   evalAs-nats g (i ∷ t [ pf ]) = get-nats g i , evalAs-nats g t
   
-  expand-nats : ∀ {b1 Sg G1 G2 D B} Ss {f : Sub< b1 > Sg G1 G2}{c1 c1-n c2 c2-n} 
-                → (∀ D r {xs ys} → Env-nats f xs ys → sub f (c1 D r xs) ≡ c2 D r ys) 
-                → Dom-nats {D = D} (Ss ->> B) f (expand Ss c1 c1-n) (expand Ss c2 c2-n)
+  expand-nats : ∀ {b1 Sg G1 G2 D B} Ss {f : Sub< b1 > Sg G1 G2}{c1 c2} 
+                → (∀ D r {xs ys} → Env-nats f xs ys → sub f (proj₁ c1 D r xs) ≡ proj₁ c2 D r ys) 
+                → Dom-nats {D = D} (Ss ->> B) f (expand Ss c1) (expand Ss c2)
   expand-nats []       h = h _ id-i _
   expand-nats (S ∷ Ss) h = λ D1 r sr x₁ → expand-nats Ss (λ D r₁ eq → h D (r₁ ∘i r) (mapDom-nats S r₁ x₁ , eq))
 
