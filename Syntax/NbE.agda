@@ -278,7 +278,7 @@ module Syntax.NbE where
 
  $$-nat : ∀ {Sg G D Ts B} → {x y : Dom Sg G D (Ts ->> B)} → _ ∋ x ≡d y → 
           ∀ {xs ys : All (Dom Sg G D) Ts} → xs ≡A ys → ∀ {K} (k : Inj _ K) → (! B) ∋ (mapDom k x $$ mapEnv k xs) ≡d ren k (y $$ ys)
- $$-nat                               f≡g {[]}     {[]}     eq k = cong (ren k) f≡g
+ $$-nat                                           f≡g {[]}     {[]}     eq k = cong (ren k) f≡g
  $$-nat {Ts = T ∷ Ts} {B} {x = f , _} {g , g-nat} f≡g {x ∷ xs} {y ∷ ys} eq k = begin
    f _ (id-i ∘i k) (mapDom k x) $$ mapEnv k xs ≡⟨ $$-ext {Ts = Ts} {B = B} {x = f _ (id-i ∘i k) (mapDom k x)}
                                                     {mapDom k (g _ id-i y)} lemma
