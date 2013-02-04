@@ -69,13 +69,13 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
      let 
          eq = begin 
                  ren i (σ S u)              ≡⟨ T-≡ σ-unifies ⟩ 
-                 subT σ (subT (thin-s u) s) ≡⟨ ≅-to-≡ (Sub∘.subT-∘ {b1 = false} {true} {true} s) ⟩ 
+                 subT σ (subT (thin-s u) s) ≡⟨ Sub∘.subT-∘ s ⟩ 
                  subT (σ ∘s thin-s u) s     ∎ 
          σ≤ρ = ρ-sup (σ ∘s thin-s u) (σ S u) (≡-T eq)
 
      in NotInv (proj₁ σ≤ρ) (σ S u , ≡-T (begin ren i (σ S u)               ≡⟨ eq ⟩ 
                                                subT (σ ∘s thin-s u) s      ≡⟨ subT-ext (proj₂ σ≤ρ) s ⟩ 
-                                               subT (proj₁ σ≤ρ ∘s ρ) s     ≡⟨ sym (≅-to-≡ (Sub∘.subT-∘ {b1 = false} {true} {true} s)) ⟩ 
+                                               subT (proj₁ σ≤ρ ∘s ρ) s     ≡⟨ sym (Sub∘.subT-∘ s) ⟩ 
                                                subT (proj₁ σ≤ρ) (subT ρ s) ∎))}
 
 ... | yes (t , ren[i,t]≡sub[ρ,s]) = yes 
@@ -102,7 +102,7 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
       σ-sup ρ₁ ρ₁-unifies = δ , ρ₁≡δ∘σ where
         ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] = begin 
            sub ρ₁ (mvar u i)         ≡⟨ T-≡ ρ₁-unifies ⟩
-           sub ρ₁ (sub (thin-s u) s) ≡⟨ ≅-to-≡ (Sub∘.sub-∘ {true} {false} {true} s) ⟩
+           sub ρ₁ (sub (thin-s u) s) ≡⟨ Sub∘.subT-∘ s ⟩
            sub (ρ₁ ∘s thin-s u) s    ∎
 
         ρ₁∘thin[u]≤ρ = ρ-sup (ρ₁ ∘s thin-s u) (ρ₁ _ u) (≡-T ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s])
@@ -119,7 +119,7 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
           (begin                                                         -- that we got the most general solution
                  ren i (ρ₁ _ u)         ≡⟨ ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] ⟩ 
                  sub (ρ₁ ∘s thin-s u) s ≡⟨ sub-ext ρ₁∘thin[u]≡δ∘ρ s ⟩ 
-                 sub (δ ∘s ρ) s         ≡⟨ sym (≅-to-≡ (Sub∘.sub-∘ {true} {false} {true} s)) ⟩ 
+                 sub (δ ∘s ρ) s         ≡⟨ sym (Sub∘.subT-∘ s) ⟩ 
                  sub δ (sub ρ s)        ≡⟨ cong (sub δ) (sym ren[i,t]≡sub[ρ,s]) ⟩ 
                  sub δ (ren i t)        ≡⟨ sub-nat t ⟩ 
                  ren i (sub δ t)        ∎)

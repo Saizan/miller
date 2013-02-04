@@ -102,7 +102,7 @@ cons z = zero ∷[] z
 abstract
 
   cons-id : ∀ {A : Set}{x : A}{xs} -> cons id-i ≡ id-i {_} {x ∷ xs}
-  cons-id = cong-∷[] refl (quo-ext (λ x v → cong suc (iso2 _ _ v)))
+  cons-id = cong-∷[] refl (quo-ext (λ x v → cong suc (id-i$ v)))
 
   cons-∘i : ∀ {A : Set}{xs ys zs : List A}{x} → (j : Inj ys zs) → (i : Inj xs ys) → cons {A} {x} (j ∘i i) ≡ cons j ∘i cons i
   cons-∘i j i = cong-∷[] refl (begin 

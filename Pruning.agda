@@ -176,8 +176,8 @@ mutual
      begin
        s S u                                               ≡⟨ proj₂ s≤pr-t S u ⟩
        (proj₁ s≤pr-t ∘s toSub (pruner pr-t)) S u           ≡⟨ sub-ext (λ S₁ u₁ → sym (uni∘p₁≡q₁ S₁ u₁)) (toSub (pruner pr-t) S u) ⟩ 
-       ((down uni ∘s toSub p₁) ∘s toSub (pruner pr-t)) S u ≡⟨ sym (≅-to-≡ (Sub∘.sub-∘ {f = down uni} {g = toSub p₁}
-                                                                           (toSub (pruner pr-t) S u))) ⟩ 
+       ((down uni ∘s toSub p₁) ∘s toSub (pruner pr-t)) S u ≡⟨ sym (Sub∘.subT-∘ {f = down uni} {g = toSub p₁}
+                                                                           (toSub (pruner pr-t) S u)) ⟩ 
        (down uni ∘s (toSub p₁ ∘s toSub (pruner pr-t))) S u ∎)
    where
      pr-t = prune' {i = i} t 

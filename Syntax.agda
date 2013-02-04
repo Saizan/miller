@@ -47,7 +47,7 @@ module Subid where
  mutual
 
    expand-id : ∀ {Sg G D T B} f {f-nat} (ts : All (Dom Sg G D) T) -> expand {T = B} T (f , f-nat) $$ ts ≡ f _ id-i ts
-   expand-id f [] = refl
+   expand-id f         []       = refl
    expand-id f {f-nat} (t ∷ ts) = 
      begin expand _ (applyN (f , f-nat) id-i t) $$ ts ≡⟨ expand-id _ ts ⟩
            f _ (id-i ∘i id-i) (mapDom id-i t ∷ ts)    ≡⟨ cong₂ (f _) (left-id id-i) refl ⟩
@@ -93,6 +93,8 @@ module Subid where
  mutual
   sub-id : ∀ {b Sg G D T} (t : Tm< b > Sg G D T) → sub id-s t ≅ t
   sub-id {b}     (con c ts) = congid {b} (con c) (subs-id ts)
+  sub-id {b}     (var x ts) = congid {b} (var x) (subs-id ts)
+  sub-id {b}     (lam t)    = congid {b} lam (sub-id t)
   sub-id {true}  (mvar u j) = ≡-to-≅ (cong (mvar u) (right-id j))
   sub-id {false} (mvar u ts) rewrite ≅-to-≡ (subs-id ts) = ≡-to-≅ (cong (mvar u) (begin 
    reifys (build (λ z → get (evals ts idEnv) (id-i $ z))) 
@@ -102,12 +104,10 @@ module Subid where
           evals ts idEnv                                ∎) ⟩
    nfs ts idEnv ≡⟨ nfs-id ts ⟩
    ts ∎))
-  sub-id {b}     (var x ts) = congid {b} (var x) (subs-id ts)
-  sub-id {b}     (lam t)    = congid {b} lam (sub-id t)
   
   subs-id : ∀ {b Sg G D T} (t : Tms< b > Sg G D T) → subs id-s t ≅ t
-  subs-id {b} [] = Het.cong {B = let A = _; B = _; C = _; D = _ in \ b -> Tms< b > A B C D} 
-                            (λ b₁ → Tms.[] {b = b₁}) (≡-to-≅ (x∧true≡x {b}))
+  subs-id {b} []       = Het.cong {B = let A = _; B = _; C = _; D = _ in \ b -> Tms< b > A B C D} 
+                                  (λ b₁ → Tms.[] {b = b₁}) (≡-to-≅ (x∧true≡x {b}))
   subs-id {b} (t ∷ ts) = i-cong₂ {A = let A = _; B = _; C = _; D = _ in λ b → Tm< b > A B C D}
                             {B = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D}
                             {C = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D}
@@ -118,6 +118,9 @@ sub-id t = ≅-to-≡ (Subid.sub-id t)
 
 subs-id : ∀ {Sg G D T} (t : Tms Sg G D T) → subs id-s t ≡ t
 subs-id ts = ≅-to-≡ (Subid.subs-id ts)
+
+left-ids : ∀ {b Sg G G1} -> (f : Sub< b > Sg G G1) -> (f ∘s id-s) ≡s f
+left-ids f S u = ren-id _
 
 ∧-assoc : ∀ {a b c} -> (a ∧ b) ∧ c ≡ a ∧ (b ∧ c)
 ∧-assoc {true} = refl
@@ -131,12 +134,12 @@ module Sub∘ where
  mutual
   sub-∘ : ∀ {b3 b1 b2 Sg G1 G2 G3 D T} {f : Sub< b1 > Sg G2 G3}{g : Sub< b2 > _ _ _} (t : Tm< b3 > Sg G1 D T) → sub f (sub g t) ≅ sub (f ∘s g) t
   sub-∘ {b3} (con c ts) = congTm b3 (con c) (subs-∘ ts)
-  sub-∘ {b3 = true} {g = g} (mvar u j) = ≡-to-≅ (sub-nat (g _ u))
-  sub-∘ {b3 = false} {f = f} {g = g} (mvar u ts) = 
+  sub-∘ {b3} (var x ts) = congTm b3 (var x) (subs-∘ ts)
+  sub-∘ {b3} (lam t)    = congTm b3 lam (sub-∘ t)
+  sub-∘ {true}          {g = g} (mvar u j)  = ≡-to-≅ (sub-nat (g _ u))
+  sub-∘ {false} {f = f} {g = g} (mvar u ts) = 
    Het.trans (≡-to-≅ (nf-nats {f = f} (evals-nats idEnv-nats (idEnv-∘ idEnv) (subs g ts)) (evals-∘ _ (idEnv-∘ idEnv) _) (g _ u))) 
              (Het.cong (replace ((f ∘s g) _ u)) (subs-∘ {f = f} {g = g} ts))
-  sub-∘ {b3} (var x ts) = congTm b3 (var x) (subs-∘ ts)
-  sub-∘ {b3} (lam t) = congTm b3 lam (sub-∘ t)
   
   subs-∘ : ∀ {b3 b1 b2 Sg G1 G2 G3 D T} {f : Sub< b1 > Sg G2 G3}{g : Sub< b2 > _ _ _} (t : Tms< b3 > Sg G1 D T) → subs f (subs g t) ≅ subs (f ∘s g) t
   subs-∘ {b3} []       = Het.cong {B = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D} (λ b → Tms.[] {b = b}) (≡-to-≅ (∧-assoc {b3}))
@@ -145,9 +148,10 @@ module Sub∘ where
                             {C = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D}
                             _∷_ (∧-assoc {b3}) (sub-∘ t) (subs-∘ t₁)
 
- subT-∘ : ∀ {Sg G1 G2 G3 D T b1 b2 b3} {f : Sub< b1 > Sg G2 G3}{g : Sub< b2 > Sg _ _} (t : Term< b3 > Sg G1 D T) → subT f (subT g t) ≅ subT (f ∘s g) t
- subT-∘ {Sg} {G1} {G2} {G3} {D} {inj₁ x} t = sub-∘ t
- subT-∘ {Sg} {G1} {G2} {G3} {D} {inj₂ y} t = subs-∘ t
+ subT-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub< false > Sg G2 G3} {g : Sub< true > Sg _ _} (t : Term< true > Sg G1 D T) 
+                              → subT f (subT g t) ≡ subT (f ∘s g) t
+ subT-∘ {Sg} {G1} {G2} {G3} {D} {inj₁ x} t = ≅-to-≡ (sub-∘ {true} {false} {true} t)
+ subT-∘ {Sg} {G1} {G2} {G3} {D} {inj₂ y} t = ≅-to-≡ (subs-∘ {true} {false} {true} t)
 
 sub-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g : Sub _ _ _} (t : Tm Sg G1 D T) → sub f (sub g t) ≡ sub (f ∘s g) t
 sub-∘ t = ≅-to-≡ (Sub∘.sub-∘ {true} {true} {true} t)
@@ -178,7 +182,8 @@ subT-ext {T = inj₁ x} eq t = sub-ext eq t
 subT-ext {T = inj₂ y} eq t = subs-ext eq t
 
 subT-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g : Sub Sg _ _} (t : Term Sg G1 D T) → subT f (subT g t) ≡ subT (f ∘s g) t
-subT-∘ t = ≅-to-≡ (Sub∘.subT-∘ {b1 = true} {true} {true} t)
+subT-∘ {T = inj₁ _} t = sub-∘ t
+subT-∘ {T = inj₂ _} t = subs-∘ t
 
 left-idf : ∀ {Sg G G1} -> (f : Sub< false > Sg G G1) -> (f ∘s id-f) ≡s f
 left-idf f S u = begin
@@ -192,15 +197,16 @@ left-idf f S u = begin
 mutual
   right-idf : ∀ {Sg G D T} -> (t : Tm< false > Sg G D T) -> sub id-f t ≡ t
   right-idf (con c ts) = cong (con c) (rights-idf ts)
-  right-idf (mvar u ts) rewrite rights-idf ts = cong (mvar u) 
-    (begin reifys (evals (reifys idEnv) (evals ts (build injv))) ≡⟨ reifys-ext (RelA-unfold _ (idEnv-∘ (evals ts (build injv)))) ⟩
-           nfs ts idEnv                                          ≡⟨ Subid.nfs-id ts ⟩
-           ts                                                    ∎)
   right-idf (var x ts) = cong (var x) (rights-idf ts)
-  right-idf (lam t) = cong lam (right-idf t)
+  right-idf (lam t)    = cong lam (right-idf t)
+  right-idf (mvar u ts) rewrite rights-idf ts = cong (mvar u) 
+    (begin reifys (evals (reifys idEnv) (evals ts idEnv)) ≡⟨ reifys-ext (RelA-unfold _ (idEnv-∘ (evals ts idEnv))) ⟩
+           reifys (evals ts idEnv)                        ≡⟨ refl ⟩
+           nfs ts idEnv                                   ≡⟨ Subid.nfs-id ts ⟩
+           ts                                             ∎)
 
   rights-idf : ∀ {Sg G D T} -> (t : Tms< false > Sg G D T) -> subs id-f t ≡ t
-  rights-idf [] = refl
+  rights-idf []       = refl
   rights-idf (x ∷ xs) = cong₂ _∷_ (right-idf x) (rights-idf xs)
 
 ↓↓ : ∀ {b Sg G D T } -> Tm< b > Sg G D T -> Tm< false > Sg G D T
@@ -334,7 +340,7 @@ mutual
   sub-idf-inj (lam s)    (lam t)      (lam eq)     = cong lam (sub-idf-inj s t eq)
 
   subs-idf-inj : ∀ {Sg G D T} -> (s t : Tms< true > Sg G D T) -> subs id-f s ≡T subs id-f t -> s ≡ t
-  subs-idf-inj [] [] _ = refl
+  subs-idf-inj []       []       _            = refl
   subs-idf-inj (s ∷ ss) (t ∷ ts) (teq ∷ tseq) = cong₂ _∷_ (sub-idf-inj s t teq) (subs-idf-inj ss ts tseq)
 
 ↓↓-inj : ∀ {b Sg G D T } -> {s t : Tm< b > Sg G D T} -> s ≡d t -> s ≡ t
