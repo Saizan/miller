@@ -1,26 +1,21 @@
 module MetaRens where
 
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
+open import Data.Nat hiding (_≤_)
 open import Relation.Nullary
 import Relation.Nullary.Decidable as Dec
-open import Relation.Binary.PropositionalEquality
-open import Relation.Binary.PropositionalEquality hiding ([_])
-import Relation.Binary.HeterogeneousEquality as Het
-open import Relation.Binary.HeterogeneousEquality using (_≅_ ; _≇_ ; refl; ≅-to-≡)
-open ≡-Reasoning
 open import Data.Empty
 open import Data.Unit hiding (_≤_)
 open import Data.Sum
 open import Data.List.All
 
-open import Injection
-open import Limits.Injection
-open import Data.List.Extras
-open import Vars2 
+open import Support.Equality
+open ≡-Reasoning
+open import Support.Product
 
+open import Injection
+open import Injection.Limits
 open import Syntax
-open import Equality
+import Category
 
 
 record VarClosure (D : MCtx) (S : MTy) : Set where
@@ -101,8 +96,6 @@ singleton-inv : ∀ {G S}(u : G ∋ S) {Ψ} (i : Inj Ψ (ctx S)) -> let f = sing
 singleton-inv u i ._ zero    = _ , u          , i    , singleton-refl u i
 singleton-inv u i  S (suc x) = _ , thin u S x , id-i , singleton-thin u i x
 
-import Category
-
 module MRop = Category MCtx (λ X Y → MetaRen Y X) (λ f g → g ∘mr f) idmr (λ f g → ∀ S x → f S x ≡ g S x) 
 module MRopProps = MRop.Props (λ S x → cong₂ _/_ (sym assoc-∘i) refl) (λ S x → left-map[id]) (λ S x → cong₂ _/_ (right-id _) refl) 
              (λ {A} {B} → record { refl = λ S x₁ → refl; sym = λ x S x₁ → sym (x _ _); trans = λ x x₁ S x₂ → trans (x S x₂) (x₁ S x₂) }) 
@@ -156,26 +149,9 @@ epic-inv {G} {G1} f f-epic S x | no ¬p = ⊥-elim absurd where
   g1∘f≡g2∘f : (g1 ∘mr f) ≡mr (g2 ∘mr f)
   g1∘f≡g2∘f S v       with f _ v    | inspect (f _) v | thick x (body (f _ v))
   g1∘f≡g2∘f S₁ v         | jfv / fv | _               | inj₁ x₁            = refl
-  g1∘f≡g2∘f (._ <<- _) v | jfv / .x | [ eq ]          | inj₂ (refl , refl) 
+  g1∘f≡g2∘f (._ <<- _) v | jfv / .x | ⌞ eq ⌟          | inj₂ (refl , refl) 
          = ⊥-elim (¬p (_ , v , jfv , refl , Het.≡-to-≅ eq))
 
   absurd : ⊥
   absurd with trans (f-epic {S ∷ S ∷ (G1 - x)} {g1} {g2} g1∘f≡g2∘f _ x) (cong thin1 (singleton-refl x id-i))
   ...       | ()
-
-module Subop {Sg} = Category MCtx (λ X Y → Sub Sg Y X) (λ f g → g ∘s f) id-s _≡s_
-module SubopProps {Sg : Ctx} where
-  module X = Subop {Sg} 
-  module D = X.Props (\ {A} {B} {C} {D} {f} {g} {h} -> λ S u → (sub-∘ (h S u)))
-                     (λ {A} {B} {f} S u → ren-id (f S u)) 
-                     (λ {A} {B} {f} S u → subT-id (f S u)) 
-                     (λ {A} {B} →
-                          record {
-                          refl = λ S x₁ → refl;
-                          sym = λ x S x₁ → sym (x _ _);
-                          trans = λ x x₁ S x₂ → trans (x S x₂) (x₁ S x₂) }) 
-                     (λ {A} {B} {C} {f} {h} {g} {i} eq1 eq2 S u →
-                          trans (cong (sub g) (eq1 S u)) (sub-ext eq2 (h S u)))
-  open D public
-
-

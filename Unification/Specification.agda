@@ -1,28 +1,17 @@
-module Specification where
+module Unification.Specification where
 
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
-open import Relation.Binary.PropositionalEquality
-import Relation.Binary.HeterogeneousEquality as Het
-open Het using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
-open ≡-Reasoning
-open import Data.Empty
-open import Data.Unit hiding (_≤_)
-open import Data.Sum
+open import Data.Sum renaming (map to map⊎)
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 
+open import Support.Equality
+open ≡-Reasoning
+
 open import Injection
-open import Limits.Injection
-open import Data.List.Extras
+open import Injection.Limits
 
 open import Syntax
-open import Data.Bool
-open import Equality
-open import OneHoleContext
 
-open import Decr-Sub
+open import Unification.Specification.Decr-Sub public
 
 Property<_> : ∀ b Sg G -> Set₁
 Property< b > Sg G = (∀ {G2} -> Sub< b > Sg G G2 -> Set)
@@ -62,9 +51,6 @@ Unifies-ext x y f≡g subfx≡subfy rewrite subT-ext f≡g x | subT-ext f≡g y 
                        subT δ' (subT q (p S u)) ∎
 
 
-sandwich : ∀ {a b Sg G1 G2 D T} {f g : Term< a > Sg G1 D T -> Term< b > Sg G2 D T} -> (∀ x -> f x ≡ g x) -> ∀ {x y} -> f x ≡T f y -> g x ≡T g y
-sandwich eq {x}{y} p rewrite eq x | eq y = p
-
 map-Unifies : ∀ {Sg g h h' d t} {σ : Sub Sg g h}{σ' : Sub Sg g h'}-> σ ≤ σ' -> {x y : Term Sg g d t} -> Unifies x y σ' -> Unifies x y σ
 map-Unifies {σ = σ} {σ'} (δ , σ≡δ∘σ') {x} {y} σ'Unifies[x,y] = ≡-T 
          (begin subT σ x           ≡⟨ subT-ext σ≡δ∘σ' x ⟩
@@ -78,6 +64,13 @@ shift_under_by_ : ∀ {Sg G h1 h2 D T} {xs ys : Term Sg G D T} {σ1 : Sub< false
 shift_under_by_ eq σ (δ , σ1≡δ∘σ) = _ , δ , sandwich (λ xs₁ → sym (trans (Sub∘.subT-∘ xs₁) 
                                                         (sym (subT-ext σ1≡δ∘σ xs₁)))) 
                                                      eq
+
+
+unify-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → ∃σ Unifies x y → ∃σ Unifies y x
+unify-comm _ _ (G , σ , eq) = (G , σ , T.sym eq)
+
+spec-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → Spec x y → Spec y x
+spec-comm _ _ = map⊎ (λ {(G , σ , eq , max) → G , σ , T.sym eq , (λ {_} ρ x → max ρ (T.sym x))}) (λ x x₁ → x (unify-comm _ _ x₁))
 
 
 cong-spec : ∀ {Sg G D D' T T'} → (d : DTm Sg G (D' , T') (D , T)) -> {x y : Term Sg G D T} → Spec x y → Spec (∫once d x) (∫once d y)

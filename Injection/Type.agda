@@ -1,14 +1,12 @@
 module Injection.Type where
 
-open import Data.List hiding ([_])
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open ≡-Reasoning
-open import Data.Product
-open import Data.Unit
-open import Data.Maybe
 open import Relation.Nullary
-open import Data.Empty
 open import Relation.Nullary.Decidable
+open import Data.Product
+open import Data.Empty
+open import Data.Unit
 open import Data.Sum
 
 open import Vars
@@ -29,16 +27,19 @@ mutual
   pf ∉ [] = ⊤ 
   pf ∉ (i ∷ pfs [ pf₁ ]) = False (eq-∋ (_ , pf) (_ , i)) × pf ∉ pfs
 
+proof-irr-False : ∀ {P : Set}{d : Dec P} -> (p q : False d) -> p ≡ q
+proof-irr-False {d = yes _} () _
+proof-irr-False {d = no  _} _ _ = refl
 
-proof-irr-∉ : ∀ {A : Set}{y : A} {xs ys} → (i : y ∈ xs) → (f : Inj ys xs) → (p q : i ∉ f) → p ≡ q
-proof-irr-∉ i [] p q = refl
-proof-irr-∉ i (i₁ ∷ f [ pf ]) p q with eq-∋ (_ , i) (_ , i₁) 
-proof-irr-∉ i (i₁ ∷ f [ pf ]) (() , _) q | yes p 
-proof-irr-∉ i (i₁ ∷ f [ pf ]) p q | no ¬p = cong (_,_ _) (proof-irr-∉ i f (proj₂ p) (proj₂ q))
+proof-irr-∉ : ∀ {A : Set} {xs ys} {y : A} {i : y ∈ xs} (f : Inj ys xs) → (p q : i ∉ f) → p ≡ q
+proof-irr-∉ []             p        q        = refl
+proof-irr-∉ (v ∷ f [ pf ]) (Fp , p) (Fq , q) = cong₂ _,_ (proof-irr-False Fp Fq) (proof-irr-∉ f p q)
 
-cong-∷[] : ∀ {A : Set}{xs : List A}{y} {ys : List A} {i j : y ∈ xs} → i ≡ j → {is js : Inj ys xs} → is ≡ js → {pf1 : (i ∉ is)}{pf2 : j ∉ js} → 
-           i ∷ is [ pf1 ] ≡ j ∷ js [ pf2 ]
-cong-∷[] {i = i} refl {is} refl {pf1} {pf2}  = cong (λ pf → i ∷ is [ pf ]) (proof-irr-∉ i is pf1 pf2)
+cong-∷[] : ∀ {A : Set}{xs ys} {y : A}
+           {i j : y ∈ xs}      → i  ≡ j  → 
+           {is js : Inj ys xs} → is ≡ js → 
+           ∀ {pf1 pf2} → i ∷ is [ pf1 ] ≡ j ∷ js [ pf2 ]
+cong-∷[] {i = i} refl {is} refl {pf1} {pf2}  = cong (λ pf → i ∷ is [ pf ]) (proof-irr-∉ is pf1 pf2)
 
 mkFalse : ∀ {P : Set} → (P → ⊥) → ∀ {d : Dec P} → False d
 mkFalse ¬p {yes p} = ¬p p
@@ -72,7 +73,7 @@ quo f {inj} = proj₁ (quo' f {inj})
 quo-ext : ∀ {A : Set} {xs ys} → {f : ∀ (x : A) → x ∈ xs → x ∈ ys}{injf : ∀ x → {i j : x ∈ xs} → f x i ≡ f x j → i ≡ j} →
             {g : ∀ (x : A) → x ∈ xs → x ∈ ys}{injg : ∀ x → {i j : x ∈ xs} → g x i ≡ g x j → i ≡ j} →
             (∀ x v → f x v ≡ g x v) → quo f {injf} ≡ quo g {injg}
-quo-ext {A} {[]}     eq = refl
+quo-ext {A} {[]}                                 eq = refl
 quo-ext {A} {x ∷ xs} {injf = injf} {injg = injg} eq = cong-∷[] (eq _ zero) (quo-ext {injf = λ x₁ x₂ → suc-inj1 (injf x₁ x₂)} 
                                                                                     {injg = λ x₁ x₂ → suc-inj1 (injg x₁ x₂)} (λ x₁ v → eq x₁ (suc v)))
 

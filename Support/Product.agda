@@ -1,4 +1,4 @@
-module Data.Product.Extras where
+module Support.Product where
 
 open import Data.Product public renaming (map to mapΣ)
 

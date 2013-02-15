@@ -1,4 +1,4 @@
-module Data.List.Extras where
+module Support.List where
 
 
 open import Data.List public using (List; []; _∷_)

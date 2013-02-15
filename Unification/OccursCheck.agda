@@ -1,20 +1,15 @@
-module OccursCheck where
+module Unification.OccursCheck where
 
-open import Data.Product.Extras
-open import Data.Nat renaming (ℕ to Nat)
-open import Relation.Nullary using (¬_)
-open import Relation.Binary.PropositionalEquality
-open import Relation.Binary.HeterogeneousEquality using (refl)
+open import Data.Nat
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum renaming (inj₁ to no; inj₂ to yes)
 
-open import Injection
-open import Data.List.Extras
+open import Support.Equality
+
+open import Injection hiding (Dec)
 
 open import Syntax
-open import Height
-open import OneHoleContext
 
 -- No-Cycle proves that Even under different renamings a term can't
 -- appear inside itself: it wouldn't be well-founded. 
@@ -28,10 +23,10 @@ No-Cycle d ps t i j eq = ≡-or-> (cong heightT eq) r
   where open ≤-Reasoning 
         open import Data.Nat.Properties
         r = begin
-              suc (heightT (renT i t)) ≡⟨ cong suc (sym (renT-height i t)) ⟩
-              suc (heightT t) ≡⟨ cong suc (renT-height j t) ⟩
-              suc (heightT (renT j t)) ≤⟨ s≤s (OnHeight.∫-height ps (renT j t)) ⟩
-              suc (heightT (∫ ps (renT j t))) ≤⟨ OnHeight.∫once-height d (∫ ps (renT j t)) ⟩ 
+              suc (heightT (renT i t))            ≡⟨ cong suc (sym (renT-height i t)) ⟩
+              suc (heightT t)                     ≡⟨ cong suc (renT-height j t) ⟩
+              suc (heightT (renT j t))            ≤⟨ s≤s (OnHeight.∫-height ps (renT j t)) ⟩
+              suc (heightT (∫ ps (renT j t)))     ≤⟨ OnHeight.∫once-height d (∫ ps (renT j t)) ⟩ 
               heightT (∫once d (∫ ps (renT j t))) ∎
         ≡-or-> : ∀ {m n} -> m ≡ n -> n > m -> ⊥
         ≡-or-> refl (s≤s ge) = ≡-or-> refl ge

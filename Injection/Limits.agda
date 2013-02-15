@@ -1,22 +1,15 @@
-module Limits.Injection where
+module Injection.Limits where
 
-open import Data.List hiding ([_])
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open ≡-Reasoning
 open import Data.Product
-open import Data.Unit
-open import Data.Maybe
-open import Relation.Nullary
 open import Data.Empty
-open import Relation.Nullary.Decidable
-open import Data.Sum
 
 open import Injection
 import Category
 
-module Dummy {A : Set} where
+module _ {A : Set} where
   open Category (List A) Inj _∘i_ id-i _≡_ public
-open Dummy public
 
 -- The category of injective maps between finite sets has all the
 -- pullbacks and equalizers, "pullback" and "equalizer" compute

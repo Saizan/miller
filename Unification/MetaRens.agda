@@ -1,31 +1,20 @@
-module Colimits.ESub where
+module Unification.MetaRens where
 
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
-open import Relation.Binary.PropositionalEquality
-open import Relation.Binary.PropositionalEquality hiding ([_])
-import Relation.Binary.HeterogeneousEquality as Het
-open import Relation.Binary.HeterogeneousEquality using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
-open ≡-Reasoning
 open import Data.Empty
-open import Data.Unit hiding (_≤_)
 open import Data.Sum
-open import Data.Bool
 open import Data.List.All
-open import Data.List hiding ([_])
-open import Vars.SumIso
+
+open import Support.Equality
+open ≡-Reasoning
 
 open import Injection
-open import Limits.Injection
-open import Data.List.Extras
-open import Vars2 
+open import Injection.Limits
+open import Vars.MatchTwo 
+open import Vars.SumIso
 
 open import Syntax
-open import Equality
 open import MetaRens hiding (_⋆_)
-open import RenOrn
+
 
 record ESub (Sg : Ctx) (G : MCtx) (G1 : MCtx) : Set where
   constructor ι_
@@ -146,7 +135,6 @@ epic-to-sub2 f f-epic {C} {g1} {g2} eq S u | _ , y , j , refl | .(j / u) | z = r
 epic-to-sub : ∀ {X Y Sg} -> (f : MetaRen X Y) -> MRop.Monic f -> ESubop.Monic {Sg} (toESub f)
 epic-to-sub f f-epic {C} {g1} {g2} eq = ES (epic-to-sub2 f f-epic {C} {g1} {g2} ([]eq eq))
 
-open import Data.Bool
 
 mutual
   lift-equalizer : ∀ {b Sg G X Y S} {i j : Inj X Y} (equ : Equalizer i j) (t : Tm< b > Sg G X S) →

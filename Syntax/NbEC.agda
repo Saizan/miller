@@ -1,19 +1,14 @@
 module Syntax.NbEC where
- open import Relation.Nullary
- import Relation.Nullary.Decidable as Dec
- open import Relation.Binary.PropositionalEquality
- open import EqReasoning
- import Relation.Binary.HeterogeneousEquality as Het
- open Het using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
+
  open import Data.Empty
- open import Data.Unit hiding (_≤_)
  open import Data.Sum
- open import Data.Bool
  open import Data.Product
- open import Data.List.All renaming (map to mapAll)
  open import Function using (_∘_)
+
+ open import Support.Equality
+ open import Support.EqReasoning
+
  open import Injection
- open import Data.List.Extras public
 
  open import Syntax.Type
  open import Syntax.NbE

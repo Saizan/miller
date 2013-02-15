@@ -1,21 +1,19 @@
-module Decr-Sub where
+module Unification.Specification.Decr-Sub where
 
 open import Data.Nat renaming (_≤_ to _≤ℕ_)
-open import Data.List hiding ([_])
-open import Relation.Binary.PropositionalEquality hiding ([_])
-import Relation.Binary.HeterogeneousEquality as Het
-open Het using (_≅_; refl)
 open import Relation.Nullary
 open import Data.Nat.Properties
 open import Algebra
 open CommutativeSemiring commutativeSemiring using (+-comm; +-assoc)
 open import Data.Sum
-open import Data.Product
+
+open import Support.Equality
 
 open import Injection
-open import Limits.Injection
-open import Syntax
+open import Injection.Limits
 open import MetaRens
+
+open import Syntax
 
 -- We define a measure of meta-contexts to help with proving
 -- termination of the main unification algorithm and pruning.

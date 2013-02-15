@@ -1,40 +1,34 @@
 module Syntax where
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
-open import Relation.Binary.PropositionalEquality
-open import EqReasoning
-import Relation.Binary.HeterogeneousEquality as Het
-open Het using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
+
+open import Data.Nat hiding (_≤_)
 open import Data.Empty
 open import Data.Unit hiding (_≤_)
 open import Data.Sum
-open import Data.Bool
-open import Data.List.All renaming (map to mapAll)
+
+open import Support.Equality
+open import Support.EqReasoning
+open import Support.Product public
 
 open import Injection
-open import Data.List.Extras public
 
 open import Syntax.Type public
-import Syntax.NbE as NbE
-open NbE
+open import Syntax.NbE
 open import Syntax.NbEC
-open import Syntax.Sub  public
-open import RenOrn
-open import Equality
+open import Syntax.Sub public
+open import Syntax.Equality public
+open import Syntax.RenOrn public
 
 i-cong : ∀ {I : Set}{A B : I → Set}{i j} {x : A i}{y : A j}
        (f : ∀ {i} -> A i → B i) → i ≡ j -> x ≅ y → f x ≅ f y
-i-cong f refl Het.refl = Het.refl
+i-cong f refl refl = Het.refl
 
 i-congd : ∀ {I : Set}{A : I → Set}{B : {i : I} -> A i -> Set}{i j} {x : A i}{y : A j}
        (f : ∀ {i} -> (a : A i) → B {i} a) → i ≡ j -> x ≅ y → f x ≅ f y
-i-congd f refl Het.refl = Het.refl
+i-congd f refl refl = Het.refl
 
 i-cong₂ : ∀ {I : Set}{A B C : I → Set}{i j} {x : A i}{y : A j} {w : B i}{z : B j}
        (f : ∀ {i} -> A i → B i -> C i) → i ≡ j -> x ≅ y → w ≅ z -> f x w ≅ f y z
-i-cong₂ f refl Het.refl Het.refl = Het.refl
+i-cong₂ f refl refl refl = Het.refl
 
 
 module Subid where
@@ -152,7 +146,7 @@ module Sub∘ where
                               → subT f (subT g t) ≡ subT (f ∘s g) t
  subT-∘ {Sg} {G1} {G2} {G3} {D} {inj₁ x} t = ≅-to-≡ (sub-∘ {true} {false} {true} t)
  subT-∘ {Sg} {G1} {G2} {G3} {D} {inj₂ y} t = ≅-to-≡ (subs-∘ {true} {false} {true} t)
-
+ 
 sub-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g : Sub _ _ _} (t : Tm Sg G1 D T) → sub f (sub g t) ≡ sub (f ∘s g) t
 sub-∘ t = ≅-to-≡ (Sub∘.sub-∘ {true} {true} {true} t)
 
@@ -346,3 +340,6 @@ mutual
 ↓↓-inj : ∀ {b Sg G D T } -> {s t : Tm< b > Sg G D T} -> s ≡d t -> s ≡ t
 ↓↓-inj {true} eq = sub-idf-inj _ _ (≡-T eq)
 ↓↓-inj {false} eq = eq
+
+open import Syntax.Height public
+open import Syntax.OneHoleContext public

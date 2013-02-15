@@ -1,20 +1,13 @@
 module Syntax.Sub where
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
-open import Relation.Binary.PropositionalEquality
-open ≡-Reasoning
-import Relation.Binary.HeterogeneousEquality as Het
-open Het using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
-open import Data.Empty
-open import Data.Unit hiding (_≤_)
+
+open import Data.Unit using (⊤)
 open import Data.Sum
-open import Data.Bool
-open import Data.List.All renaming (map to mapAll)
+
+open import Support.Equality
+open ≡-Reasoning
+open import Support.Product
 
 open import Injection
-open import Data.List.Extras public
 
 open import Syntax.Type
 open import Syntax.NbE
@@ -76,7 +69,7 @@ mutual
                                      Dom-nats S f s1 s2 → Dom-nats (Ss ->> B) f (proj₁ x D1 r s1) (proj₁ y D1 r s2)
 
   Env-nats : ∀ {Sg G1 G2 D Ts b} → (f : Sub< b > Sg G1 G2) (x : All (Dom Sg G1 D) Ts)(y : All (Dom Sg G2 D) Ts) → Set
-  Env-nats f [] [] = ⊤
+  Env-nats f []       []       = ⊤
   Env-nats f (x ∷ xs) (y ∷ ys) = Dom-nats _ f x y × Env-nats f xs ys
 
 RelId : ∀ {Sg G D Ts} → (y : All (Dom Sg G D) Ts) → Set
@@ -132,12 +125,12 @@ mutual
 
   evals-nats : ∀ {b1 b2 Sg G1 G2 D1 D2 T} {f : Sub< b1 > Sg G1 G2} {g1 : All (Dom Sg G1 D1) D2}{g2 : All (Dom Sg G2 D1) D2} 
                → Env-nats f g1 g2 → RelId g2 → (t : Tms< b2 > Sg G1 D2 T) → Env-nats f (evals t g1) (evals (subs f t) g2)
-  evals-nats enat gr []       = tt
+  evals-nats enat gr []       = _
   evals-nats enat gr (x ∷ xs) = eval-nats enat gr x , evals-nats enat gr xs
 
   evalAs-nats : ∀ {b1 Sg G1 G2 D1 D2 T} {f : Sub< b1 > Sg G1 G2} {g1 : All (Dom Sg G1 D1) D2}{g2 : All (Dom Sg G2 D1) D2} 
                 → Env-nats f g1 g2 → (t : Args true Sg G1 D2 T) → Env-nats f (evalAs t g1) (evalAs t g2)
-  evalAs-nats g []             = tt
+  evalAs-nats g []             = _
   evalAs-nats g (i ∷ t [ pf ]) = get-nats g i , evalAs-nats g t
   
   expand-nats : ∀ {b1 Sg G1 G2 D B} Ss {f : Sub< b1 > Sg G1 G2}{c1 c2} 
@@ -187,7 +180,7 @@ mutual
   build-nats : ∀ {b Sg G G1 D} Ts (s : Sub< b > Sg G G1) (f : ∀ {S} (x : Ts ∋ S) → Dom Sg G D S) ->
               (g : ∀ {S} (x : Ts ∋ S) → Dom Sg G1 D S) ->
               (∀ {S} (x : Ts ∋ S) → Dom-nats S s (f x) (g x)) → Env-nats s (build f) (build g)
-  build-nats []       s f g fg-nats = tt
+  build-nats []       s f g fg-nats = _
   build-nats (x ∷ Ts) s f g fg-nats = fg-nats zero , build-nats Ts s (λ x₁ → f (suc x₁)) (λ x₁ → g (suc x₁)) (λ x₁ → fg-nats (suc x₁))
 
   idEnv-nats : ∀ {D b Sg G1 G2} {f : Sub< b > Sg G1 G2} → Env-nats f (idEnv {D = D}) idEnv

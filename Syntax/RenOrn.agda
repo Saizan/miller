@@ -1,12 +1,12 @@
-module RenOrn where
+module Syntax.RenOrn where
 
-open import Data.Product.Extras
 open import Relation.Binary.PropositionalEquality
 open import Data.Sum
 open import Data.Bool
 
+open import Support.Product
+
 open import Injection
-open import Data.List.Extras
 
 open import Syntax.Type
 

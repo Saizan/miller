@@ -1,36 +1,26 @@
-module Unif where
+module Unification where
 
-open import Data.Product.Extras
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
-open import Relation.Nullary
+open import Data.Nat hiding (_≤_)
 open import Relation.Binary
-open DecTotalOrder Data.Nat.decTotalOrder using () renaming (refl to ≤-refl; trans to ≤-trans)         
-open import Relation.Binary.PropositionalEquality
-import Relation.Binary.HeterogeneousEquality as Het
-open Het using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
-open ≡-Reasoning
+open DecTotalOrder Data.Nat.decTotalOrder 
+  using () renaming (refl to ≤-refl; trans to ≤-trans)         
 open import Data.Empty
-open import Data.Sum renaming (map to map⊎)
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
-open import Data.Bool
+
+open import Support.Equality
+open ≡-Reasoning
 
 open import Injection
-open import Limits.Injection
-open import Data.List.Extras
-open import Data.List
+open import Injection.Limits
+open import MetaRens
 
 open import Syntax
-open import Equality
-open import RenOrn
-open import OneHoleContext
-open import OccursCheck
-open import Pruning
-open import Inversion
 
-open import Decr-Sub
-open import Specification
-open import MetaRens
-open import Colimits.ESub
+open import Unification.Specification
+open import Unification.MetaRens
+open import Unification.OccursCheck
+open import Unification.Pruning
+open import Unification.Inversion
 
 
 flexSame : ∀ {Sg G D S} → (u : G ∋ S) → (i j : Inj (ctx S) D) → ∃⟦σ⟧ Max (Unifies {Sg} (Tm.mvar u i) (mvar u j))
@@ -132,13 +122,6 @@ flexAny u i .(mvar u j)                  | inj₂ (G1 , j , [] , refl)     = yes
 flexAny u i .(∫once x (∫ ps (mvar u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no  λ {(D1 , s , eq) → 
       No-Cycle (subD s x) (subC s ps) (s _ u) i j
         (trans (T-≡ eq) (∫-sub s (x ∷ ps) (mvar u j)))} 
-
-
-unify-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → ∃σ Unifies x y → ∃σ Unifies y x
-unify-comm _ _ (G , σ , eq) = (G , σ , T.sym eq)
-
-spec-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → Spec x y → Spec y x
-spec-comm _ _ = map⊎ (λ {(G , σ , eq , max) → G , σ , T.sym eq , (λ {_} ρ x → max ρ (T.sym x))}) (λ x x₁ → x (unify-comm _ _ x₁))
 
 mutual
   unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y

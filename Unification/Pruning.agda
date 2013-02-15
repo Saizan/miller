@@ -1,29 +1,21 @@
-module Pruning where
+module Unification.Pruning where
 
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
-open import Relation.Nullary
-open import Relation.Binary
-open DecTotalOrder Data.Nat.decTotalOrder using () renaming (refl to ≤-refl; trans to ≤-trans)         
-open import Relation.Binary.PropositionalEquality
-open import Relation.Binary.HeterogeneousEquality using (_≅_; refl; ≅-to-≡)
-open ≡-Reasoning
+open import Data.Nat using (_≥_)
 open import Data.Empty
-open import Data.Unit hiding (_≤_)
 open import Data.Sum
 
+open import Support.Equality
+open ≡-Reasoning
+
 open import Injection
-open import Limits.Injection
-open import Data.List.Extras
+open import Injection.Limits
+
+open import MetaRens
 
 open import Syntax
-open import Equality
-open import RenOrn
-open import MetaRens
-open import Decr-Sub
-open import Specification
-open import Colimits.ESub
-open import Epi-Decr
+open import Unification.Specification
+open import Unification.MetaRens
+open import Unification.Pruning.Epi-Decr
 
 data AllMV∈  {Sg : Ctx} {G : MCtx} {D0 D : Ctx} (i : Inj D0 D) : ∀ {T} → Term Sg G D T → Set where
   [] : AllMV∈ i {inj₂ []} []
@@ -38,7 +30,7 @@ data AllMV∈  {Sg : Ctx} {G : MCtx} {D0 D : Ctx} (i : Inj D0 D) : ∀ {T} → T
 _/_∈_ : ∀ {Sg G1 G2 D1 D2 T} → Sub Sg G1 G2 → Term Sg G1 D2 T → Inj D1 D2 → Set
 _/_∈_ s t i = AllMV∈ i (subT s t)
 
--- (\ s -> s / t ∈ i) is closed under pre-composition, we'll need this in the _∷_ case of prune.
+-- (\ s -> s / t ∈ i) is closed under post-composition, we'll need this in the _∷_ case of prune.
 _/_∈_-∘Closed : ∀ {Sg G1 G2 G3 D1 D2 T} (f : Sub Sg G2 G3) {g : Sub Sg G1 G2} {i : Inj D1 D2} →
                 ∀ {t : Term Sg G1 D2 T} → g / t ∈ i → (f ∘s g) / t ∈ i
 _/_∈_-∘Closed f m = subst (AllMV∈ _) (subT-∘ _) (go f m) where
@@ -65,7 +57,7 @@ _/_∈_-∘Closed f m = subst (AllMV∈ _) (subT-∘ _) (go f m) where
   go f {i = i} (mvar {v = v} {h = h} (k , i∘k≡h)) = go2 (k , i∘k≡h) (f _ v)
 
    
--- A few properties of substitutions that carry over to _/_∈_
+-- A few properties of substitutions respected by _/_∈_
 _/_∈_-∘ : ∀ {Sg G1 G2 G3 D1 D2 T} {f : Sub Sg G2 G3} (g : Sub Sg G1 G2) {i : Inj D1 D2} →
           ∀ (t : Term Sg G1 D2 T) → f / subT g t ∈ i → (f ∘s g) / t ∈ i
 _/_∈_-∘ g t m = subst (AllMV∈ _) (subT-∘ _) m
@@ -136,7 +128,6 @@ mutual
                       epic-from-sub p₁ (mono-pullback-stable _ _ (Mixed.Pushout.to-sub push)
                                         (epic-to-sub (pruner pr-ts) (epic pr-ts)))
 
-open import Data.Bool
 
 
 -- prune-sup makes use of the universal property of pullbacks to prove

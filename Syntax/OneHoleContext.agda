@@ -1,24 +1,16 @@
-module OneHoleContext where
+module Syntax.OneHoleContext where
 
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
 open import Relation.Binary.PropositionalEquality
-open import Data.Empty
-open import Data.Unit
 open import Data.Sum
-open import Data.Bool
-open import Data.Maybe
-open import Category.Monad
-import Level
-open RawMonad (monad {Level.zero})
+
+open import Support.Product
 
 open import Injection
-open import Data.List.Extras
 
-open import Syntax
-open import Equality
+open import Syntax.Type
+open import Syntax.Sub
+open import Syntax.Equality
+
 
 -- Given an inductive type T = F T we can build the type of its one
 -- hole contexts as List (F' T) where F' is the derivative of F,
@@ -66,9 +58,10 @@ Context = Context< true >
 
 
 module OnHeight where
-  open import Height
-  open ≤-Reasoning
+  open import Syntax.Height
+  open import Data.Nat  
   open import Data.Nat.Properties
+  open ≤-Reasoning
   private
     n≤m⊔n : ∀ m n → Data.Nat._≤_ n (m ⊔ n)
     n≤m⊔n zero    _       = begin _ ∎

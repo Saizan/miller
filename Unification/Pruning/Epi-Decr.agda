@@ -1,29 +1,18 @@
-module Epi-Decr where
+module Unification.Pruning.Epi-Decr where
 
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
+open import Data.Nat hiding (_≤_)
 open import Data.Nat.Properties
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
-open import Relation.Binary.PropositionalEquality
-import Relation.Binary.HeterogeneousEquality as Het
-open import Relation.Binary.HeterogeneousEquality using (_≅_ ; _≇_ ; refl; ≅-to-≡)
 open import Data.Empty
-open import Data.Unit hiding (_≤_)
 open import Data.Sum
-open import Data.List hiding ([_])
-open import Data.List.All
+
+open import Support.Equality
 
 open import Injection
-open import Limits.Injection
-open import Data.List.Extras
-open import Vars
-open import Vars2 
+open import Injection.Limits
 
 open import Syntax
-open import Equality
 open import MetaRens
-open import Decr-Sub
+open import Unification.Specification.Decr-Sub
 
 Epi : _ -> _ -> Set
 Epi G G1 = ∃ \ (f : MetaRen G G1) -> MRop.Monic f
@@ -64,9 +53,9 @@ punchout {x} {G} {G1} (f , f-epic)
 
   f' : MetaRen G (G1 - u)
   f' S x  with f S (suc x) | inspect (f S) (suc x)
-  f' S x     |      i /  v | [ eq ] with thick u v
+  f' S x     |      i /  v | ⌞ eq ⌟ with thick u v
   ...                               | inj₁ x₂            = i / proj₁ x₂
-  f' (._ <<- _) x | i / ._ | [ eq ] | inj₂ (refl , refl) = ⊥-elim (¬p (_ , _ , cong (_<<-_ _) (_≈vc_.Ψeq (to-vc eq)) , _≈vc_.beq (to-vc eq)))
+  f' (._ <<- _) x | i / ._ | ⌞ eq ⌟ | inj₂ (refl , refl) = ⊥-elim (¬p (_ , _ , cong (_<<-_ _) (_≈vc_.Ψeq (to-vc eq)) , _≈vc_.beq (to-vc eq)))
 
   f'-epic : MRop.Monic f'
   f'-epic {C} {g1} {g2} eq S y = wk-inj 

@@ -1,19 +1,17 @@
 module Vars where
 
-open import Data.List hiding ([_])
 open import Data.Nat
-open import Relation.Binary.PropositionalEquality hiding ([_])
-import Relation.Binary.HeterogeneousEquality as Het
-open import Relation.Binary.HeterogeneousEquality using (_≅_ ; _≇_ ; refl; ≅-to-≡)
-open ≡-Reasoning
 open import Data.Product
-open import Data.Unit
 open import Data.Maybe
-open import Relation.Nullary
 open import Function using (_∘_)
 open import Data.Empty
-open import Relation.Nullary.Decidable
 open import Data.Sum
+
+open import Support.Equality
+open ≡-Reasoning
+
+open import Relation.Nullary public
+open import Data.List public hiding ([_])
 
 infix 4 _∋_
 

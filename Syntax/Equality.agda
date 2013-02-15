@@ -1,19 +1,12 @@
-module Equality where
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
+module Syntax.Equality where
+
 open import Relation.Binary.PropositionalEquality renaming (sym to ≡-sym; cong to ≡-cong; trans to ≡-trans)
-open import Data.Empty
-open import Data.Unit
 open import Data.Sum
-open import Data.Maybe
-open import Category.Monad
-import Level
-open RawMonad (monad {Level.zero})
+
+open import Support.Product
+open import Support.List
 
 open import Injection
-open import Data.List.Extras
 open import Syntax.Type
 
 data _≡T_ {b} {Sg} {G} {D} : {T : Ty ⊎ List Ty} -> (x y : Term< b > Sg G D T) -> Set where 
@@ -72,3 +65,7 @@ module T where
 
   trans : ∀ {Sg G D T b}{x y z : Term< b > Sg G D T} -> x ≡T y -> y ≡T z -> x ≡T z
   trans x≡y y≡z = ≡-T (≡-trans (T-≡ x≡y) (T-≡ y≡z))
+
+sandwich : ∀ {a b Sg G1 G2 D T} {f g : Term< a > Sg G1 D T -> Term< b > Sg G2 D T} -> (∀ x -> f x ≡ g x) -> ∀ {x y} -> f x ≡T f y -> g x ≡T g y
+sandwich eq {x}{y} p rewrite eq x | eq y = p
+

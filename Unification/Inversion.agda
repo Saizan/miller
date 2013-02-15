@@ -1,25 +1,15 @@
-module Inversion where
+module Unification.Inversion where
 
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
 open import Relation.Binary.PropositionalEquality
 open import Data.Empty
-open import Data.Unit
 open import Data.Sum renaming (map to map⊎)
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
-open import Data.Bool
 
 open import Injection
-open import Data.List.Extras
 
 open import Syntax
-open import OneHoleContext
-open import Pruning
-open import RenOrn
-open import MetaRens
-open import Equality
+open import Unification.Pruning
+
 
 NotInv : ∀ {Sg G D D' T} (i : Inj D D') (t : Term Sg G D' T) → Set
 NotInv {Sg} {G} i t = ∀ {G1} (σ : Sub< false > Sg G G1) -> ¬ ∃ \ s -> renT i s ≡T subT σ t 

@@ -1,9 +1,9 @@
 module Vars.SumIso {A : Set} where
-open import Data.Unit
+
 open import Relation.Binary.PropositionalEquality
 open import Data.Sum renaming (map to map⊎)
 open import Function using (id)
-open import Data.List
+
 open import Vars
 
 split# : ∀ m {n}{T : A} -> _∋_ (m ++ n) T -> _∋_ m T ⊎ _∋_ n T

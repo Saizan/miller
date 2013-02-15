@@ -1,15 +1,9 @@
 module Injection.Sum where
 
-open import Data.List hiding ([_])
-open import Relation.Binary.PropositionalEquality hiding ([_])
+open import Relation.Binary.PropositionalEquality
 open ≡-Reasoning
-open import Data.Product
-open import Data.Unit
-open import Data.Maybe
-open import Relation.Nullary
-open import Data.Empty
-open import Relation.Nullary.Decidable
 open import Data.Sum
+
 open import Injection
 open import Vars.SumIso
 

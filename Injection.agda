@@ -1,33 +1,30 @@
 module Injection where
 
-open import Data.List hiding ([_])
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open ≡-Reasoning
 open import Data.Product
-open import Data.Unit
-open import Data.Maybe
 open import Relation.Nullary
 open import Data.Empty
-open import Relation.Nullary.Decidable
 open import Data.Sum
 
 open import Vars public
 open import Injection.Type public
 
-invert : ∀ {A : Set} {xs ys : List A} (i : Inj xs ys) → ∀ {t} (y : ys ∋ t) → Dec (∃ \ x → (i $ x) ≡ y) 
-invert [] x = no (λ { (() , _)})
-invert (i ∷ f [ pf ]) y with eq-∋ (_ , i) (_ , y) 
-invert (.y₁ ∷ f [ pf ]) y₁ | yes refl = yes (zero , refl)
-invert (i ∷ f [ pf ]) y₁ | no ¬p with invert f y₁ 
-invert (i ∷ f [ pf ]) y₁ | no ¬p | yes p = yes (suc (proj₁ p) , (proj₂ p))
-invert (i ∷ f [ pf ]) y₁ | no ¬p₁ | no ¬p = no (lemmi ¬p₁ ¬p) where
-    lemmi : ∀ {t} {y : _ ∋ t} → (¬ (_ , i) ≡ (t , y)) → (¬ ∃ \ x₂ → f $ x₂ ≡ y) → Σ (_ ∷ _ ∋ _) (λ x₂ → (i ∷ f [ pf ]) $ x₂ ≡ y) → ⊥
-    lemmi ¬1 ¬2 (zero , p) = ¬1 (cong (_,_ _) p)
-    lemmi ¬1 ¬2 (suc n , p) = ¬2 (n , p)
+invert : ∀ {A : Set} {xs ys : List A} (i : Inj xs ys) → ∀ {t} (y : ys ∋ t) → Dec (∃ \ x → i $ x ≡ y) 
+invert []              y = no (λ { (() , _)})
+invert ( z ∷ i [ pf ]) y with eq-∋ (_ , z) (_ , y) 
+invert (.y ∷ i [ pf ]) y | yes refl = yes (zero , refl)
+invert ( z ∷ i [ pf ]) y | no  z≢y  with invert i y 
+invert ( z ∷ i [ pf ]) y | no  z≢y  | yes (x , i$x≡y) = yes (suc x , i$x≡y)
+invert ( z ∷ i [ pf ]) y | no  z≢y  | no  ¬[i⁻¹y]     = no  (neither z≢y ¬[i⁻¹y])
+  where
+    neither : ∀ {t} {y : _ ∋ t} → ¬ (_ , z) ≡ (t , y) → ¬ (∃ \ x → i $ x ≡ y) → ¬ Σ (_ ∷ _ ∋ _) (λ x → (z ∷ i [ pf ]) $ x ≡ y)
+    neither ¬1 ¬2 (zero  , p) = ¬1 (cong (_,_ _) p)
+    neither ¬1 ¬2 (suc x , p) = ¬2 (x , p)
 
 abstract
   _∘i_ : ∀ {A : Set}{xs ys zs : List A} → Inj ys zs → Inj xs ys → Inj xs zs
-  f ∘i g = proj₁ (quo' (λ x x₁ → f $ (g $ x₁)) {(λ x x₁ → injective g _ _ (injective f _ _ x₁))})
+  f ∘i g = quo (λ x x₁ → f $ (g $ x₁)) {λ x x₁ → injective g _ _ (injective f _ _ x₁)}
 
 mutual
   id-i : ∀ {A : Set}{xs : List A} → Inj xs xs
@@ -165,3 +162,4 @@ Pull-universal-quote i j p₁ p₂ uni {Q} q₁ q₂ commutes =
     f a v = uni a (q₂ $ v) (q₁ $ v) (∘-ext commutes a v)
     u : ∀ a (v : Q ∋ a) -> _
     u a v = proj₁ (f a v)
+

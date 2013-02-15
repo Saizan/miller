@@ -1,4 +1,4 @@
-module EqReasoning where
+module Support.EqReasoning where
 
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality

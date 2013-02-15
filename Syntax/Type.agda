@@ -1,20 +1,14 @@
 module Syntax.Type where
-open import Data.Product renaming (map to mapΣ)
-open import Data.Nat hiding (_≤_) renaming (ℕ to Nat)
-open import Relation.Nullary
-import Relation.Nullary.Decidable as Dec
-open import Relation.Binary.PropositionalEquality
+
+open import Data.Sum public using (_⊎_; module _⊎_)
+open _⊎_ public
+open import Data.Bool public
+
+open import Support.Equality
 open ≡-Reasoning
-import Relation.Binary.HeterogeneousEquality as Het
-open Het using (_≅_ ; _≇_ ; refl; ≅-to-≡; ≡-to-≅)
-open import Data.Empty
-open import Data.Unit hiding (_≤_)
-open import Data.Sum
-open import Data.Bool
-open import Data.List.All renaming (map to mapAll)
+open import Support.List public
 
 open import Injection
-open import Data.List.Extras public
 
 postulate
   -- it'd more properly be a module parameter

@@ -1,14 +1,11 @@
-module Height where
+module Syntax.Height where
 
-open import Data.Sum
-open import Data.Bool
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality
 
 open import Injection
-open import Data.List.Extras
 
-open import Syntax
+open import Syntax.Type
 
 Height = ℕ
 
