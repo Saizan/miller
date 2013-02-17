@@ -34,10 +34,10 @@ abstract
   thin[_,_]-disjoint : ∀ {A}{G : List A}{S S1 T} → (x : G ∋ S)(z : G ∋ S1) → {y : (G -[ x , z ]) ∋ T} 
                        -> One⊎Other x z (thin[ x , z ] y) -> ⊥
   thin[ x ,  z ]-disjoint eq           with thick x z 
-  thin[ x , ._ ]-disjoint (one eq)       | inj₁ (z' , refl)   = x∉thinx x _ eq
-  thin[ x , ._ ]-disjoint (other _ eq)   | inj₁ (z' , refl)   = x∉thinx z' _ (thin-inj x eq)
-  thin[ x , .x ]-disjoint (one eq)       | inj₂ (refl , refl) = x∉thinx x _ eq
-  thin[ x , .x ]-disjoint (other neq eq) | inj₂ (refl , refl) = x∉thinx x _ eq
+  thin[ x , ._ ]-disjoint (one eq)       | inj₁ (z' , refl) = x∉thinx x _ eq
+  thin[ x , ._ ]-disjoint (other _ eq)   | inj₁ (z' , refl) = x∉thinx z' _ (thin-inj x eq)
+  thin[ x , .x ]-disjoint (one eq)       | inj₂ refl`       = x∉thinx x _ eq
+  thin[ x , .x ]-disjoint (other neq eq) | inj₂ refl`       = x∉thinx x _ eq
 
 data Thick {A}{G : List A}{S S1} (x : G ∋ S)(z : G ∋ S1) {T : _} (y : G ∋ T) : Set where
   one⊎other : (eq : One⊎Other x z y) -> Thick x z y
@@ -45,13 +45,13 @@ data Thick {A}{G : List A}{S S1} (x : G ∋ S)(z : G ∋ S1) {T : _} (y : G ∋ 
 
 abstract
   thick[_,_] : ∀ {A}{G : List A}{S S1 T} → (x : G ∋ S)(z : G ∋ S1) → (y : G ∋ T) → Thick x z y
-  thick[ x ,  z ]  y with thick x z          | thick x y          | neither {x = x} {z = z} {y = y} 
-  thick[ x , .x ] ._    | inj₂ (refl , refl) | inj₁ (y' , refl)   | ne = ne y' refl 
-  thick[ x , .x ] .x    | inj₂ (refl , refl) | inj₂ (refl , refl) | ne = one⊎other (one refl)
-  thick[ x ,  z ] .x    | inj₁ (z' , eq)     | inj₂ (refl , refl) | ne = one⊎other (one refl)
-  thick[ x ,  z ]  y    | inj₁ (z' , eq)     | inj₁ (y' , eq')    | ne with thick z' y' 
-  thick[ x , ._ ] ._    | inj₁ (z' , refl)   | inj₁ (._ , refl)   | ne    | inj₁ (y'' , refl)  = ne y'' refl 
-  thick[ x ,  z ] ._    | inj₁ (z' , eq)     | inj₁ (._ , refl)   | ne    | inj₂ (refl , refl) = one⊎other (other neq (sym eq))
+  thick[ x ,  z ]  y with thick x z        | thick x y        | neither {x = x} {z = z} {y = y} 
+  thick[ x , .x ] ._    | inj₂ refl`       | inj₁ (y' , refl) | ne = ne y' refl 
+  thick[ x , .x ] .x    | inj₂ refl`       | inj₂ refl`       | ne = one⊎other (one refl)
+  thick[ x ,  z ] .x    | inj₁ (z' , eq)   | inj₂ refl`       | ne = one⊎other (one refl)
+  thick[ x ,  z ]  y    | inj₁ (z' , eq)   | inj₁ (y' , eq')  | ne with thick z' y' 
+  thick[ x , ._ ] ._    | inj₁ (z' , refl) | inj₁ (._ , refl) | ne    | inj₁ (y'' , refl)  = ne y'' refl 
+  thick[ x ,  z ] ._    | inj₁ (z' , eq)   | inj₁ (._ , refl) | ne    | inj₂ refl` = one⊎other (other neq (sym eq))
     where 
       neq : ∀ {S v} (eq₁ : S ≡ _) → x ≡ subst (_∋_ _) eq₁ (thin x _ v) → ⊥
       neq refl eq = x∉thinx x _ eq
@@ -79,7 +79,7 @@ thick[ x , ._ ]-refl₂    | neither w eq | inj₁ (z' , refl) = ⊥-elim (thin[
       neq : ∀ {S} {z : _ ∋ S}{v : _ ∋ S} (eq₁ : S ≡ _) → x ≡ subst (_∋_ _) eq₁ (thin[ x , z ] v) → ⊥
       neq refl eq = thin[ x , _ ]-disjoint (one eq)
 
-thick[ .z , z ]-refl₂ | neither w eq | inj₂ (refl , refl) = ⊥-elim (thin[ z , z ]-disjoint (one (sym eq))) -- 
+thick[ .z , z ]-refl₂    | neither w eq | inj₂ refl`       = ⊥-elim (thin[ z , z ]-disjoint (one (sym eq))) -- 
 
 
 thick[_,_]-refl₂₂ : ∀ {A}{G : List A}{S S1} → (x : G ∋ S)(z : G ∋ S1) 

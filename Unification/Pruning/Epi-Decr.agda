@@ -54,8 +54,8 @@ punchout {x} {G} {G1} (f , f-epic)
   f' : MetaRen G (G1 - u)
   f' S x  with f S (suc x) | inspect (f S) (suc x)
   f' S x     |      i /  v | ⌞ eq ⌟ with thick u v
-  ...                               | inj₁ x₂            = i / proj₁ x₂
-  f' (._ <<- _) x | i / ._ | ⌞ eq ⌟ | inj₂ (refl , refl) = ⊥-elim (¬p (_ , _ , cong (_<<-_ _) (_≈vc_.Ψeq (to-vc eq)) , _≈vc_.beq (to-vc eq)))
+  ...                               | inj₁ x₂    = i / proj₁ x₂
+  f' (._ <<- _) x | i / ._ | ⌞ eq ⌟ | inj₂ refl` = ⊥-elim (¬p (_ , _ , cong (_<<-_ _) (_≈vc_.Ψeq (to-vc eq)) , _≈vc_.beq (to-vc eq)))
 
   f'-epic : MRop.Monic f'
   f'-epic {C} {g1} {g2} eq S y = wk-inj 
@@ -68,7 +68,7 @@ punchout {x} {G} {G1} (f , f-epic)
     shift : MetaRen (G1 - u) C -> MetaRen G1 (_ ∷ C)
     shift g1 S x with thick u x
     shift g1 S₁ x₁  | inj₁ x₂            = wk (g1 _ (proj₁ x₂))
-    shift g1 ._ ._  | inj₂ (refl , refl) = id-i / zero
+    shift g1 ._ ._  | inj₂ refl` = id-i / zero
 
     shift-thin : ∀ g S y -> shift g _ (thin u S y) ≡ wk (g S y)
     shift-thin g S y rewrite thick-thin u y = refl
@@ -77,7 +77,7 @@ punchout {x} {G} {G1} (f , f-epic)
     shift-refl g rewrite thick-refl u = refl
 
     shift-refl2 : ∀ {S}{v : _ ∋ S} g g1 -> u ≅∋ v -> shift g _ v ≡ shift g1 _ v
-    shift-refl2 {.(type x) <<- .(Ψ (f x zero))} g g1 (refl , refl) = trans (shift-refl g) (sym (shift-refl g1))
+    shift-refl2 {.(type x) <<- .(Ψ (f x zero))} g g1 refl` = trans (shift-refl g) (sym (shift-refl g1))
 
     zero-eq = cong (map-Vc _) (begin shift g1 _ u ≡⟨ shift-refl g1 ⟩ 
                                      id-i / zero  ≡⟨ sym (shift-refl g2) ⟩ 

@@ -1,13 +1,14 @@
 module Injection.Type where
 
-open import Relation.Binary.PropositionalEquality hiding ([_])
-open ≡-Reasoning
 open import Relation.Nullary
 open import Relation.Nullary.Decidable
 open import Data.Product
 open import Data.Empty
 open import Data.Unit
 open import Data.Sum
+
+open import Support.Equality
+open ≡-Reasoning
 
 open import Vars
 
@@ -24,8 +25,8 @@ mutual
     _∷_[_] : ∀ {xs} {y} {ys : List A} (i : y ∈ xs) (is : Inj ys xs) (pf : (i ∉ is)) → Inj (y ∷ ys) xs
 
   _∉_ : ∀ {A : Set}{y : A} {xs ys} → y ∈ xs → Inj ys xs → Set
-  pf ∉ [] = ⊤ 
-  pf ∉ (i ∷ pfs [ pf₁ ]) = False (eq-∋ (_ , pf) (_ , i)) × pf ∉ pfs
+  v ∉ []            = ⊤ 
+  v ∉ (u ∷ i [ _ ]) = False (v ≅∋? u) × v ∉ i
 
 proof-irr-False : ∀ {P : Set}{d : Dec P} -> (p q : False d) -> p ≡ q
 proof-irr-False {d = yes _} () _
@@ -50,21 +51,23 @@ fromFalse {P} {yes p} ()
 fromFalse {P} {no ¬p} _ = ¬p
 
 quo' : ∀ {A : Set} {xs ys} → (f : ∀ (x : A) → x ∈ xs → x ∈ ys){inj : ∀ x → {i j : x ∈ xs} → f x i ≡ f x j → i ≡ j} → 
-    Σ (Inj xs ys) \ is → (∀ x (i : x ∈ ys) → (∀ y j → False (eq-∋ (_ , i) (_ , f y j))) → (i ∉ is))
-quo' {_} {[]} f {inj} = [] , (λ x i x₁ → _)
-quo' {_} {x ∷ xs} f {inj} = is , proof where
+    Σ (Inj xs ys) \ is → (∀ x (i : x ∈ ys) → (∀ y j → False (i ≅∋? (f y j))) → (i ∉ is))
+quo' {_} {[]}     f {inj} = [] , (λ x i x₁ → _)
+quo' {_} {x ∷ xs} f {inj} = is , proof 
+ where
    rec = (quo' {_} {xs} (λ x₁ x₂ → f x₁ (suc x₂)) {(λ x₁ x₂ → suc-inj1 (inj x₁ x₂))})
+
    abstract
     pf : f x zero ∉ proj₁ (quo' (λ x₁ x₂ → f x₁ (suc x₂)) {(λ x₁ x₂ → suc-inj1 (inj x₁ x₂))})
-    pf = proj₂ rec x (f x zero) (λ y j → mkFalse (lemmma y j))  
-      where lemmma : ∀ y j → (x , f x zero) ≡ (y , f y (suc j)) → ⊥
-            lemmma y j eq with cong proj₁ eq
-            lemmma .x j eq | refl with f x zero | inj x {zero} {suc j}  
-            lemmma ._ j refl | refl | .(f x (suc j)) | q with q refl 
-            ... | ()
+    pf = proj₂ rec x (f x zero) (λ y j → mkFalse (lemma y j))  
+      where 
+        lemma : ∀ y j → f x zero ≅∋ f y (suc j) → ⊥
+        lemma .x j (refl , eq) with inj x (≅-to-≡ eq) 
+        ...                       | ()
+
    is = f x zero ∷ proj₁ rec [ pf ]
   
-   proof : ∀ x i → (∀ y j → False (eq-∋ (_ , i) (_ , f y j))) → i ∉ is
+   proof : ∀ x i → (∀ y j → False (i ≅∋? (f y j))) → i ∉ is
    proof z i e = e x zero , proj₂ rec z i (λ y j → e y (suc j))
 
 quo : ∀ {A : Set} {xs ys} → (f : ∀ (x : A) → x ∈ xs → x ∈ ys){inj : ∀ x → {i j : x ∈ xs} → f x i ≡ f x j → i ≡ j} → (Inj xs ys)
@@ -86,15 +89,15 @@ _∉Im_ : ∀ {A : Set} {xs ys : List A} → ∀ {x} (i : x ∈ ys) → (f : Inj
 i ∉Im f = ∀ b → ¬ i ≡ f $ b
   
 ∉-∉Im : ∀ {A : Set} {xs ys : List A} → (f : Inj xs ys) → ∀ {x} (i : x ∈ ys) → i ∉ f → i ∉Im f
-∉-∉Im (i₁ ∷ f [ pf ]) .i₁ i∉f zero refl = fromFalse (proj₁ i∉f) refl
+∉-∉Im (i₁ ∷ f [ pf ]) .i₁ i∉f zero refl = fromFalse (proj₁ i∉f) refl`
 ∉-∉Im (i₁ ∷ f [ pf ]) i i∉f (suc b) eq = ∉-∉Im f i (proj₂ i∉f) b eq
 ∉-∉Im [] _ _ () _
 
 ∉Im-∉ : ∀ {A : Set} {xs ys : List A} → (f : Inj xs ys) → ∀ {x} (i : x ∈ ys) → i ∉Im f → i ∉ f
 ∉Im-∉ [] _ _ = _
 ∉Im-∉ {_}{x ∷ _} {ys} (i ∷ f [ pf ]) {t} i₁ ¬p = mkFalse (aux i pf ¬p) , ∉Im-∉ f i₁ (λ b x → ¬p (suc b) x)
-    where aux : ∀ {x} (i : ys ∋ x) pf → i₁ ∉Im (i ∷ f [ pf ]) → (t , i₁) ≡ (x , i) → ⊥
-          aux .i₁ pf₁ ¬Im refl = ¬Im zero refl
+    where aux : ∀ {x} (i : ys ∋ x) pf → i₁ ∉Im (i ∷ f [ pf ]) → i₁ ≅∋ i → ⊥
+          aux .i₁ pf₁ ¬Im refl` = ¬Im zero refl
 
 injective : ∀ {A : Set} {xs ys : List A} → (f : Inj xs ys) → ∀ {x} → (a b : x ∈ xs) → f $ a ≡ f $ b → a ≡ b
 injective f zero zero eq = refl

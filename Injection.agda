@@ -1,25 +1,26 @@
 module Injection where
 
-open import Relation.Binary.PropositionalEquality hiding ([_])
-open ≡-Reasoning
 open import Data.Product
 open import Relation.Nullary
 open import Data.Empty
 open import Data.Sum
+
+open import Support.Equality
+open ≡-Reasoning
 
 open import Vars public
 open import Injection.Type public
 
 invert : ∀ {A : Set} {xs ys : List A} (i : Inj xs ys) → ∀ {t} (y : ys ∋ t) → Dec (∃ \ x → i $ x ≡ y) 
 invert []              y = no (λ { (() , _)})
-invert ( z ∷ i [ pf ]) y with eq-∋ (_ , z) (_ , y) 
-invert (.y ∷ i [ pf ]) y | yes refl = yes (zero , refl)
-invert ( z ∷ i [ pf ]) y | no  z≢y  with invert i y 
-invert ( z ∷ i [ pf ]) y | no  z≢y  | yes (x , i$x≡y) = yes (suc x , i$x≡y)
-invert ( z ∷ i [ pf ]) y | no  z≢y  | no  ¬[i⁻¹y]     = no  (neither z≢y ¬[i⁻¹y])
+invert ( z ∷ i [ pf ]) y with z ≅∋? y 
+invert (.y ∷ i [ pf ]) y | yes refl` = yes (zero , refl)
+invert ( z ∷ i [ pf ]) y | no  z≢y   with invert i y 
+invert ( z ∷ i [ pf ]) y | no  z≢y   | yes (x , i$x≡y) = yes (suc x , i$x≡y)
+invert ( z ∷ i [ pf ]) y | no  z≢y   | no  ¬[i⁻¹y]     = no  (neither z≢y ¬[i⁻¹y])
   where
-    neither : ∀ {t} {y : _ ∋ t} → ¬ (_ , z) ≡ (t , y) → ¬ (∃ \ x → i $ x ≡ y) → ¬ Σ (_ ∷ _ ∋ _) (λ x → (z ∷ i [ pf ]) $ x ≡ y)
-    neither ¬1 ¬2 (zero  , p) = ¬1 (cong (_,_ _) p)
+    neither : ∀ {t} {y : _ ∋ t} → ¬ z ≅∋ y → ¬ (∃ \ x → i $ x ≡ y) → ¬ Σ (_ ∷ _ ∋ _) (λ x → (z ∷ i [ pf ]) $ x ≡ y)
+    neither ¬1 ¬2 (zero  , p) = ¬1 (refl , ≡-to-≅ p)
     neither ¬1 ¬2 (suc x , p) = ¬2 (x , p)
 
 abstract

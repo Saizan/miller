@@ -47,8 +47,8 @@ flexSame {Sg} {G} {D} {B <<- Ss} u i j = _ , (DS σ , singleton-Decreasing e u (
 
       ρ≡δ∘σ : ρ ≡s (δ ∘s σ)
       ρ≡δ∘σ S v          with thick u v 
-      ρ≡δ∘σ S .(thin u S w) | inj₁ (w , refl)    = sym (ren-id (ρ S (thin u S w)))
-      ρ≡δ∘σ .(B <<- Ss) .u  | inj₂ (refl , refl) = sym (proj₂ ∃s[ren[e,s]≡ρ[u]])
+      ρ≡δ∘σ S .(thin u S w) | inj₁ (w , refl) = sym (ren-id (ρ S (thin u S w)))
+      ρ≡δ∘σ .(B <<- Ss) .u  | inj₂ refl`      = sym (proj₂ ∃s[ren[e,s]≡ρ[u]])
 
 
 flexRigid : ∀ {Sg G D S} (u : G ∋ S) (i : Inj (ctx S) D) (s : Tm Sg (G - u) D (! type S)) → Spec (mvar u i) (sub (thin-s u) s)
@@ -79,8 +79,8 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
     where
       σ : Sub Sg G _
       σ S v with thick u v
-      σ S v   | inj₁ (w , eq)      = ρ _ w
-      σ ._ .u | inj₂ (refl , refl) = t
+      σ S v   | inj₁ (w , eq) = ρ _ w
+      σ ._ .u | inj₂ refl`    = t
 
       σ[u]≡t : σ _ u ≡ t
       σ[u]≡t rewrite thick-refl u = refl
@@ -101,12 +101,12 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
 
         ρ₁≡δ∘σ : ρ₁ ≡s (δ ∘s σ)
         ρ₁≡δ∘σ S u₁ with thick u u₁
-        ρ₁≡δ∘σ S ._  | inj₁ (v , refl)    = begin
-                                              ρ₁ S (thin u S v)     ≡⟨ sym (ren-id (ρ₁ S (thin u S v))) ⟩
-                                              sub ρ₁ (thin-s u S v) ≡⟨ ρ₁∘thin[u]≡δ∘ρ S v ⟩ 
-                                              sub δ (ρ S v) ∎
-        ρ₁≡δ∘σ ._ .u | inj₂ (refl , refl) = ren-inj i (ρ₁ _ u) (sub δ t) -- crucial use of injectivity to show
-          (begin                                                         -- that we got the most general solution
+        ρ₁≡δ∘σ S ._  | inj₁ (v , refl) = begin
+                                           ρ₁ S (thin u S v)     ≡⟨ sym (ren-id (ρ₁ S (thin u S v))) ⟩
+                                           sub ρ₁ (thin-s u S v) ≡⟨ ρ₁∘thin[u]≡δ∘ρ S v ⟩ 
+                                           sub δ (ρ S v) ∎
+        ρ₁≡δ∘σ ._ .u | inj₂ refl`      = ren-inj i (ρ₁ _ u) (sub δ t) -- crucial use of injectivity to show
+          (begin                                                      -- that we got the most general solution
                  ren i (ρ₁ _ u)         ≡⟨ ren[i,ρ₁[u]]≡sub[ρ₁∘thin[u],s] ⟩ 
                  sub (ρ₁ ∘s thin-s u) s ≡⟨ sub-ext ρ₁∘thin[u]≡δ∘ρ s ⟩ 
                  sub (δ ∘s ρ) s         ≡⟨ sym (Sub∘.subT-∘ s) ⟩ 
@@ -126,12 +126,12 @@ flexAny u i .(∫once x (∫ ps (mvar u j))) | inj₂ (G1 , j , x ∷ ps , refl)
 mutual
   unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
   -- congruence and directly failing cases
-  unify (con c xs) (con c₁ ys) l with eq-∋ (_ , c) (_ , c₁) 
-  unify (con c xs) (con c₁ ys) l | no  c≢c₁ = no (λ {(_ , _ , eq) → c≢c₁ (con-inj₁ eq)})
-  unify (con c xs) (con .c ys) l | yes refl = cong-spec (con c) (unifyTms xs ys l)
-  unify (var x xs) (var y  ys) l with eq-∋ (_ , x) (_ , y) 
-  unify (var x xs) (var y  ys) l | no  x≢y  = no (λ {(_ , _ , eq) → x≢y (var-inj₁ eq)})
-  unify (var x xs) (var .x ys) l | yes refl = cong-spec (var x) (unifyTms xs ys l)
+  unify (con c xs) (con c₁ ys) l with c ≅∋? c₁ 
+  unify (con c xs) (con c₁ ys) l | no  c≢c₁  = no (λ {(_ , _ , eq) → c≢c₁ (con-inj₁ eq)})
+  unify (con c xs) (con .c ys) l | yes refl` = cong-spec (con c) (unifyTms xs ys l)
+  unify (var x xs) (var y  ys) l with x ≅∋? y 
+  unify (var x xs) (var y  ys) l | no  x≢y   = no (λ {(_ , _ , eq) → x≢y (var-inj₁ eq)})
+  unify (var x xs) (var .x ys) l | yes refl` = cong-spec (var x) (unifyTms xs ys l)
   unify (lam x)    (lam y)     l = cong-spec lam {x} {y} (unify x y l)
   unify (con _ _)  (var _ _)   l = no λ {(_ , _ , ())}
   unify (var _ _)  (con _ _)   l = no λ {(_ , _ , ())}

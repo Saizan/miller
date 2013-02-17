@@ -1,9 +1,10 @@
 module Injection.Limits where
 
-open import Relation.Binary.PropositionalEquality hiding ([_])
-open ≡-Reasoning
 open import Data.Product
 open import Data.Empty
+
+open import Support.Equality
+open ≡-Reasoning
 
 open import Injection
 import Category
@@ -125,12 +126,12 @@ _,_→weake⇒i∷f,j∷g {a = a} {u = u}{v} u≢v {f} {g} {pf} {pg} {E} {e} equ
 
 equalizer : ∀ {A : Set}{S T : List A}(f g : Inj S T) -> Equalizer f g
 equalizer [] [] = Equ [] , [] , empty-equalizer
-equalizer (i ∷ f [ pf ])  (j ∷ g [ pf₁ ]) with eq-∋ (_ , i) (_ , j) | equalizer f g
-equalizer (i ∷ f [ pf ]) (.i ∷ g [ pf₁ ]) | yes refl | Equ E , e , e⇒f,g = Equ _ ∷ E , zero ∷[] e , e⇒f,g →zero∷e⇒i∷f,i∷g
-equalizer (i ∷ f [ pf ])  (j ∷ g [ pf₁ ]) | no ¬p    | Equ E , e , e⇒f,g = Equ E , weak e , i≢j , e⇒f,g →weake⇒i∷f,j∷g
+equalizer (i ∷ f [ pf ])  (j ∷ g [ pf₁ ]) with i ≅∋? j | equalizer f g
+equalizer (i ∷ f [ pf ]) (.i ∷ g [ pf₁ ]) | yes refl`  | Equ E , e , e⇒f,g = Equ _ ∷ E , zero ∷[] e , e⇒f,g →zero∷e⇒i∷f,i∷g
+equalizer (i ∷ f [ pf ])  (j ∷ g [ pf₁ ]) | no ¬p      | Equ E , e , e⇒f,g = Equ E , weak e , i≢j , e⇒f,g →weake⇒i∷f,j∷g
   where
     i≢j : i ≢ j
-    i≢j = (λ x → ¬p (cong-proj₁ x))
+    i≢j = (λ x → ¬p (refl , ≡-to-≅ x))
 
 empty-pullback : ∀ {A : Set} {X Z : List A} → {f : Inj X Z} → IsPullback f [] [] [] []
 empty-pullback {A} {X} {Z} {f} = record {

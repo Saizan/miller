@@ -57,8 +57,8 @@ mutual
   check : ∀ {Sg G D T S} (u : G ∋ S) (t : Tm Sg G D T) → Dec u OccursIn t
   check u (con c ts) = con c ∙ checks u ts 
   check u (mvar w j) with thick u w
-  ...                 | no  (z , eq)      = no  (mvar z j , cong₂ mvar eq (right-id j))
-  check u (mvar .u j) | yes (refl , refl) = yes (_ , (j , ([] , refl)))
+  ...                 | no  (z , eq) = no  (mvar z j , cong₂ mvar eq (right-id j))
+  check u (mvar .u j) | yes refl`    = yes (_ , (j , ([] , refl)))
   check u (var x ts) = var x ∙ checks u ts
   check u (lam t) = lam ∙ check u t
   

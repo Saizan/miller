@@ -66,14 +66,14 @@ x∉thinx (suc x) zero ()
 x∉thinx (suc x) (suc y) eq = x∉thinx x y (suc-inj1 eq)
 
 thick : ∀ {A}{G : List A}{S T} → (x : G ∋ S) → (y : G ∋ T) → (∃ \ z → thin x T z ≡ y) ⊎ x ≅∋ y
-thick zero    zero    = inj₂ (refl , refl)
+thick zero    zero    = inj₂ refl`
 thick zero    (suc y) = inj₁ (y , refl)
 thick (suc x) zero    = inj₁ (zero , refl)
 thick (suc x) (suc y) with thick x y
 thick (suc x)  (suc y)   | inj₁ (z , eq) = inj₁ (suc z , cong suc eq)
-thick (suc .y) (suc y)   | inj₂ (refl , refl)     = inj₂ (refl , refl)
+thick (suc .y) (suc y)   | inj₂ refl`    = inj₂ refl`
 
-thick-refl : ∀ {A}{G : List A}{S} → (x : G ∋ S) → thick x x ≡ inj₂ (refl , refl)
+thick-refl : ∀ {A}{G : List A}{S} → (x : G ∋ S) → thick x x ≡ inj₂ refl`
 thick-refl zero = refl
 thick-refl (suc x) rewrite thick-refl x = refl
 
@@ -86,23 +86,6 @@ thin-inj : ∀ {A : Set}{xs : List A}{x y : A} -> (v : xs ∋ x) -> {i j : (xs -
 thin-inj v {i} {j} eq with cong (\ x -> maybe′ (\ x -> Maybe.just (proj₁ x)) nothing (isInj₁ (thick v x))) eq 
 ... | p rewrite thick-thin v i | thick-thin v j with p 
 thin-inj v {i} {.i} eq | p | refl = refl
-
-_≡∋_ : ∀ {A : Set}{xs : List A}{x y : A} (i : xs ∋ x) (j : xs ∋ y) -> Set
-i ≡∋ j = _≡_ {A = ∃ (_∋_ _)} (_ , i) (_ , j)
-
-suc-inj : ∀ {A : Set}{xs : List A}{x y z} {i : xs ∋ x}{j : xs ∋ y} → suc {S = z} i ≡∋ suc j → i ≡∋ j
-suc-inj refl = refl
-
-eq-∋ : ∀ {A : Set}{xs : List A} → (i j : ∃ (_∋_ xs)) → Dec (i ≡ j)
-eq-∋ (.y , zero)   (y , zero)  = yes refl
-eq-∋ ( x , zero)   (y , suc j) = no (λ ())
-eq-∋ ( x , suc  i) (y , zero)  = no (λ ())
-eq-∋ ( x , suc  i) (y , suc j) with eq-∋ (x , i) (y , j)
-eq-∋ (.y , suc .j) (y , suc j)    | yes refl = yes refl
-eq-∋ ( x , suc  i) (y , suc j)    | no  ¬p   = no (¬p ∘ suc-inj)
-
-cong-proj₁ : ∀ {A : Set}{xs : List A}{x : A} {i j : xs ∋ x} -> i ≡ j -> i ≡∋ j
-cong-proj₁ refl = refl
 
 _≅∋?_ : ∀ {A : Set} {G : List A} {S} (u : G ∋ S) {T} (v : G ∋ T) -> Dec (u ≅∋ v)
 u ≅∋? v         with thick u v

@@ -70,8 +70,8 @@ bind = _⋆_
 
 singleton : ∀ {G S} → (u : G ∋ S) → ∀ {Ψ} → Inj Ψ (ctx S) → MetaRen G ((G - u) <: (type S <<- Ψ))
 singleton  u j  T v with thick u v
-singleton  u j  T v | inj₁ x             = id-i / suc (proj₁ x)
-singleton .v j ._ v | inj₂ (refl , refl) = j / zero 
+singleton  u j  T v | inj₁ x     = id-i / suc (proj₁ x)
+singleton .v j ._ v | inj₂ refl` = j / zero 
 
 singleton-refl : ∀ {G S} (u : G ∋ S) {Ψ} (i : Inj Ψ (ctx S)) → singleton u i _ u ≡ i / zero
 singleton-refl u i rewrite thick-refl u = refl
@@ -127,7 +127,7 @@ _hasBody_ {G} {T} cl {S} x = ∃ \ (j : Inj (ctx S) (ctx T)) -> type T ≡ type 
 
 dec-HasBody : ∀ {G}{T}(cl : VarClosure G T) {S}(x : G ∋ S) -> Dec (cl hasBody x) 
 dec-HasBody (j / y) x with y ≅∋? x 
-dec-HasBody {G} {.type₁ <<- ctx₁} (j / .x) {type₁ <<- ctx} x | yes (refl , refl) = yes (j , refl , refl)
+dec-HasBody {G} {.type₁ <<- ctx₁} (j / .x) {type₁ <<- ctx} x | yes refl` = yes (j , refl`)
 dec-HasBody {G} {type <<- ctx₁} (j / y) {type₁ <<- ctx} x | no ¬p = no (aux ¬p)
   where aux : ∀ {type}{y : _ ∋ (type <<- _)} -> (¬ (y ≅∋ x)) -> Σ (Inj ctx ctx₁) (λ j₁ → Σ (type ≡ type₁) (λ x₁ → j / y ≅ j₁ / x)) → ⊥ 
         aux ¬p₁ (proj₁ , refl , eq) = ¬p₁ ((cong (_<<-_ _) (_≈vc_.Ψeq (to-vc (≅-to-≡ eq)))) , (_≈vc_.beq (to-vc (≅-to-≡ eq))))
@@ -148,8 +148,8 @@ epic-inv {G} {G1} f f-epic S x | no ¬p = ⊥-elim absurd where
 
   g1∘f≡g2∘f : (g1 ∘mr f) ≡mr (g2 ∘mr f)
   g1∘f≡g2∘f S v       with f _ v    | inspect (f _) v | thick x (body (f _ v))
-  g1∘f≡g2∘f S₁ v         | jfv / fv | _               | inj₁ x₁            = refl
-  g1∘f≡g2∘f (._ <<- _) v | jfv / .x | ⌞ eq ⌟          | inj₂ (refl , refl) 
+  g1∘f≡g2∘f S₁ v         | jfv / fv | _               | inj₁ x₁    = refl
+  g1∘f≡g2∘f (._ <<- _) v | jfv / .x | ⌞ eq ⌟          | inj₂ refl` 
          = ⊥-elim (¬p (_ , v , jfv , refl , Het.≡-to-≅ eq))
 
   absurd : ⊥

@@ -1,8 +1,8 @@
 module Syntax.Equality where
 
-open import Relation.Binary.PropositionalEquality renaming (sym to ≡-sym; cong to ≡-cong; trans to ≡-trans)
 open import Data.Sum
 
+open import Support.Equality renaming (sym to ≡-sym; cong to ≡-cong; trans to ≡-trans)
 open import Support.Product
 open import Support.List
 
@@ -19,27 +19,27 @@ data _≡T_ {b} {Sg} {G} {D} : {T : Ty ⊎ List Ty} -> (x y : Term< b > Sg G D T
 
 
 con-inj₁ : ∀ {Sg G D B Ss1 Ss2 b} {x : _ ∋ (Ss1 ->> B)}{y : _ ∋ (Ss2 ->> B)} {xs : Tms< b > Sg G D _}{ys} -> con x xs ≡T con y ys 
-         -> x ≡∋ y
-con-inj₁ (con refl eq) = refl 
+         -> x ≅∋ y
+con-inj₁ (con refl eq) = refl`
 
 var-inj₀ : ∀ {Sg G D Ss B b} {x : _ ∋ (Ss ->> B)}{y : _ ∋ (Ss ->> B)} {xs : Tms< b > Sg G D _}{ys} -> var x xs ≡T var y ys 
          -> x ≡ y
 var-inj₀ (var eq _) = eq
 
 var-inj₁ : ∀ {Sg G D B Ss1 Ss2 b} {x : _ ∋ (Ss1 ->> B)}{y : _ ∋ (Ss2 ->> B)} {xs : Tms< b > Sg G D _}{ys} -> var x xs ≡T var y ys 
-         -> x ≡∋ y
-var-inj₁ (var refl eq) = refl 
+         -> x ≅∋ y
+var-inj₁ (var refl eq) = refl`
 
 mutual
   refl-Tm : ∀ {Sg G D T b} -> (x : Tm< b > Sg G D T) -> x ≡T x
   refl-Tm (con c ts) = con refl (refl-Tms ts)
   refl-Tm (mvar u j) = mvar refl refl
   refl-Tm (var x ts) = var refl (refl-Tms ts)
-  refl-Tm (lam x) = lam (refl-Tm x)
+  refl-Tm (lam x)    = lam (refl-Tm x)
 
   refl-Tms : ∀ {Sg G D T b} -> (x : Tms< b > Sg G D T) -> x ≡T x
-  refl-Tms [] = []
-  refl-Tms (t ∷ x) = (refl-Tm t) ∷ (refl-Tms x)
+  refl-Tms []       = []
+  refl-Tms (t ∷ ts) = refl-Tm t ∷ refl-Tms ts
 
 refl-T : ∀ {Sg G D T b} -> (x : Term< b > Sg G D T) -> x ≡T x
 refl-T {T = inj₁ _} = refl-Tm
