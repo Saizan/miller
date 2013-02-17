@@ -52,16 +52,6 @@ Ctx-length-lemma {._ ∷ G} {Ss} (suc {S = _ <<- ctx} u) =
     suc (length Ss) + suc (length ctx) + Ctx-length (G - u)   ≡⟨ +-assoc (suc (length Ss)) (suc (length ctx)) _ ⟩ 
     suc (length Ss) + (suc (length ctx) + Ctx-length (G - u)) ∎
   where open ≡-Reasoning
-{-
-abstract
-  toMRen : ∀ {Sg G G1} (s : Sub Sg G G1) -> (id-s ≤ s) -> Σ (MetaRen G G1) \ ρ -> toSub ρ ≡s s
-  toMRen {Sg} {G} {G1} s (δ , id≡δ∘s) = (λ S x → proj₁ (aux S x)) , (λ S x → proj₂ (aux S x)) where
-    aux : ∀ S x -> ∃ \ (c : VarClosure G1 S) -> Tm.mvar (body c) (ρ-env c) ≡ s S x
-    aux S x with s S x | id≡δ∘s S x
-    aux S x | con c ts | ()
-    aux S x | mvar u j | w = (j / u) , refl
-    aux S x | var x₁ ts | ()
--}
 
 IsIso-id : ∀ {Sg G} -> IsIso {Sg} {G} {G} id-s
 IsIso-id = λ {Sg} {G} → (id-s , (λ S u → sym (ren-id _))) , (λ S u → sym (ren-id _))
@@ -117,33 +107,39 @@ _∘ds_ : ∀ {Sg G1 G2 G3} -> DSub Sg G2 G3 -> DSub Sg G1 G2 -> DSub Sg G1 G3
 ⟦⟧-∘ : ∀ {Sg g h i} (s : DSub Sg h i) (s₁ : DSub Sg g h) -> ⟦ s ∘ds s₁ ⟧ ≡s (⟦ s ⟧ ∘s ⟦ s₁ ⟧)
 ⟦⟧-∘ s s1 S x = refl
 
+_≅i_ : ∀ {A : Set}{X Y Z : List A} -> Inj X Y -> Inj X Z -> Set
+_≅i_ {A} {X} {Y} {Z} i j = Z ≡ Y × i ≅ j
 
 Decr-i : ∀ {A : Set}{X Y : List A} -> Inj X Y -> Set
-Decr-i {A} {E} {S} e = (E ≡ S × e ≅ id-i {xs = E}) ⊎ length S > length E
+Decr-i {A} {E} {S} e = (e ≅i id-i) ⊎ length S > length E
+
+cons-id-≅i : ∀ {A : Set} {X Y : List A} {x : A} {e : Inj X Y} -> e ≅i id-i -> cons {x = x} e ≅i id-i
+cons-id-≅i refl` = refl , ≡-to-≅ cons-id
 
 equalizer-Decr : ∀ {A : Set}{S T : List A}(f g : Inj S T) -> let open Equalizer (equalizer f g) in Decr-i e
-equalizer-Decr [] [] = inj₁ refl`
-equalizer-Decr (i ∷ f [ pf ]) (j ∷ g [ pf₁ ]) with i ≅∋? j | equalizer f g | equalizer-Decr f g 
-equalizer-Decr (i ∷ f [ pf ]) (.i ∷ g [ pf₁ ]) | yes refl` | Equ E , .id-i , e⇒f,g | inj₁ refl`
-               = inj₁ (refl , Het.≡-to-≅ cons-id)
-equalizer-Decr (i ∷ f [ pf ]) (.i ∷ g [ pf₁ ]) | yes refl` | equ | inj₂ y₁ = inj₂ (s≤s y₁)
-equalizer-Decr (i ∷ f [ pf ]) (j ∷ g [ pf₁ ]) | no ¬p | Equ E , e , e⇒f,g | inj₁ (refl , _) = inj₂ (s≤s (begin _ ∎))
-equalizer-Decr (i ∷ f [ pf ]) (j ∷ g [ pf₁ ]) | no ¬p | equ | inj₂ y₁ = inj₂ (≤-step y₁)
+equalizer-Decr []            []             = inj₁ refl`
+equalizer-Decr (i ∷ f [ _ ]) ( j ∷ g [ _ ]) with i ≅∋? j | equalizer-Decr f g 
+equalizer-Decr (i ∷ f [ _ ]) (.i ∷ g [ _ ]) | yes refl`  | inj₁ eq       = inj₁ (cons-id-≅i eq)
+equalizer-Decr (i ∷ f [ _ ]) (.i ∷ g [ _ ]) | yes refl`  | inj₂ gt       = inj₂ (s≤s gt)
+equalizer-Decr (i ∷ f [ _ ]) ( j ∷ g [ _ ]) | no  _      | inj₁ (eq , _) = inj₂ (s≤s (begin _ ≡⟨ cong length eq ⟩ _ ∎))
+equalizer-Decr (i ∷ f [ _ ]) ( j ∷ g [ _ ]) | no  _      | inj₂ gt       = inj₂ (≤-step gt)
 
 pullback-Decr : ∀ {A : Set} {X Y Z : List A} → (f : Inj X Z)(g : Inj Y Z) -> let open Pullback (pullback f g) in Decr-i p₂
-pullback-Decr f [] = inj₁ refl`
-pullback-Decr f (i ∷ g [ pf ]) with invert f i | pullback f g | pullback-Decr f g
-pullback-Decr f (.(f $ x) ∷ g [ pf ]) | yes (x , refl) | Pull P , p₁ , .id-i , p₁,p₂⇒f,g | inj₁ refl` = inj₁ (refl , Het.≡-to-≅ cons-id)
-pullback-Decr f (.(f $ x) ∷ g [ pf ]) | yes (x , refl) | q | inj₂ y₁ = inj₂ (s≤s y₁)
-pullback-Decr f (i ∷ g [ pf ]) | no ¬p | Pull P , _ , _ , _ | inj₁ (refl , _) = inj₂ (s≤s (begin _ ∎))
-pullback-Decr f (i ∷ g [ pf ]) | no ¬p | pull | inj₂ y₁ = inj₂ (≤-step y₁)
+pullback-Decr f []                   = inj₁ refl`
+pullback-Decr f (i        ∷ g [ _ ]) with invert f i  | pullback-Decr f g
+pullback-Decr f (.(f $ x) ∷ g [ _ ]) | yes (x , refl) | inj₁ eq = inj₁ (cons-id-≅i eq)
+pullback-Decr f (.(f $ x) ∷ g [ _ ]) | yes (x , refl) | inj₂ gt = inj₂ (s≤s gt)
+pullback-Decr f (i        ∷ g [ _ ]) | no  _          | inj₁ eq = inj₂ (s≤s (begin _ ≡⟨ cong length (proj₁ eq) ⟩ _ ∎))
+pullback-Decr f (i        ∷ g [ _ ]) | no  _          | inj₂ gt = inj₂ (≤-step gt)
 
 
 singleton-Decreasing : ∀ {Sg G E Ss B} (e : Inj E Ss) (u : G ∋ B <<- Ss) -> Decr-i e -> Decreasing {Sg} (toSub (singleton u e))
 singleton-Decreasing {Sg} {G} {.Ss} {Ss} {B} .id-i u (inj₁ refl`) = inj₁ (Ctx-length-lemma u , (δ , eq1) , (λ S u₁ → eq2 S u₁)) where
+
   δ : (S : MTy) → B <<- Ss ∷ G - u ∋ S → Tm Sg G (ctx S) ([] ->> type S)
   δ .(B <<- Ss) zero = mvar u id-i
   δ S (suc u₁) = mvar (thin u S u₁) id-i
+
   eq1 : id-s ≡s (δ ∘s toSub (singleton u id-i))
   eq1 S u₁ with thick u u₁ 
   eq1 S .(thin u S x) | inj₁ (x , refl) = cong (mvar _) (sym (right-id id-i))
