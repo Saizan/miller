@@ -11,14 +11,7 @@ open import Injections
 
 open import Syntax.Type
 open import Syntax.NbE
-open import Syntax.NbEC
-
-replace : ∀ {b Sg G D D1 T} → Tm< b > Sg G D T → Tms< false > Sg G D1 D → Tm< false > Sg G D1 T
-replace t ts = nf t (evals ts idEnv)
-
-toFalse : ∀ {b Sg G D T} → Tm< b > Sg G D T → Tm< false > Sg G D T
-toFalse {false} t = t 
-toFalse {true}  t = nf t idEnv
+open import Syntax.NbE.Properties
 
 -- The type of meta-substitutions
 Sub<_> : ∀ b → Ctx → MCtx → MCtx → Set
@@ -80,7 +73,6 @@ get-nats : ∀ {b1 Sg G1 G2 D1 D2} {f : Sub< b1 > Sg G1 G2} {g1 : All (Dom Sg G1
 get-nats {g1 = _ ∷ _} {_ ∷ _} (dnat , _) zero = dnat
 get-nats {g1 = _ ∷ _} {_ ∷ _} (_ , enat) (suc x) = get-nats enat x
  
-
 mutual
   sub-nat : ∀ {b1 b2 Sg G1 G2 D1 D2 T} {f : Sub< b1 > Sg G1 G2} {i : Inj D1 D2} (t : Tm< b2 > Sg G1 D1 T) → sub f (ren i t) ≡ ren i (sub f t)
   sub-nat                          (con c ts)  = cong (con c) (subs-nat ts)

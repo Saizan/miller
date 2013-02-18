@@ -13,82 +13,38 @@ open import Injections
 
 open import Syntax.Type public
 open import Syntax.NbE
-open import Syntax.NbEC
+open import Syntax.NbE.Properties
 open import Syntax.Sub public
 open import Syntax.Equality public
 open import Syntax.RenOrn public
 
-i-cong : ∀ {I : Set}{A B : I → Set}{i j} {x : A i}{y : A j}
-       (f : ∀ {i} -> A i → B i) → i ≡ j -> x ≅ y → f x ≅ f y
-i-cong f refl refl = Het.refl
 
-i-congd : ∀ {I : Set}{A : I → Set}{B : {i : I} -> A i -> Set}{i j} {x : A i}{y : A j}
-       (f : ∀ {i} -> (a : A i) → B {i} a) → i ≡ j -> x ≅ y → f x ≅ f y
-i-congd f refl refl = Het.refl
+congTm : ∀ {b1 b2 Sg G D T G1 D1 T1} -> b1 ≡ b2 -> (f : ∀ {b} -> Term< b > Sg G D T -> Term< b > Sg G1 D1 T1) -> 
+         {x : Term< b1 > Sg G D T}{y : Term< b2 > Sg G D T} -> x ≅ y -> f x ≅ f y
+congTm refl f refl = refl
 
-i-cong₂ : ∀ {I : Set}{A B C : I → Set}{i j} {x : A i}{y : A j} {w : B i}{z : B j}
-       (f : ∀ {i} -> A i → B i -> C i) → i ≡ j -> x ≅ y → w ≅ z -> f x w ≅ f y z
-i-cong₂ f refl refl refl = Het.refl
+cong-∷ : ∀ {b1 b2 Sg G D T Ts} -> b1 ≡ b2 -> {x : Tm< b1 > Sg G D T}{y : Tm< b2 > Sg G D T}
+         {xs : Tms< b1 > Sg G D Ts} {ys : Tms< b2 > Sg G D Ts} -> x ≅ y -> xs ≅ ys -> Tms._∷_ x xs ≅ Tms._∷_ y ys
+cong-∷ refl refl refl = refl
+
+cong-[] : ∀ {b1 b2 Sg G D} -> b1 ≡ b2 -> 
+          let xs : Tms< b1 > Sg G D []; xs = []; ys : Tms< b2 > Sg G D []; ys = [] in xs ≅ ys
+cong-[] refl = refl
 
 
 module Subid where
+
+ open import Function using (_∘_)
+
  x∧true≡x : ∀ {x} -> x ∧ true ≡ x
  x∧true≡x {false} = refl
  x∧true≡x {true}  = refl
 
- open import Function using (_∘_)
-
- mutual
-
-   expand-id : ∀ {Sg G D T B} f {f-nat} (ts : All (Dom Sg G D) T) -> expand {T = B} T (f , f-nat) $$ ts ≡ f _ id-i ts
-   expand-id f         []       = refl
-   expand-id f {f-nat} (t ∷ ts) = 
-     begin expand _ (applyN (f , f-nat) id-i t) $$ ts ≡⟨ expand-id _ ts ⟩
-           f _ (id-i ∘i id-i) (mapDom id-i t ∷ ts)    ≡⟨ cong₂ (f _) (left-id id-i) refl ⟩
-           f _ id-i (mapDom id-i t ∷ ts)              ≡⟨ reflN (f , f-nat) _ id-i (cons-ext (mapDom-id t) reflA) ⟩
-           f _ id-i (t ∷ ts)                          ∎
-   
-   injv-id : ∀ {Sg G D T B} (v : _ ∋ (_ ->> B)) (ts : All (Dom Sg G D) T) -> injv v $$ ts ≡ var v (reifys ts)
-   injv-id v ts = begin
-     expand _ ((λ D1 i xs → var (i $ v) (reifys xs)) , _) $$ ts ≡⟨ expand-id (λ D1 i xs → var (i $ v) (reifys xs)) ts ⟩ 
-     var (id-i $ v) (reifys ts)                                 ≡⟨ cong₂ var (id-i$ v) refl ⟩
-     var v          (reifys ts)                                 ∎
-
-   nf-id : ∀ {Sg G D T} (t : Tm< false > Sg G D T) -> nf t idEnv ≡ t
-   nf-id (con c ts) = cong (con c) (nfs-id ts)
-   nf-id (mvar u j) = cong (mvar u) (nfs-id j)
-   nf-id {Sg} {G} (var x ts) = begin
-     get idEnv x $$ evals ts idEnv ≡⟨ cong (λ f → f $$ evals ts idEnv) (get-build (injv {Sg} {G}) x) ⟩
-     injv x      $$ evals ts idEnv ≡⟨ expand-id (λ D1 i xs → var (i $ x) (reifys xs)) (evals ts idEnv) ⟩
-     var (id-i $ x) (nfs ts idEnv) ≡⟨ cong₂ var (id-i$ x) (nfs-id ts) ⟩
-     var x ts                      ∎
-   nf-id (lam t) = 
-     cong lam (begin 
-       nf t (injv zero ∷ mapEnv (weak id-i) (build injv)) 
-         ≡⟨ nf-ext t (cons-ext (injv-ext zero) λ {S} x → begin[ dom ]
-             get (mapEnv (weak id-i) idEnv) x                    ≡⟨ cong (λ g → get g x) (mapAll-build _ injv (mapDom (weak id-i))) ⟩
-             get (build (λ x₁ → mapDom (weak id-i) (injv x₁))) x ≡⟨ get-build (λ x₁ → mapDom (weak id-i) (injv x₁)) x ⟩
-             mapDom (weak id-i) (injv x)                         ≈⟨ injv-nat (weak id-i) x ⟩
-             injv (weak id-i $ x)                                ≡⟨ cong injv (apply-weakid x) ⟩
-             injv (suc x)                                        ≡⟨ sym (get-build (λ x₁ → injv (suc x₁)) x) ⟩
-             get (build (λ x₁ → injv (suc x₁))) x                ∎) ⟩
-       nf t idEnv ≡⟨ nf-id t ⟩
-       t          ∎)
-
-   nfs-id : ∀ {Sg G D T} (ts : Tms< false > Sg G D T) -> nfs ts idEnv ≡ ts
-   nfs-id [] = refl
-   nfs-id (t ∷ ts) = cong₂ _∷_ (nf-id t) (nfs-id ts)
-
- 
- congid : ∀ {b Sg G D T D1 T1} -> (f : ∀ {b} -> Term< b > Sg G D T -> Term< b > Sg G D1 T1) -> 
-          ∀ {x : Term< b ∧ true > _ _ _ _}{y : Term< b > _ _ _ _} -> x ≅ y -> f x ≅ f y
- congid {b} rewrite x∧true≡x {b} = (λ {f refl → refl})
-
  mutual
   sub-id : ∀ {b Sg G D T} (t : Tm< b > Sg G D T) → sub id-s t ≅ t
-  sub-id {b}     (con c ts) = congid {b} (con c) (subs-id ts)
-  sub-id {b}     (var x ts) = congid {b} (var x) (subs-id ts)
-  sub-id {b}     (lam t)    = congid {b} lam (sub-id t)
+  sub-id {b}     (con c ts) = congTm (x∧true≡x {b}) (con c) (subs-id ts)
+  sub-id {b}     (var x ts) = congTm (x∧true≡x {b}) (var x) (subs-id ts)
+  sub-id {b}     (lam t)    = congTm (x∧true≡x {b}) lam     (sub-id t)
   sub-id {true}  (mvar u j) = ≡-to-≅ (cong (mvar u) (right-id j))
   sub-id {false} (mvar u ts) rewrite ≅-to-≡ (subs-id ts) = ≡-to-≅ (cong (mvar u) (begin 
    reifys (build (λ z → get (evals ts idEnv) (id-i $ z))) 
@@ -97,15 +53,11 @@ module Subid where
           build (get (evals ts idEnv))                  ≡⟨ build-get (evals ts idEnv) ⟩
           evals ts idEnv                                ∎) ⟩
    nfs ts idEnv ≡⟨ nfs-id ts ⟩
-   ts ∎))
+   ts           ∎))
   
   subs-id : ∀ {b Sg G D T} (t : Tms< b > Sg G D T) → subs id-s t ≅ t
-  subs-id {b} []       = Het.cong {B = let A = _; B = _; C = _; D = _ in \ b -> Tms< b > A B C D} 
-                                  (λ b₁ → Tms.[] {b = b₁}) (≡-to-≅ (x∧true≡x {b}))
-  subs-id {b} (t ∷ ts) = i-cong₂ {A = let A = _; B = _; C = _; D = _ in λ b → Tm< b > A B C D}
-                            {B = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D}
-                            {C = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D}
-                            _∷_ (x∧true≡x {b}) (sub-id t) (subs-id ts)
+  subs-id {b} []       = cong-[] (x∧true≡x {b})
+  subs-id {b} (t ∷ ts) = cong-∷  (x∧true≡x {b}) (sub-id t) (subs-id ts)
 
 sub-id : ∀ {Sg G D T} (t : Tm Sg G D T) → sub id-s t ≡ t
 sub-id t = ≅-to-≡ (Subid.sub-id t)
@@ -120,27 +72,20 @@ left-ids f S u = ren-id _
 ∧-assoc {true} = refl
 ∧-assoc {false} = refl
 
-congTm : ∀ a {b c Sg G D T G1 D1 T1} -> (f : ∀ {b} -> Term< b > Sg G D T -> Term< b > Sg G1 D1 T1) -> 
-         {x : Term< ((a ∧ b) ∧ c) > Sg G D T}{y : Term< (a ∧ (b ∧ c)) > Sg G D T} -> x ≅ y -> f x ≅ f y
-congTm a f eq = i-cong {A = let A = _; B = _; C = _; D = _ in λ b → Term< b > A B C D}
-                       f (∧-assoc {a}) eq 
 module Sub∘ where
  mutual
   sub-∘ : ∀ {b3 b1 b2 Sg G1 G2 G3 D T} {f : Sub< b1 > Sg G2 G3}{g : Sub< b2 > _ _ _} (t : Tm< b3 > Sg G1 D T) → sub f (sub g t) ≅ sub (f ∘s g) t
-  sub-∘ {b3} (con c ts) = congTm b3 (con c) (subs-∘ ts)
-  sub-∘ {b3} (var x ts) = congTm b3 (var x) (subs-∘ ts)
-  sub-∘ {b3} (lam t)    = congTm b3 lam (sub-∘ t)
+  sub-∘ {b3} (con c ts) = congTm (∧-assoc {b3}) (con c) (subs-∘ ts)
+  sub-∘ {b3} (var x ts) = congTm (∧-assoc {b3}) (var x) (subs-∘ ts)
+  sub-∘ {b3} (lam t)    = congTm (∧-assoc {b3}) lam     (sub-∘ t)
   sub-∘ {true}          {g = g} (mvar u j)  = ≡-to-≅ (sub-nat (g _ u))
   sub-∘ {false} {f = f} {g = g} (mvar u ts) = 
    Het.trans (≡-to-≅ (nf-nats {f = f} (evals-nats idEnv-nats (idEnv-∘ idEnv) (subs g ts)) (evals-∘ _ (idEnv-∘ idEnv) _) (g _ u))) 
              (Het.cong (replace ((f ∘s g) _ u)) (subs-∘ {f = f} {g = g} ts))
   
   subs-∘ : ∀ {b3 b1 b2 Sg G1 G2 G3 D T} {f : Sub< b1 > Sg G2 G3}{g : Sub< b2 > _ _ _} (t : Tms< b3 > Sg G1 D T) → subs f (subs g t) ≅ subs (f ∘s g) t
-  subs-∘ {b3} []       = Het.cong {B = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D} (λ b → Tms.[] {b = b}) (≡-to-≅ (∧-assoc {b3}))
-  subs-∘ {b3} (t ∷ t₁) = i-cong₂ {A = let A = _; B = _; C = _; D = _ in λ b → Tm< b > A B C D}
-                            {B = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D}
-                            {C = let A = _; B = _; C = _; D = _ in λ b → Tms< b > A B C D}
-                            _∷_ (∧-assoc {b3}) (sub-∘ t) (subs-∘ t₁)
+  subs-∘ {b3} []       = cong-[] (∧-assoc {b3})
+  subs-∘ {b3} (t ∷ t₁) = cong-∷ (∧-assoc {b3}) (sub-∘ t) (subs-∘ t₁)
 
  subT-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub< false > Sg G2 G3} {g : Sub< true > Sg _ _} (t : Term< true > Sg G1 D T) 
                               → subT f (subT g t) ≡ subT (f ∘s g) t
@@ -167,6 +112,8 @@ mutual
   subs-ext q []       = refl
   subs-ext q (t ∷ ts) = cong₂ _∷_ (sub-ext q t) (subs-ext q ts)
 
+
+
 subT-id : ∀ {Sg G D T} (t : Term Sg G D T) → subT id-s t ≡ t
 subT-id {Sg} {G} {D} {inj₁ x} t = ≅-to-≡ (Subid.sub-id t)
 subT-id {Sg} {G} {D} {inj₂ y} t = ≅-to-≡ (Subid.subs-id t)
@@ -179,13 +126,15 @@ subT-∘ : ∀ {Sg G1 G2 G3 D T} {f : Sub Sg G2 G3}{g : Sub Sg _ _} (t : Term Sg
 subT-∘ {T = inj₁ _} t = sub-∘ t
 subT-∘ {T = inj₂ _} t = subs-∘ t
 
+
+
 left-idf : ∀ {Sg G G1} -> (f : Sub< false > Sg G G1) -> (f ∘s id-f) ≡s f
 left-idf f S u = begin
   eval (f S u) (evals (subs f (reifys idEnv)) idEnv) ≡⟨ eval-ext (f S u) (λ {S} x → begin[ dom ]
            get (evals (subs f (reifys idEnv)) idEnv) x ≡⟨ cong (λ ts → get (evals ts idEnv) x) (reifys-nats idEnv-nats) ⟩ 
            get (evals (reifys idEnv) idEnv) x          ≈⟨ RelA-unfold idEnv (idEnv-∘ idEnv) x ⟩
            get idEnv x                                 ∎) ⟩
-  nf (f S u) idEnv                                   ≡⟨ Subid.nf-id (f S u) ⟩
+  nf (f S u) idEnv                                   ≡⟨ nf-id (f S u) ⟩
   f S u                                              ∎
 
 mutual
@@ -196,7 +145,7 @@ mutual
   right-idf (mvar u ts) rewrite rights-idf ts = cong (mvar u) 
     (begin reifys (evals (reifys idEnv) (evals ts idEnv)) ≡⟨ reifys-ext (RelA-unfold _ (idEnv-∘ (evals ts idEnv))) ⟩
            reifys (evals ts idEnv)                        ≡⟨ refl ⟩
-           nfs ts idEnv                                   ≡⟨ Subid.nfs-id ts ⟩
+           nfs ts idEnv                                   ≡⟨ nfs-id ts ⟩
            ts                                             ∎)
 
   rights-idf : ∀ {Sg G D T} -> (t : Tms< false > Sg G D T) -> subs id-f t ≡ t
@@ -302,7 +251,7 @@ mutual
                                       (injv-∘ (Ss ->> B) idEnv _ _
                                        (≡-d (get-build (injv {Sg} {G}) (right# Ss $ (j $ v))))))
                                      {xs = mapEnv (left# Ss) idEnv} {ys = mapEnv (left# Ss) idEnv} reflA ⟩
-      injv (right# Ss $ (j $ v)) $$ mapEnv (left# Ss) idEnv ≡⟨ Subid.injv-id (right# Ss $ (j $ v)) (mapEnv (left# Ss) idEnv) ⟩
+      injv (right# Ss $ (j $ v)) $$ mapEnv (left# Ss) idEnv ≡⟨ injv-id (right# Ss $ (j $ v)) (mapEnv (left# Ss) idEnv) ⟩
       var (right# Ss $ (j $ v)) (reifys (mapEnv (left# Ss) idEnv)) ∎
 
     hip : ∀ {Ss B} (v : _ ∋ (Ss ->> B)) -> reify _ (injv (right# Ss $ (j $ v))) ≡ reify _ (injv (right# Ss $ (j₁ $ v)))

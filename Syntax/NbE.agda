@@ -386,6 +386,11 @@ module Syntax.NbE where
   nfAs-ext : ∀ {b Sg G D D1 T} → (t : Args b Sg G D T) → {g1 g2 : All (Dom Sg G D1) D} → g1 ≡A g2 → nfAs t g1 ≡ nfAs t g2
   nfAs-ext t g = reifys-ext (evalAs-ext t g)
 
+ replace : ∀ {b Sg G D D1 T} → Tm< b > Sg G D T → Tms< false > Sg G D1 D → Tm< false > Sg G D1 T
+ replace t ts = nf t (evals ts idEnv)
+
+
+
  _≤[_]_ : ∀ {Sg G D D1 D2} (g : All (Dom Sg G D1) D) (j : Inj D D2) (g1 : All (Dom Sg G D1) D2) → Set
  g ≤[ j ] g2 = ∀ {S} (x : _ ∋ S) → S ∋ get g x ≡d get g2 (j $ x)
 
