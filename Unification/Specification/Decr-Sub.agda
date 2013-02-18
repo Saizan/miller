@@ -9,11 +9,12 @@ open import Data.Sum
 
 open import Support.Equality
 
-open import Injection
-open import Injection.Limits
+open import Injections
 open import MetaRens
 
 open import Syntax
+
+open import Unification.Injections
 
 -- We define a measure of meta-contexts to help with proving
 -- termination of the main unification algorithm and pruning.

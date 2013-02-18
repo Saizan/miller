@@ -3,7 +3,7 @@ module Syntax.Height where
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality
 
-open import Injection
+open import Injections
 
 open import Syntax.Type
 

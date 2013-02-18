@@ -1,4 +1,4 @@
-module Injection where
+module Injections where
 
 open import Data.Product
 open import Relation.Nullary
@@ -9,7 +9,7 @@ open import Support.Equality
 open ≡-Reasoning
 
 open import Vars public
-open import Injection.Type public
+open import Injections.Type public
 
 invert : ∀ {A : Set} {xs ys : List A} (i : Inj xs ys) → ∀ {t} (y : ys ∋ t) → Dec (∃ \ x → i $ x ≡ y) 
 invert []              y = no (λ { (() , _)})

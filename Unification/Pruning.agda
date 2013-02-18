@@ -7,14 +7,14 @@ open import Data.Sum
 open import Support.Equality
 open ≡-Reasoning
 
-open import Injection
-open import Injection.Limits
-
+open import Injections
 open import MetaRens
 
 open import Syntax
+
 open import Unification.Specification
 open import Unification.MetaRens
+open import Unification.Injections
 open import Unification.Pruning.Epi-Decr
 
 data AllMV∈  {Sg : Ctx} {G : MCtx} {D0 D : Ctx} (i : Inj D0 D) : ∀ {T} → Term Sg G D T → Set where

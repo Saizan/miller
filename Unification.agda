@@ -10,14 +10,14 @@ open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 open import Support.Equality
 open ≡-Reasoning
 
-open import Injection
-open import Injection.Limits
+open import Injections
 open import MetaRens
 
 open import Syntax
 
 open import Unification.Specification
 open import Unification.MetaRens
+open import Unification.Injections
 open import Unification.OccursCheck
 open import Unification.Pruning
 open import Unification.Inversion

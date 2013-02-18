@@ -1,4 +1,4 @@
-module Injection.Type where
+module Injections.Type where
 
 open import Relation.Nullary
 open import Relation.Nullary.Decidable

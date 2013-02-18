@@ -9,7 +9,7 @@ open import Support.Equality
 open import Support.EqReasoning
 open import Support.Product public
 
-open import Injection
+open import Injections
 
 open import Syntax.Type public
 open import Syntax.NbE
@@ -287,7 +287,7 @@ mutual
          mapEnv (left# Ss) idEnv ≡⟨ apply-injv Ss B v j₁ ⟩
        var (right# Ss $ (j₁ $ v)) (reifys (mapEnv (left# Ss) idEnv)) ∎)))})
    where
-    open import Injection.Sum
+    open import Injections.Sum
     pointwise : ∀ {Sg G D T} -> {f g : ∀ {S} (x : T ∋ S) -> Dom Sg G D S} 
            -> ∀ {S} x -> reifys (build f) ≡T reifys (build g) -> reify S (f x) ≡ reify S (g x)
     pointwise zero    (t ∷ ts) = T-≡ t

@@ -7,12 +7,13 @@ open import Data.Sum
 
 open import Support.Equality
 
-open import Injection
-open import Injection.Limits
+open import Injections
+open import MetaRens
 
 open import Syntax
-open import MetaRens
+
 open import Unification.Specification.Decr-Sub
+open import Unification.Injections
 
 Epi : _ -> _ -> Set
 Epi G G1 = ∃ \ (f : MetaRen G G1) -> MRop.Monic f

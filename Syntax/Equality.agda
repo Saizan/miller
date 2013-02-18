@@ -6,7 +6,7 @@ open import Support.Equality renaming (sym to ≡-sym; cong to ≡-cong; trans t
 open import Support.Product
 open import Support.List
 
-open import Injection
+open import Injections
 open import Syntax.Type
 
 data _≡T_ {b} {Sg} {G} {D} : {T : Ty ⊎ List Ty} -> (x y : Term< b > Sg G D T) -> Set where 

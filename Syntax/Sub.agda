@@ -7,7 +7,7 @@ open import Support.Equality
 open ≡-Reasoning
 open import Support.Product
 
-open import Injection
+open import Injections
 
 open import Syntax.Type
 open import Syntax.NbE

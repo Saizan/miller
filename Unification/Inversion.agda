@@ -5,7 +5,7 @@ open import Data.Empty
 open import Data.Sum renaming (map to map⊎)
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 
-open import Injection
+open import Injections
 
 open import Syntax
 open import Unification.Pruning

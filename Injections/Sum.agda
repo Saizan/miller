@@ -1,10 +1,10 @@
-module Injection.Sum where
+module Injections.Sum where
 
 open import Relation.Binary.PropositionalEquality
 open ≡-Reasoning
 open import Data.Sum
 
-open import Injection
+open import Injections
 open import Vars.SumIso
 
 

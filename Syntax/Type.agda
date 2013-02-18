@@ -8,7 +8,7 @@ open import Support.Equality
 open ≡-Reasoning
 open import Support.List public
 
-open import Injection
+open import Injections
 
 postulate
   -- it'd more properly be a module parameter

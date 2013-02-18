@@ -1,4 +1,4 @@
-module Injection.Limits where
+module Unification.Injections where
 
 open import Data.Product
 open import Data.Empty
@@ -6,7 +6,7 @@ open import Data.Empty
 open import Support.Equality
 open ≡-Reasoning
 
-open import Injection
+open import Injections
 import Category
 
 module _ {A : Set} where

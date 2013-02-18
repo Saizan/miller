@@ -7,7 +7,7 @@ open import Data.Sum renaming (inj₁ to no; inj₂ to yes)
 
 open import Support.Equality
 
-open import Injection hiding (Dec)
+open import Injections hiding (Dec)
 
 open import Syntax
 

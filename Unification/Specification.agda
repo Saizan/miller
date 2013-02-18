@@ -6,12 +6,12 @@ open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
 open import Support.Equality
 open ≡-Reasoning
 
-open import Injection
-open import Injection.Limits
+open import Injections
 
 open import Syntax
 
 open import Unification.Specification.Decr-Sub public
+open import Unification.Injections
 
 Property<_> : ∀ b Sg G -> Set₁
 Property< b > Sg G = (∀ {G2} -> Sub< b > Sg G G2 -> Set)

@@ -10,7 +10,7 @@ module Syntax.NbE where
 
  open import Support.EqReasoning
 
- open import Injection
+ open import Injections
 
  open import Syntax.Type
 

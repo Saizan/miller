@@ -12,10 +12,13 @@ open import Support.Equality
 open ≡-Reasoning
 open import Support.Product
 
-open import Injection
-open import Injection.Limits
-open import Syntax
 import Category
+
+open import Injections
+
+open import Syntax
+
+open import Unification.Injections
 
 
 record VarClosure (D : MCtx) (S : MTy) : Set where

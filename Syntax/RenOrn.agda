@@ -6,7 +6,7 @@ open import Data.Bool
 
 open import Support.Product
 
-open import Injection
+open import Injections
 
 open import Syntax.Type
 

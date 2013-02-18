@@ -7,14 +7,14 @@ open import Data.List.All
 open import Support.Equality
 open ≡-Reasoning
 
-open import Injection
-open import Injection.Limits
 open import Vars.MatchTwo 
 open import Vars.SumIso
-
-open import Syntax
+open import Injections
 open import MetaRens hiding (_⋆_)
 
+open import Syntax
+
+open import Unification.Injections
 
 record ESub (Sg : Ctx) (G : MCtx) (G1 : MCtx) : Set where
   constructor ι_

@@ -8,7 +8,7 @@ module Syntax.NbEC where
  open import Support.Equality
  open import Support.EqReasoning
 
- open import Injection
+ open import Injections
 
  open import Syntax.Type
  open import Syntax.NbE
