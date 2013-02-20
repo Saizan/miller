@@ -1,6 +1,7 @@
 module Syntax.OneHoleContext where
 
 open import Relation.Binary.PropositionalEquality
+open ≡-Reasoning
 open import Data.Sum
 
 open import Support.Product
@@ -55,33 +56,6 @@ Context = Context< true >
 ∫ : ∀ {Sg G I O b} → Context< b > Sg G I O → Term< b > Sg G (proj₁ O) (proj₂ O) → Term< b > Sg G (proj₁ I) (proj₂ I)
 ∫ [] t = t
 ∫ (x ∷ c) t = ∫once x (∫ c t)
-
-
-module OnHeight where
-  open import Syntax.Height
-  open import Data.Nat  
-  open import Data.Nat.Properties
-  open ≤-Reasoning
-  private
-    n≤m⊔n : ∀ m n → Data.Nat._≤_ n (m ⊔ n)
-    n≤m⊔n zero    _       = begin _ ∎
-    n≤m⊔n (suc m) zero    = z≤n
-    n≤m⊔n (suc m) (suc n) = s≤s (n≤m⊔n m n)
-
-  ∫once-height : ∀ {Sg G DI TI DO TO b} → (d : DTm< b > Sg G (DI , TI) (DO , TO)) → (t : Term< b > Sg G DO TO) → heightT (∫once d t) > heightT t
-  ∫once-height lam t = s≤s (begin heightT t ∎)
-  ∫once-height (head ts) t = s≤s (m≤m⊔n (height t) (heights ts))
-  ∫once-height (tail t) ts = s≤s (n≤m⊔n (height t) (heights ts))
-  ∫once-height (con c) t = s≤s (begin heightT t ∎)
-  ∫once-height (var x) t = s≤s (begin heightT t ∎)
-
-  ∫-height : ∀ {Sg G I O b} → (ps : Context< b > Sg G I O) → (t : Term< b > Sg G (proj₁ O) (proj₂ O)) → heightT (∫ ps t) ≥ heightT t
-  ∫-height [] t = begin heightT t ∎
-  ∫-height (x ∷ ps) t = begin heightT t                  ≤⟨ ≤-step (∫-height ps t) ⟩ 
-                              suc (heightT (∫ ps t))     ≤⟨ ∫once-height x (∫ ps t) ⟩ 
-                              heightT (∫once x (∫ ps t)) ∎
-
-open ≡-Reasoning
 
 
 -- To move a renaming past a λ we need to handle the extra variable,

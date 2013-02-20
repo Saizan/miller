@@ -290,5 +290,5 @@ mutual
 ↓↓-inj {true} eq = sub-idf-inj _ _ (≡-T eq)
 ↓↓-inj {false} eq = eq
 
-open import Syntax.Height public
+open import Syntax.No-Cycle public
 open import Syntax.OneHoleContext public
