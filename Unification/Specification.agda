@@ -28,6 +28,9 @@ Unifies x y σ = subT σ x ≡T subT σ y
 ∃σ_ : ∀ {Sg G1} -> Property< false > Sg G1 -> Set
 ∃σ_ P = ∃ \ G2 -> ∃ \ σ -> P {G2} σ
 
+∃σ-pat_ : ∀ {Sg G1} -> Property< true > Sg G1 -> Set
+∃σ-pat_ P = ∃ \ G2 -> ∃ \ σ -> P {G2} σ
+
 Sup : ∀ {Sg G1} -> Property< false > Sg G1 -> Property< true > Sg G1
 Sup P σ = {G' : _} (ρ : _) → P {G'} ρ → ρ ≤ σ
 

@@ -5,7 +5,7 @@ open import Relation.Binary
 open DecTotalOrder Data.Nat.decTotalOrder 
   using () renaming (refl to ≤-refl; trans to ≤-trans)         
 open import Data.Empty
-open import Data.Sum renaming (inj₁ to yes; inj₂ to no)
+open import Data.Sum renaming (inj₁ to yes; inj₂ to no; map to map⊎)
 
 open import Support.Equality
 open ≡-Reasoning
@@ -160,3 +160,6 @@ mutual
              ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> 
              (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
   under-not-iso σ unifyTms xs ys (.(suc n) , n≥G) (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) (n , z)
+
+Unify : ∀ {Sg G D T} → (s t : Tm Sg G D T) → ∃σ-pat Max (Unifies s t) ⊎ ¬ ∃σ Unifies s t
+Unify x y = map⊎ (λ {(G1 , σ , σ-max) → G1 , ⟦ σ ⟧ , σ-max}) (λ ¬p → ¬p) (unify x y (_ , ≤-refl))
