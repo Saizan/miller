@@ -116,12 +116,12 @@ flexRigid {Sg} {G} {S = S} u i s with prune i s
 
 
 flexAny : ∀ {Sg G D S} → (u : G ∋ S) → (i : Inj (ctx S) D) → (t : Tm Sg G D (! (type S))) → Spec (mvar u i) t
-flexAny u i t                        with check u t 
-flexAny u i .(sub (thin-s u) s)          | inj₁ (s , refl)               = flexRigid u i s
-flexAny u i .(mvar u j)                  | inj₂ (G1 , j , [] , refl)     = yes (flexSame u i j)
-flexAny u i .(∫once x (∫ ps (mvar u j))) | inj₂ (G1 , j , x ∷ ps , refl) = no  λ {(D1 , s , eq) → 
-      No-Cycle (subD s x) (subC s ps) (s _ u) i j
-        (trans (T-≡ eq) (∫-sub s (x ∷ ps) (mvar u j)))} 
+flexAny u i t                       with check u t 
+flexAny u i .(sub (thin-s u) s)        | inj₁ (s , refl)             = flexRigid u i s
+flexAny u i .(mvar u j)                | inj₂ (G1 , j , []    , refl) = yes (flexSame u i j)
+flexAny u i .(wrap (d ∷ c) (mvar u j)) | inj₂ (G1 , j , d ∷ c , refl) = no  λ {(D1 , s , eq) → 
+      No-Cycle (subD s d) (subC s c) (s _ u) i j
+        (trans (T-≡ eq) (wrap-sub s (d ∷ c) (mvar u j)))} 
 
 mutual
   unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y

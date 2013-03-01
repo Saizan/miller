@@ -76,9 +76,9 @@ spec-comm : ∀ {Sg G D T} → (x y : Term Sg G D T) → Spec x y → Spec y x
 spec-comm _ _ = map⊎ (λ {(G , σ , eq , max) → G , σ , T.sym eq , (λ {_} ρ x → max ρ (T.sym x))}) (λ x x₁ → x (unify-comm _ _ x₁))
 
 
-cong-spec : ∀ {Sg G D D' T T'} → (d : DTm Sg G (D' , T') (D , T)) -> {x y : Term Sg G D T} → Spec x y → Spec (∫once d x) (∫once d y)
-cong-spec d (inj₁ (_ , σ , unifies , sup)) = inj₁ (_ , (σ , (cong-∫once d unifies , (λ ρ ρ-unifies → sup ρ (inv-∫once d ρ-unifies)))))
-cong-spec d (inj₂ no-unifier) = inj₂ (λ {(_ , σ , σ-unifies) → no-unifier (_ , (σ , inv-∫once d σ-unifies)) })
+cong-spec : ∀ {Sg G D D' T T'} → (d : DTm Sg G (D' , T') (D , T)) -> {x y : Term Sg G D T} → Spec x y → Spec (wrapD d x) (wrapD d y)
+cong-spec d (inj₁ (_ , σ , unifies , sup)) = inj₁ (_ , (σ , (cong-wrapD d unifies , (λ ρ ρ-unifies → sup ρ (inv-wrapD d ρ-unifies)))))
+cong-spec d (inj₂ no-unifier) = inj₂ (λ {(_ , σ , σ-unifies) → no-unifier (_ , (σ , inv-wrapD d σ-unifies)) })
 
 optimist : ∀ {Sg m l o D T Ts}(x y : Tm Sg m D T)(xs ys : Tms Sg m D Ts) ->
            (p : Sub Sg m o) (q : Sub Sg o l) ->

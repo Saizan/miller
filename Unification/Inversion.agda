@@ -14,16 +14,17 @@ open import Unification.Pruning
 NotInv : ∀ {Sg G D D' T} (i : Inj D D') (t : Term Sg G D' T) → Set
 NotInv {Sg} {G} i t = ∀ {G1} (σ : Sub< false > Sg G G1) -> ¬ ∃ \ s -> renT i s ≡T subT σ t 
 
-map-NI : ∀ {Sg G DI D T D' T' }{i : Inj D' DI}{t : Term Sg G D T} (d : DTm Sg G (DI , T') (D , T) ) → NotInv (∫oInj d i) t → NotInv i (∫once d t)
-map-NI lam notinv σ (lam s , lam eq) = notinv σ (s , eq)
-map-NI (head ts) notinv σ (t₁ ∷ s , eq ∷ eq₁) = notinv σ (t₁ , eq)
-map-NI (tail t₁) notinv σ (t₂ ∷ s , eq ∷ eq₁) = notinv σ (s , eq₁)
-map-NI (con c) notinv σ (con .c ts , con refl eq) = notinv σ (ts , eq)
-map-NI (con c) notinv σ (mvar u j , ())
-map-NI (con c) notinv σ (var x ts , ())
-map-NI (var x) notinv σ (con c ts , ())
-map-NI (var x) notinv σ (mvar u j , ())
-map-NI (var ._) notinv σ (var x₁ ts , var refl eq) = notinv σ (ts , eq)
+map-NI : ∀ {Sg G DI D T D' T'}{i : Inj D' DI}{t : Term Sg G D T} 
+         (d : DTm Sg G (DI , T') (D , T)) → NotInv (wrapD-Inj d i) t → NotInv i (wrapD d t)
+map-NI lam       notinv σ (lam s     , lam eq)      = notinv σ (s , eq)
+map-NI (head ts) notinv σ (s ∷ ss    , eq ∷ eq')    = notinv σ (s , eq)
+map-NI (tail t)  notinv σ (s ∷ ss    , eq ∷ eq')    = notinv σ (ss , eq')
+map-NI (con c)   notinv σ (con .c ss , con refl eq) = notinv σ (ss , eq)
+map-NI (var ._)  notinv σ (var x  ss , var refl eq) = notinv σ (ss , eq)
+map-NI (con c)   notinv σ (var x ss  , ())
+map-NI (con c)   notinv σ (mvar u j  , ()) 
+map-NI (var x)   notinv σ (con c ss  , ())
+map-NI (var x)   notinv σ (mvar u j  , ())
 
 NI-var : ∀ {Sg G D D1 Ss B} {i : Inj D D1} {ts : Tms Sg G D1 Ss} {x : D1 ∋ (Ss ->> B)} 
          → ¬ ∃ (λ y → i $ y ≡ x) → NotInv {T = inj₁ _} i (var x ts)

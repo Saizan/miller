@@ -40,85 +40,85 @@ data IList {I : Set}(T : I → I → Set) (i : I) : (j : I) → Set where
   _∷_ : ∀ {k j} → T i k → (xs : IList T k j) → IList T i j
 
 Context<_> : (b : Bool) (Sg : Ctx)(G : MCtx) → Index -> Index → Set
-Context< b > Sg G = IList (\ i j → DTm< b > Sg G i j)
+Context< b > Sg G = IList (DTm< b > Sg G)
 
 Context : (Sg : Ctx)(G : MCtx) → Index -> Index → Set
 Context = Context< true >
 
 -- Given a Context and an index-compatible filling we can rebuild a Term
-∫once : ∀ {Sg G DI TI DO TO b} → DTm< b > Sg G (DI , TI) (DO , TO) → Term< b > Sg G DO TO → Term< b > Sg G DI TI
-∫once lam t = lam t
-∫once (head ts) t = t ∷ ts
-∫once (tail t) ts = t ∷ ts
-∫once (con c) ts = con c ts
-∫once (var x) ts = var x ts
+wrapD : ∀ {Sg G DI TI DO TO b} → DTm< b > Sg G (DI , TI) (DO , TO) → Term< b > Sg G DO TO → Term< b > Sg G DI TI
+wrapD lam       t = lam t
+wrapD (head ts) t = t ∷ ts
+wrapD (tail t) ts = t ∷ ts
+wrapD (con c)  ts = con c ts
+wrapD (var x)  ts = var x ts
 
-∫ : ∀ {Sg G I O b} → Context< b > Sg G I O → Term< b > Sg G (proj₁ O) (proj₂ O) → Term< b > Sg G (proj₁ I) (proj₂ I)
-∫ [] t = t
-∫ (x ∷ c) t = ∫once x (∫ c t)
+wrap : ∀ {Sg G I O b} → Context< b > Sg G I O → Term< b > Sg G (proj₁ O) (proj₂ O) → Term< b > Sg G (proj₁ I) (proj₂ I)
+wrap []      t = t
+wrap (d ∷ c) t = wrapD d (wrap c t)
 
 
 -- To move a renaming past a λ we need to handle the extra variable,
--- ∫oInj takes care of the induced action of a DTm on Inj.
-∫oCtx : ∀ {Sg G I1 I2 b} -> DTm< b > Sg G I1 I2 -> Ctx -> Ctx
-∫oCtx (lam {S = S}) D = S ∷ D
-∫oCtx _ D = D
+-- wrapoInj takes care of the induced action of a DTm on Inj.
+wrapD-Ctx : ∀ {Sg G I1 I2 b} -> DTm< b > Sg G I1 I2 -> Ctx -> Ctx
+wrapD-Ctx (lam {S = S}) D = S ∷ D
+wrapD-Ctx _             D = D
 
-∫oInj : ∀ {Sg G DI I1 I2 b} -> (d : DTm< b > Sg G I1 I2) -> Inj DI (proj₁ I1) -> Inj (∫oCtx d DI) (proj₁ I2)
-∫oInj lam i = cons i
-∫oInj (head ts) i = i
-∫oInj (tail t) i = i
-∫oInj (con c) i = i
-∫oInj (var x) i = i
+wrapD-Inj : ∀ {Sg G DI I1 I2 b} -> (d : DTm< b > Sg G I1 I2) -> Inj DI (proj₁ I1) -> Inj (wrapD-Ctx d DI) (proj₁ I2)
+wrapD-Inj lam       i = cons i
+wrapD-Inj (head ts) i = i
+wrapD-Inj (tail t)  i = i
+wrapD-Inj (con c)   i = i
+wrapD-Inj (var x)   i = i
 
 
-subD : ∀ {Sg G1 G2 TI TO b1 b2} -> (Sub< b1 > Sg G1 G2) -> DTm< b2 > Sg G1 TI TO -> DTm< b2 ∧ b1 > Sg G2 TI TO
-subD s lam = lam
+subD : ∀ {Sg G1 G2 TI TO b1 b2} -> Sub< b1 > Sg G1 G2 -> DTm< b2 > Sg G1 TI TO -> DTm< b2 ∧ b1 > Sg G2 TI TO
+subD s lam       = lam
 subD s (head ts) = head (subs s ts)
-subD s (tail t) = tail (sub s t)
-subD s (con c) = con c
-subD s (var x) = var x
+subD s (tail t)  = tail (sub s t)
+subD s (con c)   = con c
+subD s (var x)   = var x
 
 
 subC : ∀ {Sg G1 G2 TI TO b1 b2} -> (Sub< b1 > Sg G1 G2) -> Context< b2 > Sg G1 TI TO -> Context< b2 ∧ b1 > Sg G2 TI TO
-subC s [] = []
+subC s []      = []
 subC s (x ∷ c) = subD s x ∷ (subC s c)
 
-∫once-sub : ∀ {Sg G1 G2 TI TO b1 b2} -> (s : Sub< b1 > Sg G1 G2) -> (d : DTm< b2 > Sg G1 TI TO) -> 
-            ∀ t -> subT s (∫once d t) ≡ ∫once (subD s d) (subT s t)
-∫once-sub s lam t = refl
-∫once-sub s (head ts) t = refl
-∫once-sub s (tail t) t₁ = refl
-∫once-sub s (con c) t = refl
-∫once-sub s (var x) t = refl
+wrapD-sub : ∀ {Sg G1 G2 TI TO b1 b2} -> (s : Sub< b1 > Sg G1 G2) -> (d : DTm< b2 > Sg G1 TI TO) -> 
+            ∀ t -> subT s (wrapD d t) ≡ wrapD (subD s d) (subT s t)
+wrapD-sub s lam       t = refl
+wrapD-sub s (head ts) t = refl
+wrapD-sub s (tail t) ts = refl
+wrapD-sub s (con c)  ts = refl
+wrapD-sub s (var x)  ts = refl
 
-∫-sub : ∀ {Sg G1 G2 TI TO b1 b2} -> (s : Sub< b1 > Sg G1 G2) -> (c : Context< b2 > Sg G1 TI TO) -> 
-        ∀ t -> subT s (∫ c t) ≡ ∫ (subC s c) (subT s t)
-∫-sub s [] t = refl
-∫-sub s (x ∷ c) t = trans (∫once-sub s x _) (cong (∫once (subD s x)) (∫-sub s c t))
+wrap-sub : ∀ {Sg G1 G2 TI TO b1 b2} -> (s : Sub< b1 > Sg G1 G2) -> (c : Context< b2 > Sg G1 TI TO) -> 
+           ∀ t -> subT s (wrap c t) ≡ wrap (subC s c) (subT s t)
+wrap-sub s []      t = refl
+wrap-sub s (d ∷ c) t = trans (wrapD-sub s d _) (cong (wrapD (subD s d)) (wrap-sub s c t))
 
 
-cong-∫once : ∀ {Sg G1 G2 TI TO b1 b2} -> {s : Sub< b1 > Sg G1 G2} -> (d : DTm< b2 > Sg G1 TI TO) -> 
-             ∀ {x y} -> subT s x ≡T subT s y -> subT s (∫once d x) ≡T subT s (∫once d y)
-cong-∫once {s = s} d {x} {y} eq = ≡-T 
+cong-wrapD : ∀ {Sg G1 G2 TI TO b1 b2} -> {s : Sub< b1 > Sg G1 G2} -> (d : DTm< b2 > Sg G1 TI TO) -> 
+             ∀ {x y} -> subT s x ≡T subT s y -> subT s (wrapD d x) ≡T subT s (wrapD d y)
+cong-wrapD {s = s} d {x} {y} eq = ≡-T 
    (begin
-      subT s (∫once d x)          ≡⟨ ∫once-sub s d x ⟩
-      ∫once (subD s d) (subT s x) ≡⟨ cong (∫once (subD s d)) (T-≡ eq) ⟩
-      ∫once (subD s d) (subT s y) ≡⟨ sym (∫once-sub s d y) ⟩
-      subT s (∫once d y)          ∎)
+      subT s (wrapD d x)          ≡⟨ wrapD-sub s d x ⟩
+      wrapD (subD s d) (subT s x) ≡⟨ cong (wrapD (subD s d)) (T-≡ eq) ⟩
+      wrapD (subD s d) (subT s y) ≡⟨ sym (wrapD-sub s d y) ⟩
+      subT s (wrapD d y)          ∎)
 
-∫once-inj : ∀ {Sg G1 TI TO b} -> (d : DTm< b > Sg G1 TI TO) -> ∀ {x y} -> ∫once d x ≡ ∫once d y -> x ≡ y
-∫once-inj lam refl = refl
-∫once-inj (head ts) refl = refl
-∫once-inj (tail t) refl = refl
-∫once-inj (con c) refl = refl
-∫once-inj (var x) refl = refl
+wrapD-inj : ∀ {Sg G1 TI TO b} -> (d : DTm< b > Sg G1 TI TO) -> ∀ {x y} -> wrapD d x ≡ wrapD d y -> x ≡ y
+wrapD-inj lam       refl = refl
+wrapD-inj (head ts) refl = refl
+wrapD-inj (tail t)  refl = refl
+wrapD-inj (con c)   refl = refl
+wrapD-inj (var x)   refl = refl
 
-inv-∫once : ∀ {Sg G1 G2 TI TO b1 b2} -> {s : Sub< b1 > Sg G1 G2} -> (d : DTm< b2 > Sg G1 TI TO) -> 
-            ∀ {x y} -> subT s (∫once d x) ≡T subT s (∫once d y) -> subT s x ≡T subT s y
-inv-∫once {s = s} d {x} {y} eq = ≡-T (∫once-inj (subD s d)  
+inv-wrapD : ∀ {Sg G1 G2 TI TO b1 b2} -> {s : Sub< b1 > Sg G1 G2} -> (d : DTm< b2 > Sg G1 TI TO) -> 
+            ∀ {x y} -> subT s (wrapD d x) ≡T subT s (wrapD d y) -> subT s x ≡T subT s y
+inv-wrapD {s = s} d {x} {y} eq = ≡-T (wrapD-inj (subD s d)  
    (begin
-      ∫once (subD s d) (subT s x) ≡⟨ sym (∫once-sub s d x) ⟩
-      subT s (∫once d x)          ≡⟨ T-≡ eq ⟩
-      subT s (∫once d y)          ≡⟨ ∫once-sub s d y ⟩ 
-      ∫once (subD s d) (subT s y) ∎))
+      wrapD (subD s d) (subT s x) ≡⟨ sym (wrapD-sub s d x) ⟩
+      subT s (wrapD d x)          ≡⟨ T-≡ eq ⟩
+      subT s (wrapD d y)          ≡⟨ wrapD-sub s d y ⟩ 
+      wrapD (subD s d) (subT s y) ∎))

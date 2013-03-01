@@ -12,7 +12,7 @@ open import Injections hiding (Dec)
 open import Syntax
 
 _OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
-_OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → Σ (Context _ _ _ (_ , inj₁ _) ) \ C → ∫ C (mvar u j) ≡ t
+_OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → Σ (Context _ _ _ (_ , inj₁ _) ) \ C → wrap C (mvar u j) ≡ t
   where open import Data.Sum
 
 _NotOccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
@@ -21,13 +21,13 @@ u NotOccursIn t = ∃ \ (s : Term _ _ _ _) → subT (thin-s u) s ≡ t
 Dec_OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
 Dec u OccursIn t = u NotOccursIn t ⊎ u OccursIn t
 
-map-occ : ∀ {Sg G S D T D' T'}{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg G (D' , T') (D , T)) → u OccursIn t → u OccursIn ∫once d t
-map-occ d (Dj , j , C , eq) = (Dj , j , (d ∷ C) , cong (∫once d) eq)
+map-occ : ∀ {Sg G S D T D' T'}{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg G (D' , T') (D , T)) → u OccursIn t → u OccursIn wrapD d t
+map-occ d (Dj , j , C , eq) = (Dj , j , (d ∷ C) , cong (wrapD d) eq)
 
 _∙_ : ∀ {Sg G S D T D' T'}{u : G ∋ S}{t : Term Sg G D T} (d : DTm Sg (G - u) (D' , T') (D , T)) 
-        → Dec u OccursIn t → Dec u OccursIn ∫once (subD (thin-s u) d) t
+        → Dec u OccursIn t → Dec u OccursIn wrapD (subD (thin-s u) d) t
 _∙_ {u = u} d (yes occ)     = yes (map-occ (subD (thin-s u) d) occ)
-_∙_ {u = u} d (no (s , eq)) = no  (∫once d s , trans (∫once-sub _ d s) (cong (∫once (subD (thin-s u) d)) eq))
+_∙_ {u = u} d (no (s , eq)) = no  (wrapD d s , trans (wrapD-sub _ d s) (cong (wrapD (subD (thin-s u) d)) eq))
 
 -- "check" decides whether u occurs in t.
 -- Note: without the pattern condition we'd have to consider
