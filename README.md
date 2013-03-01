@@ -1,5 +1,7 @@
-Higher-Order Pattern Unification
-================================
+Higher-Order Pattern Unification in Agda
+========================================
+
+Higher-order unification problems can have multiple incompatible solutions, a challenge for many applications which can't afford to enumerate nor to guess, like type inference. A good strategy is instead to defer any decision except for the cases that fall into the pattern fragment, a subset which guarantees unique solutions.
 
 This repo provides a formalization in Agda of higher-order pattern unification as defined by Miller in ["A Logic Programming Language with Lambda-Abstraction, Function Variables, and Simple Unification"](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.54.8958).
 
