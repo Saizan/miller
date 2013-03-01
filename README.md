@@ -1,14 +1,28 @@
-### Modules
+Higher-Order Pattern Unification
+================================
+
+This repo provides a formalization in Agda of higher-order pattern unification as defined by Miller in ["A Logic Programming Language with Lambda-Abstraction, Function Variables, and Simple Unification"](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.54.8958).
+
+The code has been tested with [Agda-2.3.2](http://hackage.haskell.org/package/Agda-2.3.2) using [The Agda standard library](http://wiki.portal.chalmers.se/agda/pmwiki.php?n=Libraries.StandardLibrary), if reloading you get an error related to "refl\`" you need to invalidate the interface file for `Support.Equality' because of [this bug](http://code.google.com/p/agda/issues/detail?id=756) with pattern synonyms.
+
+The presentation is greatly influenced both by ["Higher-Order Dynamic Pattern Unification for Dependent Types and Records"](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.190.4789) and ["First-Order Unification by Structural Recursion"](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.25.1516) but neither are required to follow the work.
+
+["A tutorial implementation of dynamic pattern unification"](https://personal.cis.strath.ac.uk/adam.gundry/pattern-unify/) using Haskell and tackling a much more general version of the problem is a great introduction to the field.
+
+
+The key to read the present work is to identify argument lists satisfying the pattern condition with injective renamings, this point of view and the richly typed structures make it very natural to apply concepts from category theory to organize the algorithm and its proof of correctness.
+
+### Overview of the modules
 <pre>
-- Definitions and Theorems from Category Theory  
+- Definitions and Theorems from Category Theory.
  Category - monos, equalizers, pullbacks
 
-- Variable Names as Typed de Bruijn Indexes
+- Variable Names as Typed de Bruijn Indexes.
  Vars            - `Γ ∋ τ'
    Vars.MatchTwo - matching against two names in one go
    Vars.SumIso   - `(Γ ++ Δ) ∋ τ' ≈ `Γ ∋ τ ⊎ Δ ∋ τ'
 
-- Injective Renamings as a first-order datatype
+- Injective Renamings as a first-order datatype.
  Injections 
    Injections.Type - `Inj Γ Δ' ≈ injective `∀ τ → Γ ∋ τ → Δ ∋ τ'
    Injections.Sum  - `Inj Γ (Γ ++ Δ)' and `Inj Δ (Γ ++ Δ)'  
@@ -39,7 +53,7 @@
    Unification.Inversion                - solving for `z` in `ren i z ≡ sub ρ t`
    Unification.OccursCheck              - checking whether a meta-var occurs in a term
 
-- Wrappers around the Agda Standard Library
+- Wrappers around the Agda Standard Library.
  Support.Product
  Support.List
  Support.Equality
