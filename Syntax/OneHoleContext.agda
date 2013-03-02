@@ -15,9 +15,9 @@ open import Syntax.Equality
 
 -- Given an inductive type T = F T we can build the type of its one
 -- hole contexts as List (F' T) where F' is the derivative of F,
--- i.e. the elements of F' x are the same as F x with one occurrence
--- of x removed.  The same holds for indexed types when we lift the
--- construction pointwise.
+-- i.e. the elements of F' x are the same as the ones of F x but with
+-- one occurrence of x removed. For indexed types like Term we only
+-- need to lift this construction pointwise.
 --
 -- In our case T = Term Sg G and we define:
 --    DTm Sg G      as F' T, 
