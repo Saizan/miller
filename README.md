@@ -12,7 +12,7 @@ The presentation is greatly influenced both by ["Higher-Order Dynamic Pattern Un
 ["A tutorial implementation of dynamic pattern unification"](https://personal.cis.strath.ac.uk/adam.gundry/pattern-unify/) using Haskell and tackling a much more general version of the problem is a great introduction to the field.
 
 
-The key to read the present work is to identify argument lists satisfying the pattern condition with injective renamings, this point of view and the richly typed structures make it very natural to apply concepts from category theory to organize the algorithm and its proof of correctness.
+The key to read the present work is to identify argument lists satisfying the pattern condition with injective renamings, this point of view and the richly typed structures make it very natural to apply concepts from category theory to design the algorithm and its proof of correctness.
 
 ### Overview of the modules
 <pre>
