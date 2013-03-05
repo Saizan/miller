@@ -42,9 +42,9 @@ _≅∋_ {A} {G} {S} {T} u v = S ≡ T × u ≅ v
 --
 -- thin and thick below are the witnesses
 
-_-_ : ∀{A} {T} → (G : List A) → G ∋ T → List A
-_-_ {_} {T} .(T ∷ G) (zero {G}) = G
-._ - suc {G} {_} {S} x = S ∷ (G - x) 
+_-_ : ∀ {A T} → (G : List A) → G ∋ T → List A
+(T ∷ G) - zero  = G
+(S ∷ G) - suc x = S ∷ (G - x) 
 
 infix 35 _-_
 
