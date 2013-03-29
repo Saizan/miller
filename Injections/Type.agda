@@ -81,9 +81,9 @@ quo-ext {A} {x ∷ xs} {injf = injf} {injg = injg} eq = cong-∷[] (eq _ zero) (
                                                                                     {injg = λ x₁ x₂ → suc-inj1 (injg x₁ x₂)} (λ x₁ v → eq x₁ (suc v)))
 
 _$_ : ∀ {A : Set} {xs ys : List A} → Inj xs ys → ∀ {x} → x ∈ xs → x ∈ ys
-(i ∷ is [ pf ]) $ zero = i
+(i ∷ is [ pf ]) $ zero   = i
 (i ∷ is [ pf ]) $ suc x₂ = is $ x₂
-[] $ () 
+[] $ ()
 
 _∉Im_ : ∀ {A : Set} {xs ys : List A} → ∀ {x} (i : x ∈ ys) → (f : Inj xs ys) → Set
 i ∉Im f = ∀ b → ¬ i ≡ f $ b
@@ -100,9 +100,9 @@ i ∉Im f = ∀ b → ¬ i ≡ f $ b
           aux .i₁ pf₁ ¬Im refl` = ¬Im zero refl
 
 injective : ∀ {A : Set} {xs ys : List A} → (f : Inj xs ys) → ∀ {x} → (a b : x ∈ xs) → f $ a ≡ f $ b → a ≡ b
-injective f zero zero eq = refl
-injective (i ∷ f [ pf ]) zero (suc b) eq = ⊥-elim (∉-∉Im f i pf b eq)
-injective (i ∷ f [ pf ]) (suc a₁) zero eq = ⊥-elim (∉-∉Im f i pf a₁ (sym eq))
+injective f              zero     zero    eq = refl
+injective (i ∷ f [ pf ]) zero     (suc b) eq = ⊥-elim (∉-∉Im f i pf b eq)
+injective (i ∷ f [ pf ]) (suc a₁) zero    eq = ⊥-elim (∉-∉Im f i pf a₁ (sym eq))
 injective (i ∷ f [ pf ]) (suc a₁) (suc b) eq = cong suc (injective f a₁ b eq)
 
 iso1 : ∀ {A : Set} {xs ys : List A} → (f : Inj xs ys) → (inj : _) → quo (\ x v → f $ v) {inj} ≡ f

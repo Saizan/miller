@@ -28,15 +28,15 @@ thin-s u = \ S v → mvar (thin u S v) id-i
 
 mutual
   sub : ∀ {b1 b2 Sg G1 G2 D T} → Sub< b1 > Sg G1 G2 → Tm< b2 > Sg G1 D T → Tm< b2 ∧ b1 > Sg G2 D T
-  sub              s (con x x₁)  = con x (subs s x₁)
+  sub              s (con c ts)  = con c (subs s ts)
   sub {b1} {true}  s (mvar u i)  = ren i (s _ u)
-  sub {b1} {false} s (mvar u xs) = replace (s _ u) (subs s xs)
-  sub              s (var x xs)  = var x (subs s xs)
+  sub {b1} {false} s (mvar u ts) = replace (s _ u) (subs s ts)
+  sub              s (var x ts)  = var x (subs s ts)
   sub              s (lam t)     = lam (sub s t)
 
   subs : ∀ {b1 b2 Sg G1 G2 D Ss} → Sub< b1 > Sg G1 G2 → Tms< b2 > Sg G1 D Ss → Tms< b2 ∧ b1 > Sg G2 D Ss
   subs s []       = []
-  subs s (x ∷ ts) = sub s x ∷ subs s ts
+  subs s (t ∷ ts) = sub s t ∷ subs s ts
 
 id-s : ∀ {Sg G} → Sub Sg G G
 id-s = \ S x → mvar x id-i
