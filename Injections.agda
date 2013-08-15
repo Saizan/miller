@@ -74,13 +74,16 @@ abstract
   Inj-thin-$ v f u = iso2 _ _ u
 
   Inj-thin-inj : ∀ {A : Set}{x : A}{xs ys} → (v : ys ∋ x) -> (f g : Inj xs (ys - v)) -> Inj-thin v f ≡ Inj-thin v g -> f ≡ g
-  Inj-thin-inj v f g eq = ext-$ f g (λ x v₁ → thin-inj v (cong-$ eq v₁))
+  Inj-thin-inj v f g eq = ext-$ f g (λ x v₁ → thin-inj v (cong-$ {inj1 = λ x₁ x₂ → injective f _ _ (thin-inj v x₂)} {inj2 = λ x₁ x₂ → injective g _ _ (thin-inj v x₂)} eq v₁)) -- XXX regression
 
   Inj-thin-∘i : ∀ {A : Set}{x : A}{zs xs ys} → (v : ys ∋ x) -> (f : Inj xs (ys - v)) (m : Inj zs xs) -> Inj-thin v f ∘i m ≡ Inj-thin v (f ∘i m)
   Inj-thin-∘i v f m = quo-ext (λ x v₁ → trans (iso2 _ _ (m $ v₁)) (cong (thin v x) (sym (iso2 _ _ v₁))))
 
   v∉Inj-thinv : ∀ {A : Set}{x : A}{xs ys} → (v : ys ∋ x) -> (f : Inj xs (ys - v)) -> v ∉ Inj-thin v f
   v∉Inj-thinv v f = ∉Im$-∉ (λ x x₁ → thin v _ (f $ x₁)) v (λ b → x∉thinx v (f $ b))
+
+test : ∀ {A : Set} {xs ys} → (f : ∀ (x : A) → x ∈ xs → x ∈ ys){inj1 inj2 : ∀ x → {i j : x ∈ xs} → f x i ≡ f x j → i ≡ j} → quo f {inj1} ≡ quo f {inj2}
+test f = refl
 
 weak : ∀ {A : Set}{x : A}{xs ys} → Inj xs ys → Inj xs (x ∷ ys)
 weak f = Inj-thin zero f

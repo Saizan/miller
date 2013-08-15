@@ -12,7 +12,8 @@ open import Injections hiding (Dec)
 open import Syntax
 
 _OccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
-_OccursIn_ u t = ∃ \ D' → Σ (Inj _ D') \ j → Σ (Context _ _ _ (_ , inj₁ _) ) \ C → wrap C (mvar u j) ≡ t
+_OccursIn_ {Sg} {G} {D} {T} {S} u t 
+   = ∃ \ D' → ∃ \ (j : Inj (ctx S) D') → ∃ \ (C : Context Sg G (D , T) (D' , inj₁ ([] ->> type S))) → wrap C (mvar u j) ≡ t
   where open import Data.Sum
 
 _NotOccursIn_ : ∀ {Sg G D T S} (u : G ∋ S) (t : Term Sg G D T) → Set
