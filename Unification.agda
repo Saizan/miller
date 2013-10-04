@@ -124,42 +124,42 @@ flexAny u i .(wrap (d ∷ c) (mvar u j)) | inj₂ (G1 , j , d ∷ c , refl) = no
         (trans (T-≡ eq) (wrap-sub s (d ∷ c) (mvar u j)))} 
 
 mutual
-  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
+  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∀ n -> n ≥ Ctx-length G -> Spec x y
   -- congruence and directly failing cases
-  unify (con c xs) (con c₁ ys) l with c ≅∋? c₁ 
-  unify (con c xs) (con c₁ ys) l | no  c≢c₁  = no (λ {(_ , _ , eq) → c≢c₁ (con-inj₁ eq)})
-  unify (con c xs) (con .c ys) l | yes refl` = cong-spec (con c) (unifyTms xs ys l)
-  unify (var x xs) (var y  ys) l with x ≅∋? y 
-  unify (var x xs) (var y  ys) l | no  x≢y   = no (λ {(_ , _ , eq) → x≢y (var-inj₁ eq)})
-  unify (var x xs) (var .x ys) l | yes refl` = cong-spec (var x) (unifyTms xs ys l)
-  unify (lam x)    (lam y)     l = cong-spec lam {x} {y} (unify x y l)
-  unify (con _ _)  (var _ _)   l = no λ {(_ , _ , ())}
-  unify (var _ _)  (con _ _)   l = no λ {(_ , _ , ())}
+  unify (con c xs) (con c₁ ys) n l with c ≅∋? c₁ 
+  unify (con c xs) (con c₁ ys) n l | no  c≢c₁  = no (λ {(_ , _ , eq) → c≢c₁ (con-inj₁ eq)})
+  unify (con c xs) (con .c ys) n l | yes refl` = cong-spec (con c) (unifyTms xs ys n l)
+  unify (var x xs) (var y  ys) n l with x ≅∋? y 
+  unify (var x xs) (var y  ys) n l | no  x≢y   = no (λ {(_ , _ , eq) → x≢y (var-inj₁ eq)})
+  unify (var x xs) (var .x ys) n l | yes refl` = cong-spec (var x) (unifyTms xs ys n l)
+  unify (lam x)    (lam y)     n l = cong-spec lam {x} {y} (unify x y n l)
+  unify (con _ _)  (var _ _)   n l = no λ {(_ , _ , ())}
+  unify (var _ _)  (con _ _)   n l = no λ {(_ , _ , ())}
 
   -- flexible cases
-  unify (mvar u i) t          l = flexAny u i t
-  unify t          (mvar u i) l = spec-comm (mvar u i) t (flexAny u i t)
+  unify (mvar u i) t          _ l = flexAny u i t
+  unify t          (mvar u i) _ l = spec-comm (mvar u i) t (flexAny u i t)
  
-  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∃ (\ n -> n ≥ Ctx-length G) -> Spec x y
-  unifyTms []       []       _ = yes (∃σMax[Unifies[x,x]] [])
-  unifyTms (s ∷ xs) (t ∷ ys) l 
-   with unify s t l
+  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∀ n -> n ≥ Ctx-length G -> Spec x y
+  unifyTms []       []       _ _ = yes (∃σMax[Unifies[x,x]] [])
+  unifyTms (s ∷ xs) (t ∷ ys) n l 
+   with unify s t n l
   ... | no  ¬unify[s,t]        = no λ {(_ , ρ , eq ∷ _) → ¬unify[s,t] (_ , ρ , eq)}
   ... | yes (_ , σ , eq , sup) 
-     with under σ unifyTms xs ys l
+     with under σ unifyTms xs ys n l
   ...   | no  ¬unify[σxs,σys]       = no  λ {(_ , σ1 , eqt ∷ eqts) → ¬unify[σxs,σys] (shift eqts under ⟦ σ ⟧ by sup σ1 eqt) }
   ...   | yes (_ , σ1 , eq1 , sup1) = yes (_ , (σ1 ∘ds σ) , optimist s t xs ys ⟦ σ ⟧ ⟦ σ1 ⟧ (eq , sup) (eq1 , sup1))
 
   -- termination overhead
   under_unifyTms : ∀ {Sg G D Ts} -> 
-             ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> ∃ (\ n -> n ≥ Ctx-length G) -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
-  under (DS σ , inj₁ (G~G1 , σ-is-iso)) unifyTms xs ys l = Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 σ-is-iso (unifyTms xs ys l)
-  under (DS σ , inj₂ G>G1) unifyTms xs ys (n , n≥G) = under-not-iso σ unifyTms xs ys (n , n≥G) (≤-trans G>G1 n≥G) 
+             ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> ∀ n -> n ≥ Ctx-length G -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
+  under (DS σ , inj₁ (G~G1 , σ-is-iso)) unifyTms xs ys n l = Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 σ-is-iso (unifyTms xs ys n l)
+  under (DS σ , inj₂ G>G1) unifyTms xs ys n n≥G = under-not-iso σ unifyTms xs ys n n≥G (≤-trans G>G1 n≥G) 
 
   under-not-iso_unifyTms : ∀ {Sg G D Ts} -> 
              ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> 
-             (u : ∃ (\ n -> n ≥ Ctx-length G)) -> proj₁ u > Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
-  under-not-iso σ unifyTms xs ys (.(suc n) , n≥G) (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) (n , z)
+             ∀  n -> n ≥ Ctx-length G -> n > Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
+  under-not-iso σ unifyTms xs ys .(suc n) n≥G (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) n z
 
 Unify : ∀ {Sg G D T} → (s t : Tm Sg G D T) → ∃σ-pat Max (Unifies s t) ⊎ ¬ ∃σ Unifies s t
-Unify x y = map⊎ (λ {(G1 , σ , σ-max) → G1 , ⟦ σ ⟧ , σ-max}) (λ ¬p → ¬p) (unify x y (_ , ≤-refl))
+Unify x y = map⊎ (λ {(G1 , σ , σ-max) → G1 , ⟦ σ ⟧ , σ-max}) (λ ¬p → ¬p) (unify x y _ ≤-refl)
