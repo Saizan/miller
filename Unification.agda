@@ -1,9 +1,6 @@
 module Unification where
 
-open import Data.Nat hiding (_≤_)
-open import Relation.Binary
-open DecTotalOrder Data.Nat.decTotalOrder 
-  using () renaming (refl to ≤-refl; trans to ≤-trans)         
+open import Support.Nat
 open import Data.Empty
 open import Data.Sum renaming (inj₁ to yes; inj₂ to no; map to map⊎)
 
@@ -124,7 +121,7 @@ flexAny u i .(wrap (d ∷ c) (mvar u j)) | inj₂ (G1 , j , d ∷ c , refl) = no
         (trans (T-≡ eq) (wrap-sub s (d ∷ c) (mvar u j)))} 
 
 mutual
-  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∀ n -> n ≥ Ctx-length G -> Spec x y
+  unify : ∀ {Sg G D T} → (x y : Tm Sg G D T) → ∀ n -> n ≡ Ctx-length G -> Spec x y
   -- congruence and directly failing cases
   unify (con c xs) (con c₁ ys) n l with c ≅∋? c₁ 
   unify (con c xs) (con c₁ ys) n l | no  c≢c₁  = no (λ {(_ , _ , eq) → c≢c₁ (con-inj₁ eq)})
@@ -140,7 +137,7 @@ mutual
   unify (mvar u i) t          _ l = flexAny u i t
   unify t          (mvar u i) _ l = spec-comm (mvar u i) t (flexAny u i t)
  
-  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∀ n -> n ≥ Ctx-length G -> Spec x y
+  unifyTms : ∀ {Sg G D Ts} → (x y : Tms Sg G D Ts) → ∀ n -> n ≡ Ctx-length G -> Spec x y
   unifyTms []       []       _ _ = yes (∃σMax[Unifies[x,x]] [])
   unifyTms (s ∷ xs) (t ∷ ys) n l 
    with unify s t n l
@@ -152,14 +149,18 @@ mutual
 
   -- termination overhead
   under_unifyTms : ∀ {Sg G D Ts} -> 
-             ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> ∀ n -> n ≥ Ctx-length G -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
+             ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> ∀ n -> n ≡ Ctx-length G -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
   under (DS σ , inj₁ (G~G1 , σ-is-iso)) unifyTms xs ys n l = Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 σ-is-iso (unifyTms xs ys n l)
-  under (DS σ , inj₂ G>G1) unifyTms xs ys n n≥G = under-not-iso σ unifyTms xs ys n n≥G (≤-trans G>G1 n≥G) 
+  under (DS σ , inj₂ G>G1) unifyTms xs ys n n≡G = under-not-iso σ unifyTms xs ys n (cast n≡G G>G1) 
 
   under-not-iso_unifyTms : ∀ {Sg G D Ts} -> 
              ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> 
-             ∀  n -> n ≥ Ctx-length G -> n > Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
-  under-not-iso σ unifyTms xs ys .(suc n) n≥G (s≤s {._} {n} z) = unifyTms (subs σ xs) (subs σ ys) n z
+             ∀  n -> n >′ Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
 
+  under-not-iso_unifyTms σ xs ys .(suc n) (>′-refl {n} n≡G1) = unifyTms (subs σ xs) (subs σ ys) n n≡G1
+  under-not-iso_unifyTms σ xs ys .(suc n) (>′-step {n} n>G1) = under-not-iso σ unifyTms xs ys n n>G1
+
+
+-- unifyTms (subs σ xs) (subs σ ys) n z
 Unify : ∀ {Sg G D T} → (s t : Tm Sg G D T) → ∃σ-pat Max (Unifies s t) ⊎ ¬ ∃σ Unifies s t
-Unify x y = map⊎ (λ {(G1 , σ , σ-max) → G1 , ⟦ σ ⟧ , σ-max}) (λ ¬p → ¬p) (unify x y _ ≤-refl)
+Unify x y = map⊎ (λ {(G1 , σ , σ-max) → G1 , ⟦ σ ⟧ , σ-max}) (λ ¬p → ¬p) (unify x y _ refl)
