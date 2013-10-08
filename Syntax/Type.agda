@@ -55,13 +55,13 @@ MCtx = Bwd MTy
 -- We use the "spiny" representation where each var/constant is paired with as many arguments as its type requires.
 mutual
   data Tm<_> (b : Bool) (Sg : Ctx)(G : MCtx)(D : Ctx) : Ty → Set where
-    con : ∀ {Ss B} →
-          (c : Sg ∋ (Ss ->> B)) → (ts : Tms< b > Sg G D Ss) → Tm< b > Sg G D (! B)
+    con  : ∀ {Ss B} →
+           (c : Sg ∋ (Ss ->> B)) → (ts : Tms< b > Sg G D Ss) → Tm< b > Sg G D (! B)
     mvar : ∀ {Ss B} → 
-           (u : G ∋ (B <<- Ss)) → (j : Args b Sg G D Ss) → Tm< b > Sg G D (! B)
-    var : ∀ {Ss B} → 
-          (x : D ∋ (Ss ->> B)) → (ts : Tms< b > Sg G D Ss) → Tm< b > Sg G D (! B)
-    lam : ∀ {S Ss B} →
+           (u : G  ∋ (B <<- Ss)) → (j : Args b Sg G D Ss)    → Tm< b > Sg G D (! B)
+    var  : ∀ {Ss B} → 
+           (x : D  ∋ (Ss ->> B)) → (ts : Tms< b > Sg G D Ss) → Tm< b > Sg G D (! B)
+    lam  : ∀ {S Ss B} →
           (t : Tm< b > Sg G (D <: S) (Ss ->> B)) → Tm< b > Sg G D (S :> Ss ->> B)
 
   data Tms<_> (b : Bool) (Sg : Ctx)(G : MCtx)(D : Ctx) : Fwd Ty → Set where
@@ -70,7 +70,7 @@ mutual
            (t : Tm< b > Sg G D S) → (ts : Tms< b > Sg G D Ss) → Tms< b > Sg G D (S :> Ss)
 
   Args : Bool -> (Sg : Ctx)(G : MCtx)(D : Ctx) -> Fwd Ty -> Set
-  Args true Sg G D Ss = Inj Ss D
+  Args true  Sg G D Ss = Inj Ss D
   Args false Sg G D Ss = Tms< false > Sg G D Ss
 
 module Tm = Tm<_>
