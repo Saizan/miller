@@ -1,6 +1,5 @@
 module NOTERM.Unification.Pruning where
 
-open import Data.Nat using (_≥_)
 open import Data.Empty
 open import Data.Sum
 

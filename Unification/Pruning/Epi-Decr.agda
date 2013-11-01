@@ -1,6 +1,6 @@
 module Unification.Pruning.Epi-Decr where
 
-open import Data.Nat hiding (_≤_)
+open import Data.Nat using (_≥_; zero; suc; z≤n; s≤s; module ≤-Reasoning)
 open import Data.Nat.Properties
 open import Data.Empty
 open import Data.Sum

@@ -150,13 +150,11 @@ mutual
   -- termination overhead
   under_unifyTms : ∀ {Sg G D Ts} -> 
              ∀ {G1} (σ : DSub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> ∀ n -> n ≡ Ctx-length G -> Spec (subs ⟦ σ ⟧ xs) (subs ⟦ σ ⟧ ys)
-  under (DS σ , inj₁ (G~G1 , σ-is-iso)) unifyTms xs ys n l = Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 σ-is-iso (unifyTms xs ys n l)
-  under (DS σ , inj₂ G>G1) unifyTms xs ys n n≡G = under-not-iso σ unifyTms xs ys n (cast n≡G G>G1) 
+  under (DS σ , inj₁ (G~G1 , σ-is-iso)) unifyTms xs ys n l   = Spec[xs,ys]⇒Spec[σxs,σys] σ G~G1 σ-is-iso (unifyTms xs ys n l)
+  under (DS σ , inj₂ G>G1             ) unifyTms xs ys n n≡G = under-not-iso σ unifyTms xs ys n (cast n≡G G>G1) 
 
-  under-not-iso_unifyTms : ∀ {Sg G D Ts} -> 
-             ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> 
-             ∀  n -> n >′ Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
-
+  under-not-iso_unifyTms : ∀ {Sg G D Ts} -> ∀ {G1} (σ : Sub Sg G G1) -> (xs ys : Tms Sg G D Ts) -> 
+                           ∀ n -> n >′ Ctx-length G1 -> Spec (subs σ xs) (subs σ ys)
   under-not-iso_unifyTms σ xs ys .(suc n) (>′-refl {n} n≡G1) = unifyTms (subs σ xs) (subs σ ys) n n≡G1
   under-not-iso_unifyTms σ xs ys .(suc n) (>′-step {n} n>G1) = under-not-iso σ unifyTms xs ys n n>G1
 
